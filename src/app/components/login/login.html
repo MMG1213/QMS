@@ -1,0 +1,165 @@
+
+<main class="login-page">
+  <section class="login-card">
+    <header class="brand">
+      <img
+        src="/assets/fujitec-logo.png"
+        alt="Fujitec"
+        class="brand-logo"
+      />
+      <span class="brand-divider"></span>
+      <p>QUALITY MANAGEMENT SYSTEM</p>
+    </header>
+
+    <div class="heading">
+      @if (mode === 'login') {
+        <h1>Welcome back</h1>
+        <p>Sign in to access your QMS workspace.</p>
+      } @else if (mode === 'forgot') {
+        <h1>Reset password</h1>
+        <p>Enter your registered work email to get started.</p>
+      } @else {
+        <h1>Request an account</h1>
+        <p>Register your details to request QMS access.</p>
+      }
+    </div>
+
+    @if (mode === 'login') {
+      <form [formGroup]="loginForm" (ngSubmit)="signIn()">
+        <div class="form-field">
+          <label for="username">Username or Employee ID</label>
+          <input
+            id="username"
+            type="text"
+            formControlName="username"
+            placeholder="Enter your username"
+            autocomplete="username"
+          />
+          @if (loginForm.controls.username.touched &&
+               loginForm.controls.username.invalid) {
+            <small class="field-error">Username is required.</small>
+          }
+        </div>
+
+        <div class="form-field">
+          <label for="password">Password</label>
+          <div class="password-wrapper">
+            <input
+              id="password"
+              [type]="showPassword ? 'text' : 'password'"
+              formControlName="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="toggle-password"
+              (click)="showPassword = !showPassword"
+              [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            >
+              {{ showPassword ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+          @if (loginForm.controls.password.touched &&
+               loginForm.controls.password.invalid) {
+            <small class="field-error">Password is required.</small>
+          }
+        </div>
+
+        <div class="forgot-row">
+          <button type="button" class="text-link"
+                  (click)="setMode('forgot')">
+            Forgot password?
+          </button>
+        </div>
+
+        <button type="submit" class="primary-button">Sign In</button>
+      </form>
+
+      <div class="signup-prompt">
+        New to QMS?
+        <button type="button" class="text-link"
+                (click)="setMode('signup')">
+          Request an account
+        </button>
+      </div>
+    }
+
+    @if (mode === 'forgot') {
+      <form [formGroup]="forgotForm" (ngSubmit)="requestPasswordReset()">
+        <div class="form-field">
+          <label for="resetEmail">Work email</label>
+          <input id="resetEmail" type="email"
+                 formControlName="email"
+                 placeholder="name@company.com"
+                 autocomplete="email" />
+          @if (forgotForm.controls.email.touched &&
+               forgotForm.controls.email.invalid) {
+            <small class="field-error">Enter a valid email address.</small>
+          }
+        </div>
+        <button type="submit" class="primary-button">Request Reset</button>
+        <button type="button" class="secondary-button"
+                (click)="setMode('login')">
+          Back to Sign In
+        </button>
+      </form>
+    }
+
+    @if (mode === 'signup') {
+      <form [formGroup]="signupForm" (ngSubmit)="requestSignup()">
+        <div class="form-field">
+          <label for="employeeId">Employee ID</label>
+          <input id="employeeId" formControlName="employeeId"
+                 placeholder="Enter employee ID" />
+        </div>
+        <div class="form-field">
+          <label for="fullName">Full name</label>
+          <input id="fullName" formControlName="name"
+                 placeholder="Enter your name" autocomplete="name" />
+        </div>
+        <div class="form-field">
+          <label for="signupEmail">Work email</label>
+          <input id="signupEmail" type="email"
+                 formControlName="email"
+                 placeholder="name@company.com" autocomplete="email" />
+        </div>
+        <div class="form-field">
+          <label for="signupPassword">Create password</label>
+          <input id="signupPassword"
+                 [type]="showPassword ? 'text' : 'password'"
+                 formControlName="password"
+                 placeholder="At least 8 characters"
+                 autocomplete="new-password" />
+          @if (signupForm.controls.password.touched &&
+               signupForm.controls.password.invalid) {
+            <small class="field-error">
+              Password must contain at least 8 characters.
+            </small>
+          }
+        </div>
+        <button type="submit" class="primary-button">Request Access</button>
+        <button type="button" class="secondary-button"
+                (click)="setMode('login')">
+          Back to Sign In
+        </button>
+      </form>
+    }
+
+    @if (message) {
+      <div class="feedback"
+           [class.feedback-error]="messageType === 'error'"
+           [class.feedback-success]="messageType === 'success'"
+           role="status">
+        {{ message }}
+      </div>
+    }
+
+    <footer>
+      <span class="footer-dot"></span>
+      Authorized personnel only
+      <span class="footer-separator">·</span>
+      Secure document control
+    </footer>
+  </section>
+</main>
