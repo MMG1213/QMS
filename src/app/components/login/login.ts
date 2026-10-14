@@ -6,6 +6,7 @@ import {
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
+import { Router } from '@angular/router';
 
 type PageMode = 'login' | 'forgot' | 'signup';
 
@@ -26,7 +27,7 @@ export class Login {
   forgotForm;
   signupForm;
 
-  constructor(private fb: FormBuilder) {
+  constructor(private fb: FormBuilder, private router: Router) {
     this.loginForm = this.fb.nonNullable.group({
       username: ['', Validators.required],
       password: ['', Validators.required]
@@ -55,6 +56,14 @@ export class Login {
       this.loginForm.markAllAsTouched();
       this.showMessage('Enter your username and password.');
       return;
+    }
+
+    const { username, password } = this.loginForm.getRawValue();
+
+    if(username === 'admin' && password === 'admin') {
+      this.router.navigate(['/qms']);
+    } else {
+      this.showMessage('Invalid username or password.');
     }
 
     this.showMessage(
