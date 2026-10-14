@@ -1,0 +1,130 @@
+
+<div class="qms-app">
+
+    <!-- Top corporate header -->
+    <header class="top-header">
+      <div class="brand">
+        <div class="brand-mark">F</div>
+        <div class="brand-text">
+          <span class="brand-name">FUJITEC</span>
+          <span class="brand-subtitle">QUALITY MANAGEMENT SYSTEM</span>
+        </div>
+      </div>
+  
+      <div class="header-right">
+        <span class="system-label">QMS PORTAL</span>
+        <div class="profile" title="User profile">U</div>
+      </div>
+    </header>
+  
+    <!-- Navigation -->
+    <nav class="navigation" aria-label="QMS modules">
+      <div class="nav-inner">
+        <button
+          *ngFor="let tab of tabs"
+          type="button"
+          class="nav-tab"
+          [class.active]="activeTab === tab"
+          [attr.aria-current]="activeTab === tab ? 'page' : null"
+          (click)="selectTab(tab)">
+  
+          <span class="nav-dot"></span>
+          <span>{{ tab }}</span>
+        </button>
+      </div>
+    </nav>
+  
+    <!-- Main content -->
+    <main class="main-content">
+  
+      <div class="breadcrumb">
+        <span>Home</span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="current-crumb">{{ activeTab }}</span>
+      </div>
+  
+      <section class="welcome-section">
+        <div>
+          <p class="eyebrow">QUALITY MANAGEMENT</p>
+          <h1>{{ activeTab }}</h1>
+          <p class="welcome-description">
+            Your central workspace for quality processes and documentation.
+          </p>
+        </div>
+  
+        <div class="module-count">
+          <span class="status-dot"></span>
+          Module preview
+        </div>
+      </section>
+  
+      <!-- Coming soon screen -->
+      <section class="coming-soon-card" aria-live="polite">
+  
+        <div class="illustration">
+          <div class="illustration-circle">
+            <svg
+              viewBox="0 0 100 100"
+              width="76"
+              height="76"
+              fill="none"
+              aria-hidden="true">
+  
+              <rect
+                x="25" y="14" width="50" height="68"
+                rx="5"
+                stroke="currentColor"
+                stroke-width="2.5"/>
+  
+              <path
+                d="M36 31H64 M36 43H64 M36 55H54"
+                stroke="currentColor"
+                stroke-width="3"
+                stroke-linecap="round"/>
+  
+              <circle
+                cx="70" cy="72" r="16"
+                fill="#FFFFFF"
+                stroke="#D71920"
+                stroke-width="3"/>
+  
+              <path
+                d="M62 72L68 78L79 65"
+                stroke="#D71920"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <span class="decor decor-one"></span>
+          <span class="decor decor-two"></span>
+        </div>
+  
+        <span class="coming-soon-badge">
+          <span></span>
+          UNDER DEVELOPMENT
+        </span>
+  
+        <h2>Coming Soon</h2>
+  
+        <p class="coming-description">
+          We're working on the {{ activeTab }} module to bring you
+          a streamlined and efficient quality management experience.
+        </p>
+  
+        <div class="red-divider"></div>
+  
+        <p class="footer-message">
+          This module will be available here soon.
+        </p>
+  
+      </section>
+  
+      <footer class="page-footer">
+        <span>FUJITEC · QUALITY MANAGEMENT SYSTEM</span>
+        <span>Document control &nbsp;·&nbsp; Process excellence</span>
+      </footer>
+  
+    </main>
+  </div>
+  
