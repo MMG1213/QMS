@@ -10,10 +10,11 @@
 using System;
 using System.Reflection;
 
+[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsIdAttribute("da432907-0be8-465e-99ee-a10911a1c16f")]
 [assembly: System.Reflection.AssemblyCompanyAttribute("Qms.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0fa26fad005359002032d959ac15f888d2640b7f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+34ce3ab35f2ee488aceeb697f55b7f923148d3c7")]
 [assembly: System.Reflection.AssemblyProductAttribute("Qms.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Qms.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

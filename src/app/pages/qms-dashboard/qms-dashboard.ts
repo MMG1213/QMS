@@ -1,28 +1,62 @@
 
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-
-type QmsTab = 'Master List' | 'DCR' | 'Internal Audit' | 'QPM' | 'MRM';
+import { Component, HostListener } from '@angular/core';
 
 @Component({
-  selector: 'app-qms-dashboard',
+  selector: 'app-home',
   standalone: true,
-  imports: [CommonModule],
   templateUrl: './qms-dashboard.html',
   styleUrl: './qms-dashboard.css'
 })
 export class QmsDashboardComponent {
-  activeTab: QmsTab = 'Master List';
-
-  tabs: QmsTab[] = [
-    'Master List',
+  tabs: string[] = [
+    'MasterList',
     'DCR',
     'Internal Audit',
-    'QPM',
+    'QPI',
     'MRM'
   ];
 
-  selectTab(tab: QmsTab): void {
+  activeTab = 'MasterList';
+  profileMenuOpen = false;
+
+  // Replace these demo values with logged-in user data.
+  userName = 'QMS User';
+  userRole = 'Quality Department';
+
+  get userInitial(): string {
+    return this.userName.trim().charAt(0).toUpperCase() || 'U';
+  }
+
+  selectTab(tab: string): void {
     this.activeTab = tab;
+    this.profileMenuOpen = false;
+  }
+
+  toggleProfileMenu(): void {
+    this.profileMenuOpen = !this.profileMenuOpen;
+  }
+
+  closeProfileMenu(): void {
+    this.profileMenuOpen = false;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeProfileMenu();
+  }
+
+  openProfile(): void {
+    this.closeProfileMenu();
+
+    // TODO: Navigate to your profile page when implemented.
+    console.log('Open user profile');
+  }
+
+  logout(): void {
+    this.closeProfileMenu();
+
+    // TODO: Call your ASP.NET Core logout endpoint,
+    // clear authentication state, and navigate to login.
+    console.log('Logout requested');
   }
 }

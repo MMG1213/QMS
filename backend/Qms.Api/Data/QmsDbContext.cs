@@ -1,4 +1,7 @@
 
+using System.Diagnostics.SymbolStore;
+using System.Dynamic;
+//using System.Reflection.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Qms.Api.Models;
 
@@ -18,6 +21,14 @@ public class QmsDbContext : DbContext
         => Set<DepartmentApprovalMapping>();
 
     public DbSet<AppUser> AppUsers => Set<AppUser>();
+
+    //Master list models
+
+   public  DbSet<Document> Documents => Set<Document>();
+    public DbSet<DocumentRevision> DocumentRevisions => Set<DocumentRevision>();
+
+   public  DbSet<DocumentType> DocumentTypes => Set<DocumentType>();
+   public  DbSet<QMSDepartment> QMSDepartments => Set<QMSDepartment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -82,5 +93,78 @@ public class QmsDbContext : DbContext
             entity.HasIndex(m => m.DepartmentId)
                 .IsUnique();
         });
+
+        modelBuilder.Entity<QMSDepartment>(entity =>
+        {
+            entity.HasKey(d => d.DepartmentId);
+
+            entity.Property(d => d.DepartmentCode).HasMaxLength(20).IsRequired();
+
+            entity.HasIndex(d => d.DepartmentCode).IsUnique();
+
+            entity.Property(d => d.DepartmentName).HasMaxLength(100).IsRequired();
+            entity.HasIndex(d => d.DepartmentName).IsUnique();
+        });
+
+        modelBuilder.Entity<DocumentType>(entity =>
+        {
+            entity.HasKey(t => t.DocumentTypeId);
+            entity.Property(t => t.TypeCode).HasMaxLength(20).IsRequired();
+            entity.Property(t => t.TypeName).HasMaxLength(100).IsRequired();
+            entity.HasIndex(t => t.TypeCode).IsUnique();
+        });
+
+
+        modelBuilder.Entity<Document>(entity =>
+ {
+     entity.HasKey(d => d.DocumentId);
+
+     entity.Property(d => d.DocumentNo)
+         .HasMaxLength(100)
+         .IsRequired();
+
+     entity.Property(d => d.Title)
+         .HasMaxLength(250)
+         .IsRequired();
+
+     entity.HasOne(d => d.QMSDepartment)
+         .WithMany(department => department.Documents)
+         .HasForeignKey(d => d.DepartmentId)
+         .OnDelete(DeleteBehavior.Restrict);
+
+     entity.HasOne(d => d.DocumentType)
+         .WithMany(type => type.Documents)
+         .HasForeignKey(d => d.DocumentTypeId)
+         .OnDelete(DeleteBehavior.Restrict);
+
+     entity.HasIndex(d => d.DocumentNo)
+         .IsUnique();
+ });
+
+    modelBuilder.Entity<DocumentRevision>(entity =>
+{
+    entity.HasKey(r => r.Id);
+
+    entity.Property(r => r.RevisionNumber)
+        .IsRequired();
+
+    entity.Property(r => r.PageCount)
+        .IsRequired();
+
+    entity.Property(r => r.RevisionDate)
+        .HasColumnType("date")
+        .IsRequired();
+
+    entity.HasOne(r => r.Document)
+        .WithMany(d => d.Revisions)
+        .HasForeignKey(r => r.DocumentId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+    entity.HasIndex(r => new
+    {
+        r.DocumentId,
+        r.RevisionNumber
+    }).IsUnique();
+});
     }
 }
