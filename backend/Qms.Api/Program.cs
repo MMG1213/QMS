@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Qms.Api.Data;
+using Qms.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped<MasterListExcelPreviewService>();
 
 // Add services to the container.
 
