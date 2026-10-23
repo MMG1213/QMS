@@ -1,5 +1,7 @@
 
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-home',
@@ -8,6 +10,12 @@ import { Component, HostListener } from '@angular/core';
   styleUrl: './qms-dashboard.css'
 })
 export class QmsDashboardComponent {
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+  openSignupRequests(): void {
+    void this.router.navigate(['/qms/admin/signup-requests']);
+  }
+
   tabs: string[] = [
     'MasterList',
     'DCR',
@@ -19,9 +27,10 @@ export class QmsDashboardComponent {
   activeTab = 'MasterList';
   profileMenuOpen = false;
 
-  // Replace these demo values with logged-in user data.
-  userName = 'QMS User';
-  userRole = 'Quality Department';
+  private readonly currentUser = this.authService.getCurrentUser();
+
+  userName = this.currentUser?.fullName || this.currentUser?.employeeId || 'QMS User';
+  userRole = this.currentUser?.role || 'User';
 
   get userInitial(): string {
     return this.userName.trim().charAt(0).toUpperCase() || 'U';
@@ -47,16 +56,12 @@ export class QmsDashboardComponent {
 
   openProfile(): void {
     this.closeProfileMenu();
-
-    // TODO: Navigate to your profile page when implemented.
-    console.log('Open user profile');
+    // Profile page can be implemented separately.
   }
 
   logout(): void {
     this.closeProfileMenu();
-
-    // TODO: Call your ASP.NET Core logout endpoint,
-    // clear authentication state, and navigate to login.
-    console.log('Logout requested');
+    this.authService.logout();
+    void this.router.navigate(['/']);
   }
 }

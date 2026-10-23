@@ -41,32 +41,57 @@
       </svg>
     </button>
 
-    @if (profileMenuOpen) {
-      <div class="profile-menu">
-        <div class="profile-info">
-          <span class="profile-name">{{ userName }}</span>
-          <span class="profile-role">{{ userRole }}</span>
-        </div>
 
-        <div class="menu-divider"></div>
-
-        <button type="button" class="menu-item" (click)="openProfile()">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 21a8 8 0 0 1 16 0" />
-          </svg>
-          My Profile
-        </button>
-
-        <button type="button" class="menu-item logout" (click)="logout()">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M10 17l5-5-5-5" />
-            <path d="M15 12H3" />
-            <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7" />
-          </svg>
-          Logout
-        </button>
+  @if (profileMenuOpen) {
+    <div class="profile-menu">
+      <div class="profile-info">
+        <span class="profile-name">{{ userName }}</span>
+        <span class="profile-role">{{ userRole }}</span>
       </div>
+
+      <div class="menu-divider"></div>
+
+      <button
+        type="button"
+        class="menu-item"
+        (click)="openProfile()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21a8 8 0 0 1 16 0" />
+        </svg>
+        <span>My Profile</span>
+      </button>
+
+      @if (userRole === 'QMS Admin') {
+        <button
+          type="button"
+          class="menu-item"
+          (click)="openSignupRequests()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="9" cy="8" r="3.5" />
+            <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+            <path d="M17 8h5" />
+            <path d="M19.5 5.5v5" />
+          </svg>
+          <span>Manage Signup Requests</span>
+        </button>
+      }
+
+      <button
+        type="button"
+        class="menu-item logout"
+        (click)="logout()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M10 17l5-5-5-5" />
+          <path d="M15 12H3" />
+          <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7" />
+        </svg>
+        <span>Logout</span>
+      </button>
+    </div>
     }
   </div>
 </header>
