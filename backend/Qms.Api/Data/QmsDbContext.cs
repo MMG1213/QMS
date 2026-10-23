@@ -137,6 +137,12 @@ public class QmsDbContext : DbContext
          .HasForeignKey(d => d.DocumentTypeId)
          .OnDelete(DeleteBehavior.Restrict);
 
+     entity.Property(d => d.RetentionPeriod).HasMaxLength(50)
+     .IsRequired(false);
+
+     entity.Property(d => d.Status).HasMaxLength(20).HasDefaultValue("Active")
+     .IsRequired();
+
      entity.HasIndex(d => d.DocumentNo)
          .IsUnique();
  });

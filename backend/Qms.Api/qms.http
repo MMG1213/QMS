@@ -1,0 +1,14 @@
+###
+GET http://localhost:5193/api/master-list/document-types
+
+###
+Get http://localhost:5193/api/master-list/departments
+
+###
+Get http://localhost:5193/api/master-list/documents
+
+###
+Get http://localhost:5193/api/master-list/documents?documentTypeId=1&departmentId=2
+
+###
+Get http://localhost:5193/api/master-list/documents?search=Format

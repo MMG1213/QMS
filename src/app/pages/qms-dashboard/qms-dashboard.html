@@ -1,5 +1,5 @@
+
 <header class="topbar">
-  <!-- Replace this path with your actual Fujitec logo path -->
   <a class="brand" href="#" aria-label="Fujitec QMS Home">
     <img
       class="brand-logo"
@@ -31,6 +31,7 @@
       (click)="toggleProfileMenu()"
     >
       <span class="avatar">{{ userInitial }}</span>
+
       <svg
         class="chevron"
         [class.rotated]="profileMenuOpen"
@@ -42,7 +43,7 @@
     </button>
 
     @if (profileMenuOpen) {
-      <div class="profile-menu">
+      <div class="profile-menu" (click)="$event.stopPropagation()">
         <div class="profile-info">
           <span class="profile-name">{{ userName }}</span>
           <span class="profile-role">{{ userRole }}</span>
@@ -72,35 +73,292 @@
 </header>
 
 <main class="page-content" (click)="closeProfileMenu()">
-  <section class="coming-soon" aria-live="polite">
-    <div class="icon-wrapper">
-      <svg
-        class="document-icon"
-        viewBox="0 0 88 88"
-        fill="none"
-        aria-hidden="true"
-      >
-        <rect x="19" y="11" width="44" height="58" rx="5" />
-        <path d="M29 26h24M29 37h24M29 48h16" />
-        <circle cx="61" cy="61" r="15" fill="#fffafa" />
-        <path d="M61 52v10l7 4" />
-      </svg>
-      <span class="decoration-dot dot-one"></span>
-      <span class="decoration-dot dot-two"></span>
-    </div>
 
-    <div class="accent-line"></div>
+  @if (activeTab === 'MasterList') {
+    <section class="master-list-page">
 
-    <p class="eyebrow">FUJITEC QUALITY MANAGEMENT SYSTEM</p>
+      <div class="master-list-heading">
+        <div>
+          <p class="eyebrow">FUJITEC QUALITY MANAGEMENT SYSTEM</p>
+          <h1>Master List</h1>
+          <p class="description">
+            View controlled documents and their approved revision history.
+          </p>
+        </div>
 
-    <h1>Coming Soon</h1>
+        <button
+          type="button"
+          class="refresh-button"
+          (click)="loadDocuments()"
+          [disabled]="isLoadingDocuments"
+        >
+          ↻ Refresh
+        </button>
+      </div>
 
-    <p class="description">
-      The <strong>{{ activeTab }}</strong> module is currently under development.
-    </p>
+      <div class="filter-panel">
+        <div class="filter-field">
+          <label for="documentType">Document Type</label>
 
-    <p class="supporting-text">
-      We're working to bring you a streamlined quality management experience.
-    </p>
-  </section>
+          <select
+            id="documentType"
+            [ngModel]="selectedDocumentTypeId ?? ''"
+            (ngModelChange)="onDocumentTypeChange($event)"
+          >
+            <option value="">All Document Types</option>
+
+            @for (type of documentTypes; track type.documentTypeId) {
+              <option [value]="type.documentTypeId">
+                {{ type.typeName }}
+              </option>
+            }
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="department">Department</label>
+
+          <select
+            id="department"
+            [ngModel]="selectedDepartmentId ?? ''"
+            (ngModelChange)="onDepartmentChange($event)"
+          >
+            <option value="">All Departments</option>
+
+            @for (department of departments; track department.departmentId) {
+              <option [value]="department.departmentId">
+                {{ department.departmentName }}
+              </option>
+            }
+          </select>
+        </div>
+
+        <div class="filter-field search-field">
+          <label for="documentSearch">Search Documents</label>
+
+          <input
+            id="documentSearch"
+            type="search"
+            placeholder="Document number or title"
+            [(ngModel)]="searchText"
+            (keyup.enter)="onSearch()"
+          />
+        </div>
+
+        <button
+          type="button"
+          class="search-button"
+          (click)="onSearch()"
+        >
+          Search
+        </button>
+
+        <button
+          type="button"
+          class="clear-button"
+          (click)="clearFilters()"
+        >
+          Clear
+        </button>
+      </div>
+
+      @if (filterError) {
+        <div class="error-message">{{ filterError }}</div>
+      }
+
+      @if (documentError) {
+        <div class="error-message">
+          {{ documentError }}
+          <button type="button" (click)="loadDocuments()">Retry</button>
+        </div>
+      }
+
+      @if (isLoadingFilters) {
+        <p class="loading-message">
+          Loading document types and departments...
+        </p>
+      }
+
+      <section class="table-card">
+
+        <div class="table-toolbar">
+          <div>
+            <h2>Controlled Documents</h2>
+            <p>Document details and revision records</p>
+          </div>
+
+          <span class="record-count">
+            {{ documents.length }}
+            {{ documents.length === 1 ? 'document' : 'documents' }}
+          </span>
+        </div>
+
+        <div class="table-scroll">
+          <table class="master-table">
+        
+            <thead>
+              <tr>
+                <th rowspan="2" class="serial-column">Sl. No.</th>
+                <th rowspan="2" class="title-column">Title / Description</th>
+                <th rowspan="2" class="document-number-column">
+                  Document No.
+                </th>
+                <th rowspan="2" class="department-column">
+                  Department Name
+                </th>
+                <th rowspan="2" class="retention-column">
+                  Retention Period
+                </th>
+                <th rowspan="2" class="status-column">Status</th>
+        
+                @for (
+                  revisionNumber of revisionColumns;
+                  track revisionNumber
+                ) {
+                  <th colspan="2" class="revision-column">
+                    {{ formatRevision(revisionNumber) }}
+                  </th>
+                }
+              </tr>
+        
+              <tr>
+                @for (
+                  revisionNumber of revisionColumns;
+                  track revisionNumber
+                ) {
+                  <th class="revision-subcolumn">Pages</th>
+                  <th class="revision-subcolumn">Date</th>
+                }
+              </tr>
+            </thead>
+        
+            <tbody>
+              @if (isLoadingDocuments) {
+                <tr>
+                  <td
+                    class="table-message"
+                    [attr.colspan]="6 + revisionColumns.length * 2"
+                  >
+                    Loading documents...
+                  </td>
+                </tr>
+              } @else if (documents.length > 0) {
+        
+                @for (
+                  document of documents;
+                  track document.documentId;
+                  let i = $index
+                ) {
+                  <tr>
+                    <td class="serial-cell">{{ i + 1 }}</td>
+        
+                    <td class="title-cell">
+                      <span class="document-title">
+                        {{ document.title }}
+                      </span>
+                    </td>
+        
+                    <td class="document-number-cell">
+                      {{ document.documentNo }}
+                    </td>
+        
+                    <td class="department-cell">
+                      {{ document.departmentName || '—' }}
+                    </td>
+        
+                    <td class="retention-cell">
+                      {{ document.retentionPeriod ?? '—' }}
+                    </td>
+        
+                    <td class="status-cell">
+                      <span class="status-badge">
+                        {{ document.status ?? '—' }}
+                      </span>
+                    </td>
+        
+                    @for (
+                      revisionNumber of revisionColumns;
+                      track revisionNumber
+                    ) {
+                      @if (
+                        getRevision(document, revisionNumber);
+                        as revision
+                      ) {
+                        <td class="revision-cell page-count">
+                          {{ revision.pageCount }}
+                        </td>
+        
+                        <td class="revision-cell revision-date">
+                          {{ formatDate(revision.revisionDate) }}
+                        </td>
+                      } @else {
+                        <td class="revision-cell empty-revision">—</td>
+                        <td class="revision-cell empty-revision">—</td>
+                      }
+                    }
+                  </tr>
+                }
+        
+              } @else if (!documentError) {
+                <tr>
+                  <td
+                    class="table-message empty-state"
+                    [attr.colspan]="6 + revisionColumns.length * 2"
+                  >
+                    <strong>No documents found</strong>
+                    <span>
+                      Matching documents will appear here when records
+                      are available in the database.
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+        
+          </table>
+        </div>
+        
+
+        <div class="table-footer">
+          <span>Showing {{ documents.length }} document(s)</span>
+          <span>Revision data retrieved from the database</span>
+        </div>
+
+      </section>
+    </section>
+
+  } @else {
+    <section class="coming-soon" aria-live="polite">
+      <div class="icon-wrapper">
+        <svg
+          class="document-icon"
+          viewBox="0 0 88 88"
+          fill="none"
+          aria-hidden="true"
+        >
+          <rect x="19" y="11" width="44" height="58" rx="5" />
+          <path d="M29 26h24M29 37h24M29 48h16" />
+          <circle cx="61" cy="61" r="15" fill="#fffafa" />
+          <path d="M61 52v10l7 4" />
+        </svg>
+
+        <span class="decoration-dot dot-one"></span>
+        <span class="decoration-dot dot-two"></span>
+      </div>
+
+      <div class="accent-line"></div>
+
+      <p class="eyebrow">FUJITEC QUALITY MANAGEMENT SYSTEM</p>
+
+      <h1>Coming Soon</h1>
+
+      <p class="description">
+        The <strong>{{ activeTab }}</strong> module is currently under development.
+      </p>
+
+      <p class="supporting-text">
+        We're working to bring you a streamlined quality management experience.
+      </p>
+    </section>
+  }
 </main>
