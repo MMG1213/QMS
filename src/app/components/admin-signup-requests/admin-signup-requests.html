@@ -1,0 +1,401 @@
+
+<main class="admin-page">
+  <header class="page-header">
+    <div class="page-heading">
+      <p class="eyebrow">FUJITEC · QUALITY MANAGEMENT SYSTEM</p>
+      <h1>Signup Requests</h1>
+      <p class="subtitle">
+        Review employee details and requested roles before granting QMS access.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="secondary-button"
+      (click)="goBack()"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M19 12H5" />
+        <path d="m12 19-7-7 7-7" />
+      </svg>
+      Back to Dashboard
+    </button>
+  </header>
+
+  <section class="request-panel">
+    <div class="panel-toolbar">
+      <div class="panel-heading">
+        <h2>Employee Requests</h2>
+        <p>Review each request before granting access.</p>
+      </div>
+
+      <div class="filters">
+        <label for="statusFilter">Request status</label>
+
+        <select
+          id="statusFilter"
+          [value]="selectedStatus"
+          (change)="changeStatus($any($event.target).value)"
+          [disabled]="isLoading || reviewingId !== null"
+        >
+          <option value="Pending">Pending</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+
+        <button
+          type="button"
+          class="refresh-button"
+          (click)="loadRequests()"
+          [disabled]="isLoading || reviewingId !== null"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 7v5h-5" />
+            <path d="M4 17v-5h5" />
+            <path d="M5.6 9A7 7 0 0 1 18 6l2 6" />
+            <path d="M18.4 15A7 7 0 0 1 6 18l-2-6" />
+          </svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    @if (errorMessage) {
+      <div class="feedback error" role="alert">
+        <strong>Something went wrong</strong>
+        <p>{{ errorMessage }}</p>
+      </div>
+    }
+
+    @if (successMessage) {
+      <div class="feedback success" role="status">
+        <strong>Success</strong>
+        <p>{{ successMessage }}</p>
+      </div>
+    }
+
+    @if (isLoading) {
+      <div class="state-panel" role="status">
+        <span class="loading-spinner" aria-hidden="true"></span>
+        <h3>Loading requests</h3>
+        <p>Please wait while we retrieve employee requests.</p>
+      </div>
+    } @else if (errorMessage && requests.length === 0) {
+      <div class="state-panel error-state">
+        <h3>Unable to load requests</h3>
+        <p>{{ errorMessage }}</p>
+        <button
+          type="button"
+          class="primary-button"
+          (click)="loadRequests()"
+        >
+          Try again
+        </button>
+      </div>
+    } @else if (requests.length === 0) {
+      <div class="state-panel">
+        <div class="empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M8 3h8l4 4v14H4V3z" />
+            <path d="M8 3v5h8V3" />
+            <path d="M8 13h8M8 17h5" />
+          </svg>
+        </div>
+
+        <h3>No {{ selectedStatus.toLowerCase() }} requests</h3>
+        <p>
+          There are currently no employee signup requests with this status.
+        </p>
+      </div>
+    } @else {
+      <div class="results-summary">
+        <span>
+          Showing <strong>{{ requests.length }}</strong>
+          {{ requests.length === 1 ? 'request' : 'requests' }}
+        </span>
+
+        <span class="results-status">
+          {{ selectedStatus }} requests
+        </span>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee ID</th>
+              <th>Employee details</th>
+              <th>Department</th>
+              <th>Requested role</th>
+              <th>Requested on</th>
+              <th>Status</th>
+
+              @if (selectedStatus === 'Pending') {
+                <th class="actions-column">Actions</th>
+              }
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (request of requests; track request.id) {
+              <tr>
+                <td>
+                  <span class="employee-id">
+                    {{ request.employeeId }}
+                  </span>
+                </td>
+
+                <td>
+                  <div class="employee-details">
+                    <span class="employee-name">
+                      {{ request.fullName }}
+                    </span>
+                    <span class="employee-email">
+                      {{ request.email }}
+                    </span>
+                  </div>
+                </td>
+
+                <td>
+                  <span class="department-name">
+                    {{ request.departmentName || '—' }}
+                  </span>
+                </td>
+
+                <td>
+                  <span class="role-pill">
+                    {{ request.role }}
+                  </span>
+                </td>
+
+                <td>
+                  <span class="request-date">
+                    {{ request.requestedAtUtc | date:'dd MMM yyyy' }}
+                  </span>
+                  <span class="request-time">
+                    {{ request.requestedAtUtc | date:'hh:mm a' }}
+                  </span>
+                </td>
+
+                <td>
+                  <span
+                    class="status-pill"
+                    [class.pending]="request.status === 'Pending'"
+                    [class.approved]="request.status === 'Approved'"
+                    [class.rejected]="request.status === 'Rejected'"
+                    [class.completed]="request.status === 'Completed'"
+                  >
+                    <span class="status-dot"></span>
+                    {{ request.status }}
+                  </span>
+                </td>
+
+                @if (selectedStatus === 'Pending') {
+                  <td>
+                    <div class="row-actions">
+                      <button
+                        type="button"
+                        class="approve-button"
+                        [disabled]="reviewingId !== null"
+                        (click)="reviewRequest(request, 'Approve')"
+                      >
+                        {{
+                          reviewingId === request.id
+                            ? 'Processing...'
+                            : 'Approve'
+                        }}
+                      </button>
+
+                      <button
+                        type="button"
+                        class="reject-button"
+                        [disabled]="reviewingId !== null"
+                        (click)="reviewRequest(request, 'Reject')"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <section class="create-account-panel">
+    <div class="create-account-heading">
+      <div>
+        <p class="eyebrow">ACCOUNT MANAGEMENT</p>
+        <h2>Create New Account</h2>
+        <p>
+          Create an active employee account without a signup approval request.
+        </p>
+      </div>
+    </div>
+
+    @if (createAccountError) {
+      <div class="feedback error" role="alert">
+        <strong>Unable to create account</strong>
+        <p>{{ createAccountError }}</p>
+      </div>
+    }
+
+    @if (createAccountSuccess) {
+      <div class="feedback success" role="status">
+        <strong>Account created</strong>
+        <p>{{ createAccountSuccess }}</p>
+      </div>
+    }
+
+    <form
+      [formGroup]="createAccountForm"
+      (ngSubmit)="createAccount()"
+      class="create-account-form"
+    >
+      <div class="account-field">
+        <label for="newEmployeeId">Employee ID</label>
+        <input
+          id="newEmployeeId"
+          type="text"
+          formControlName="employeeId"
+          autocomplete="off"
+          placeholder="Enter employee ID"
+          maxlength="50"
+        />
+
+        @if (
+          createAccountForm.controls.employeeId.touched &&
+          createAccountForm.controls.employeeId.invalid
+        ) {
+          <small class="field-error">
+            Employee ID is required and must not exceed 50 characters.
+          </small>
+        }
+      </div>
+
+      <div class="account-field">
+        <label for="newFullName">Full name</label>
+        <input
+          id="newFullName"
+          type="text"
+          formControlName="fullName"
+          autocomplete="name"
+          placeholder="Enter full name"
+          maxlength="150"
+        />
+
+        @if (
+          createAccountForm.controls.fullName.touched &&
+          createAccountForm.controls.fullName.invalid
+        ) {
+          <small class="field-error">
+            Full name is required and must not exceed 150 characters.
+          </small>
+        }
+      </div>
+
+      <div class="account-field">
+        <label for="newEmail">Work email</label>
+        <input
+          id="newEmail"
+          type="email"
+          formControlName="email"
+          autocomplete="off"
+          placeholder="employee@company.com"
+          maxlength="256"
+        />
+
+        @if (
+          createAccountForm.controls.email.touched &&
+          createAccountForm.controls.email.invalid
+        ) {
+          <small class="field-error">
+            Enter a valid work email address.
+          </small>
+        }
+      </div>
+
+      <div class="account-field">
+        <label for="newDepartment">Department</label>
+        <select id="newDepartment" formControlName="departmentId">
+          <option [ngValue]="0">Select department</option>
+          @for (department of adminDepartments; track department.id) {
+            <option [ngValue]="department.id">
+              {{ department.name }}
+            </option>
+          }
+        </select>
+
+        @if (
+          createAccountForm.controls.departmentId.touched &&
+          createAccountForm.controls.departmentId.invalid
+        ) {
+          <small class="field-error">
+            Please select a department.
+          </small>
+        }
+      </div>
+
+      <div class="account-field">
+        <label for="newRole">Role</label>
+        <select id="newRole" formControlName="role">
+          @for (role of accountRoles; track role) {
+            <option [value]="role">{{ role }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="account-field">
+        <label for="newPassword">Initial password</label>
+        <input
+          id="newPassword"
+          type="password"
+          formControlName="password"
+          autocomplete="new-password"
+          placeholder="Create initial password"
+          maxlength="128"
+        />
+        <small>
+          Minimum 8 characters, including uppercase, number and special
+          character. Spaces are not allowed.
+        </small>
+
+        @if (
+          createAccountForm.controls.password.touched &&
+          createAccountForm.controls.password.invalid
+        ) {
+          <small class="field-error">
+            Password must be 8–128 characters and contain an uppercase
+            letter, a number and a special character.
+          </small>
+        }
+      </div>
+
+      <div class="create-account-actions">
+        <button
+          type="submit"
+          class="create-account-button"
+          [disabled]="
+            isCreatingAccount ||
+            createAccountForm.invalid ||
+            adminDepartments.length === 0
+          "
+        >
+          {{
+            isCreatingAccount
+              ? 'Creating account...'
+              : 'Create Active Account'
+          }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <footer class="page-footer">
+    <span>FUJITEC Quality Management System</span>
+    <span>Authorized personnel only</span>
+  </footer>
+</main>

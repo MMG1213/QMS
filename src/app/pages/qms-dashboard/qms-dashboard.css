@@ -27,7 +27,7 @@ button:disabled {
   opacity: 0.6;
 }
 
-/* Compact header and logo */
+/* Header and logo */
 
 .topbar {
   min-height: 64px;
@@ -180,32 +180,58 @@ button:disabled {
   background: #eceef1;
 }
 
-.menu-item {
+.menu-item,
+.profile-menu .menu-item {
   width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 40px;
   padding: 10px;
   color: #444852;
   background: transparent;
   border: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   text-align: left;
+  font-family: inherit;
   font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.menu-item svg {
-  width: 17px;
-  height: 17px;
+.menu-item svg,
+.profile-menu .menu-item svg {
+  display: block;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.profile-menu .menu-item span {
+  min-width: 0;
 }
 
 .menu-item:hover,
-.menu-item.logout:hover {
+.menu-item.logout:hover,
+.profile-menu .menu-item:hover {
   color: #c8102e;
   background: #fff1f3;
+}
+
+.menu-item.logout,
+.profile-menu .menu-item.logout {
+  color: #d21f2b;
+}
+
+.menu-item.logout:hover,
+.profile-menu .menu-item.logout:hover {
+  background: #fff0f1;
 }
 
 /* Main page */
@@ -276,7 +302,7 @@ button:disabled {
   border-color: #c8102e;
 }
 
-/* Compact, aligned filters */
+/* Filters */
 
 .filter-panel {
   display: grid;
@@ -391,114 +417,148 @@ button:disabled {
   font-size: 12px;
 }
 
-/* Table container */
+/* Master List table */
 
 .table-card {
   width: 100%;
   min-width: 0;
   overflow: hidden;
   background: #fff;
-  border: 1px solid #e1e4e8;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgb(25 30 45 / 3%);
+  border: 1px solid #e1e5eb;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgb(16 24 40 / 4%);
 }
 
 .table-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 15px;
-  padding: 15px 18px;
-  border-bottom: 1px solid #e7e9ed;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e7eaf0;
 }
 
 .table-toolbar h2 {
   margin: 0;
-  color: #2c2f36;
-  font-size: 14px;
+  color: #202939;
+  font-size: 17px;
   font-weight: 700;
+  letter-spacing: -0.2px;
 }
 
 .table-toolbar p {
   margin: 5px 0 0;
-  color: #7d818a;
-  font-size: 11px;
+  color: #667085;
+  font-size: 13px;
 }
 
 .record-count {
-  flex: 0 0 auto;
-  padding: 6px 10px;
-  color: #a80c25;
-  background: #fff0f2;
+  flex-shrink: 0;
+  padding: 7px 12px;
+  color: #b4232f;
+  background: #fff1f2;
+  border: 1px solid #ffe0e3;
   border-radius: 20px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-/* Dynamic revision columns */
-
-.table-scroll {
-  width: 100%;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-}
-
-.master-table {
-  width: 100%;
-  min-width: 700px;
-  border-collapse: separate;
-  border-spacing: 0;
-  text-align: left;
-}
-
-.master-table thead th {
-  padding: 12px 14px;
-  color: #4e535d;
-  background: #f5f6f8;
-  border-bottom: 1px solid #e0e3e8;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
 }
 
-.master-table tbody td {
-  padding: 13px 14px;
-  border-bottom: 1px solid #eceef1;
+/* Horizontal scrolling for dynamic revision columns */
+
+.table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+  max-height: 65vh;
+  overscroll-behavior: contain;
+}
+
+.master-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+  color: #344054;
+  font-size: 13px;
+  text-align: left;
+}
+
+.master-table th,
+.master-table td {
+  display: table-cell;
+  box-sizing: border-box;
   vertical-align: middle;
+  border-right: 1px solid #edf0f4;
+  border-bottom: 1px solid #e8ebf0;
 }
 
-.master-table tbody tr:last-child td {
-  border-bottom: 0;
+.master-table th:last-child,
+.master-table td:last-child {
+  border-right: none;
 }
 
-.master-table tbody tr:hover {
-  background: #fffafb;
-}
+/* Sticky two-level header */
 
-.serial-column,
-.serial-cell {
-  width: 65px;
-  text-align: center !important;
-}
-
-.serial-cell {
-  color: #747984;
+.master-table thead th {
+  position: sticky;
+  z-index: 3;
+  padding: 12px 14px;
+  color: #344054;
+  background: #f4f6f9;
+  text-align: center;
   font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.title-column,
-.title-cell {
-  min-width: 220px;
+.master-table thead tr:first-child th {
+  top: 0;
+  height: 43px;
+  border-bottom: 1px solid #dfe4ec;
+}
+
+.master-table thead tr:nth-child(2) th {
+  top: 43px;
+  height: 37px;
+  background: #fafbfc;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Document detail columns */
+
+.master-table .serial-column,
+.serial-column {
+  min-width: 70px;
+  width: 70px;
+  text-align: center;
+}
+
+.serial-cell {
+  color: #667085;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.master-table .title-column,
+.title-column {
+  min-width: 270px;
+  text-align: left;
 }
 
 .title-cell {
+  min-width: 270px;
   max-width: 360px;
+  text-align: left;
 }
 
 .document-title {
   display: block;
-  color: #30333a;
-  font-size: 12px;
+  color: #202939;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -507,82 +567,176 @@ button:disabled {
 .department-name {
   display: block;
   margin-top: 4px;
-  color: #858994;
-  font-size: 10px;
+  color: #7a8495;
+  font-size: 11px;
   line-height: 1.5;
 }
 
-.document-number-column,
+.master-table .document-number-column,
+.document-number-column {
+  min-width: 155px;
+}
+
 .document-number-cell {
+  color: #344054;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.master-table .department-column,
+.department-column,
+.department-cell {
+  min-width: 200px;
+  width: 200px;
+}
+
+.department-cell {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.master-table .retention-column {
   min-width: 145px;
 }
 
-.document-number-cell {
-  color: #383c45;
-  font-family: Consolas, "Courier New", monospace;
-  font-size: 11px;
-  font-weight: 700;
+.master-table .status-column {
+  min-width: 115px;
+}
+
+.retention-cell,
+.status-cell {
+  text-align: center;
   white-space: nowrap;
 }
 
-.revision-column,
-.revision-cell {
-  min-width: 125px;
-  text-align: center !important;
+/* Body rows */
+
+.master-table tbody td {
+  height: 62px;
+  padding: 13px 14px;
+  background: #fff;
+  line-height: 1.5;
 }
 
+.master-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.master-table tbody tr:hover td {
+  background: #fafbfe;
+}
+
+.master-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Dynamic revision groups */
+
+.master-table .revision-column,
+.revision-column {
+  min-width: 200px;
+  width: 200px;
+  background: #f0f3f8;
+  color: #26364b;
+  font-size: 12px;
+  text-align: center;
+}
+
+.master-table .revision-subcolumn {
+  min-width: 100px;
+  width: 100px;
+}
+
+.master-table .revision-cell,
 .revision-cell {
+  min-width: 100px;
+  width: 100px;
+  height: 62px;
+  padding: 13px 12px;
+  text-align: center;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .page-count {
   display: block;
-  color: #343842;
-  font-size: 11px;
-  font-weight: 600;
+  color: #26364b;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .revision-date {
   display: block;
   margin-top: 5px;
-  color: #818590;
-  font-size: 10px;
+  color: #667085;
+  font-size: 12px;
 }
 
+.master-table td.empty-revision,
 .empty-revision {
-  color: #b5b8bf;
-  font-size: 14px;
+  color: #98a2b3;
+  font-size: 15px;
+  text-align: center;
 }
 
+/* Status badge */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 5px 10px;
+  border: 1px solid #d0eadb;
+  border-radius: 20px;
+  background: #ecfdf3;
+  color: #067647;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Empty states and table messages */
+
+.master-table .table-message,
 .table-message {
-  padding: 32px 18px !important;
-  color: #777c85;
+  padding: 40px 20px !important;
+  color: #667085;
   text-align: center;
+  background: #fff;
   line-height: 1.7;
 }
 
-.empty-state strong {
+.empty-state strong,
+.empty-state span {
   display: block;
-  margin-bottom: 5px;
-  color: #424650;
-  font-size: 13px;
+}
+
+.empty-state strong {
+  margin-bottom: 7px;
+  color: #344054;
+  font-size: 14px;
 }
 
 .empty-state span {
-  display: block;
   font-size: 12px;
 }
+
+/* Table footer */
 
 .table-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 18px;
-  color: #7c818a;
-  background: #fcfcfd;
-  border-top: 1px solid #e8eaee;
-  font-size: 10px;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 24px;
+  color: #667085;
+  background: #fff;
+  border-top: 1px solid #e7eaf0;
+  font-size: 12px;
 }
 
 /* Other modules */
@@ -691,6 +845,20 @@ button:disabled {
   }
 }
 
+@media (max-width: 768px) {
+  .table-toolbar {
+    padding: 16px;
+  }
+
+  .table-footer {
+    padding: 12px 16px;
+  }
+
+  .table-scroll {
+    max-height: 70vh;
+  }
+}
+
 @media (max-width: 650px) {
   .topbar {
     flex-wrap: wrap;
@@ -765,335 +933,4 @@ button:disabled {
   .coming-soon {
     min-height: 330px;
   }
-}
-
-
-
-/* =========================================
-   ENTERPRISE MASTER LIST TABLE
-   ========================================= */
-
-   .table-card {
-    width: 100%;
-    min-width: 0;
-    overflow: hidden;
-    background: #ffffff;
-    border: 1px solid #e1e5eb;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.04);
-  }
-  
-  .table-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 20px 24px;
-    border-bottom: 1px solid #e7eaf0;
-  }
-  
-  .table-toolbar h2 {
-    margin: 0;
-    color: #202939;
-    font-size: 17px;
-    font-weight: 700;
-    letter-spacing: -0.2px;
-  }
-  
-  .table-toolbar p {
-    margin: 5px 0 0;
-    color: #667085;
-    font-size: 13px;
-  }
-  
-  .record-count {
-    flex-shrink: 0;
-    padding: 7px 12px;
-    color: #b4232f;
-    background: #fff1f2;
-    border: 1px solid #ffe0e3;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-  
-  /* Horizontal scrolling for unlimited revisions */
-  
-  .table-scroll {
-    width: 100%;
-    max-width: 100%;
-    overflow: auto;
-    max-height: 65vh;
-    overscroll-behavior: contain;
-  }
-  
-  /* Base table layout */
-  
-  .master-table {
-    width: max-content;
-    min-width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    table-layout: auto;
-    color: #344054;
-    font-size: 13px;
-  }
-  
-  /* Restore actual table-cell behaviour.
-     This prevents revision values from breaking into
-     separate vertical blocks. */
-  
-  .master-table th,
-  .master-table td {
-    display: table-cell;
-    box-sizing: border-box;
-    vertical-align: middle;
-    border-right: 1px solid #edf0f4;
-    border-bottom: 1px solid #e8ebf0;
-  }
-  
-  .master-table th:last-child,
-  .master-table td:last-child {
-    border-right: none;
-  }
-  
-  /* Two-level header */
-  
-  .master-table thead th {
-    position: sticky;
-    z-index: 3;
-    padding: 12px 14px;
-    color: #344054;
-    background: #f4f6f9;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-  
-  .master-table thead tr:first-child th {
-    top: 0;
-    height: 43px;
-    border-bottom: 1px solid #dfe4ec;
-  }
-  
-  .master-table thead tr:nth-child(2) th {
-    top: 43px;
-    height: 37px;
-    background: #fafbfc;
-    color: #667085;
-    font-size: 11px;
-    font-weight: 600;
-  }
-  
-  /* Document detail columns */
-  
-  .master-table .serial-column {
-    min-width: 70px;
-    width: 70px;
-  }
-  
-  .master-table .title-column {
-    min-width: 270px;
-    text-align: left;
-  }
-  
-  .master-table .document-number-column {
-    min-width: 155px;
-  }
-  
-  .master-table .retention-column {
-    min-width: 145px;
-  }
-  
-  .master-table .status-column {
-    min-width: 115px;
-  }
-  
-  .master-table tbody td {
-    height: 62px;
-    padding: 13px 14px;
-    background: #ffffff;
-    line-height: 1.5;
-  }
-  
-  .master-table tbody tr {
-    transition: background-color 0.15s ease;
-  }
-  
-  .master-table tbody tr:hover td {
-    background: #fafbfe;
-  }
-  
-  .master-table tbody tr:last-child td {
-    border-bottom: none;
-  }
-  
-  .serial-cell {
-    color: #667085;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
-  }
-  
-  .title-cell {
-    min-width: 270px;
-    max-width: 360px;
-    text-align: left;
-  }
-  
-  .document-title {
-    display: block;
-    color: #202939;
-    font-size: 13px;
-    font-weight: 600;
-    overflow-wrap: anywhere;
-  }
-  
-  .department-name {
-    display: block;
-    margin-top: 4px;
-    color: #7a8495;
-    font-size: 11px;
-  }
-  
-  .document-number-cell {
-    color: #344054;
-    font-family: Consolas, monospace;
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  
-  .retention-cell,
-  .status-cell {
-    text-align: center;
-    white-space: nowrap;
-  }
-  
-  /* Status badge */
-  
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 72px;
-    padding: 5px 10px;
-    border: 1px solid #d0eadb;
-    border-radius: 20px;
-    background: #ecfdf3;
-    color: #067647;
-    font-size: 11px;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-  
-  /* Dynamic revision groups */
-  
-  .master-table .revision-column {
-    min-width: 200px;
-    width: 200px;
-    background: #f0f3f8;
-    color: #26364b;
-    font-size: 12px;
-  }
-  
-  .master-table .revision-subcolumn {
-    min-width: 100px;
-    width: 100px;
-  }
-  
-  .master-table .revision-cell {
-    min-width: 100px;
-    width: 100px;
-    height: 62px;
-    padding: 13px 12px;
-    text-align: center;
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-  }
-  
-  /* Pages and date each occupy their own table cell */
-  
-  .master-table td.page-count {
-    color: #26364b;
-    font-size: 13px;
-    font-weight: 700;
-  }
-  
-  .master-table td.revision-date {
-    color: #667085;
-    font-size: 12px;
-  }
-  
-  .master-table td.empty-revision {
-    color: #98a2b3;
-    font-size: 15px;
-    text-align: center;
-  }
-  
-  /* Loading and empty states */
-  
-  .master-table .table-message {
-    padding: 40px 20px;
-    color: #667085;
-    text-align: center;
-    background: #ffffff;
-  }
-  
-  .empty-state strong,
-  .empty-state span {
-    display: block;
-  }
-  
-  .empty-state strong {
-    margin-bottom: 7px;
-    color: #344054;
-    font-size: 14px;
-  }
-  
-  .empty-state span {
-    font-size: 12px;
-  }
-  
-  /* Footer */
-  
-  .table-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 14px 24px;
-    color: #667085;
-    background: #ffffff;
-    border-top: 1px solid #e7eaf0;
-    font-size: 12px;
-  }
-  
-  /* Smaller screens */
-  
-  @media (max-width: 768px) {
-    .table-toolbar {
-      padding: 16px;
-    }
-  
-    .table-footer {
-      padding: 12px 16px;
-    }
-  
-    .table-scroll {
-      max-height: 70vh;
-    }
-  }
-  
-  .department-column,
-.department-cell {
-  min-width: 200px;
-  width: 200px;
-}
-
-.department-cell {
-  white-space: normal;
-  overflow-wrap: anywhere;
 }

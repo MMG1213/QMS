@@ -1,14 +1,22 @@
 
-import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject } from '@angular/core';
 import {
   FormBuilder,
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
 import { Router } from '@angular/router';
+import { finalize, timeout } from 'rxjs';
+
+import {
+  AuthService,
+  DepartmentOption
+} from '../../services/auth.service';
 
 type PageMode = 'login' | 'forgot' | 'signup';
+type SignupRole = 'User' | 'Department Head';
 
 @Component({
   selector: 'app-login',
@@ -18,58 +26,210 @@ type PageMode = 'login' | 'forgot' | 'signup';
   styleUrl: './login.css'
 })
 export class Login {
+  private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
+
   mode: PageMode = 'login';
   showPassword = false;
+  isLoading = false;
+  isLoadingDepartments = false;
+
   message = '';
   messageType: 'error' | 'success' = 'error';
 
-  loginForm;
-  forgotForm;
-  signupForm;
+  departments: DepartmentOption[] = [];
 
-  constructor(private fb: FormBuilder, private router: Router) {
-    this.loginForm = this.fb.nonNullable.group({
-      username: ['', Validators.required],
-      password: ['', Validators.required]
-    });
+  readonly signupRoles: SignupRole[] = [
+    'User',
+    'Department Head'
+  ];
 
-    this.forgotForm = this.fb.nonNullable.group({
-      email: ['', [Validators.required, Validators.email]]
-    });
+  private readonly passwordPattern =
+    /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s])\S{8,128}$/;
 
-    this.signupForm = this.fb.nonNullable.group({
-      employeeId: ['', Validators.required],
-      name: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(8)]]
-    });
-  }
+  loginForm = this.fb.nonNullable.group({
+    username: ['', Validators.required],
+    password: ['', Validators.required]
+  });
+
+  forgotForm = this.fb.nonNullable.group({
+    email: [
+      '',
+      [
+        Validators.required,
+        Validators.email,
+        Validators.maxLength(256)
+      ]
+    ]
+  });
+
+  signupForm = this.fb.nonNullable.group({
+    employeeId: [
+      '',
+      [
+        Validators.required,
+        Validators.maxLength(50)
+      ]
+    ],
+    name: [
+      '',
+      [
+        Validators.required,
+        Validators.maxLength(150)
+      ]
+    ],
+    email: [
+      '',
+      [
+        Validators.required,
+        Validators.email,
+        Validators.maxLength(256)
+      ]
+    ],
+    departmentId: [
+      0,
+      [
+        Validators.required,
+        Validators.min(1)
+      ]
+    ],
+    role: [
+      'User' as SignupRole,
+      Validators.required
+    ],
+    password: [
+      '',
+      [
+        Validators.required,
+        Validators.minLength(8),
+        Validators.maxLength(128),
+        Validators.pattern(this.passwordPattern)
+      ]
+    ]
+  });
 
   setMode(mode: PageMode): void {
     this.mode = mode;
     this.message = '';
+    this.messageType = 'error';
     this.showPassword = false;
+    this.isLoading = false;
+
+    if (mode === 'signup' && this.departments.length === 0) {
+      this.loadDepartments();
+    }
   }
 
-  signIn(): void {
-    if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
-      this.showMessage('Enter your username and password.');
+  private loadDepartments(): void {
+    if (this.isLoadingDepartments) {
       return;
     }
 
-    const { username, password } = this.loginForm.getRawValue();
+    this.isLoadingDepartments = true;
+    this.message = '';
 
-    if(username === 'admin' && password === 'admin') {
-      this.router.navigate(['/qms']);
-    } else {
-      this.showMessage('Invalid username or password.');
+    this.authService
+      .getActiveDepartments()
+      .pipe(
+        finalize(() => {
+          this.isLoadingDepartments = false;
+        })
+      )
+      .subscribe({
+        next: (response: DepartmentOption[]) => {
+          this.departments = response ?? [];
+
+          if (this.departments.length === 0) {
+            this.showMessage(
+              'No active departments are available.'
+            );
+          }
+        },
+        error: (error: HttpErrorResponse) => {
+          this.departments = [];
+
+          this.showMessage(
+            error.status === 0
+              ? 'Cannot connect to the QMS server. Check that the backend is running.'
+              : 'Unable to load departments. Please try again.'
+          );
+        }
+      });
+  }
+
+  signIn(): void {
+    if (this.isLoading) {
+      return;
     }
 
-    this.showMessage(
-      'The form is valid. Connect your authentication API to sign in.',
-      'success'
-    );
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      this.showMessage(
+        'Enter your employee ID or email and password.'
+      );
+      return;
+    }
+
+    const { username, password } =
+      this.loginForm.getRawValue();
+
+    this.isLoading = true;
+    this.message = '';
+    this.messageType = 'error';
+
+    this.authService
+      .login({
+        loginId: username.trim(),
+        password
+      })
+      .pipe(
+        timeout({ first: 15000 }),
+        finalize(() => {
+          this.isLoading = false;
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.isLoading = false;
+          void this.router.navigate(['/qms']);
+        },
+        error: (error: HttpErrorResponse | Error) => {
+          // Reset immediately on failure; finalize is an additional safeguard.
+          this.isLoading = false;
+
+          if (
+            error instanceof HttpErrorResponse &&
+            error.status === 401
+          ) {
+            this.showMessage(
+              'Invalid credentials or inactive account.'
+            );
+          } else if (
+            error instanceof HttpErrorResponse &&
+            error.status === 400
+          ) {
+            this.showMessage(
+              'Please check your login details and try again.'
+            );
+          } else if (
+            error instanceof HttpErrorResponse &&
+            error.status === 0
+          ) {
+            this.showMessage(
+              'Cannot connect to the QMS server. Check that the backend is running.'
+            );
+          } else if (error.name === 'TimeoutError') {
+            this.showMessage(
+              'The login request timed out. Check the backend and try again.'
+            );
+          } else {
+            this.showMessage(
+              'Sign-in failed. Please try again or contact the QMS administrator.'
+            );
+          }
+        }
+      });
   }
 
   requestPasswordReset(): void {
@@ -80,24 +240,93 @@ export class Login {
     }
 
     this.showMessage(
-      'The email is valid. Password reset requires a backend service.',
-      'success'
+      'Password reset is not connected yet. Please contact your QMS administrator.'
     );
   }
 
   requestSignup(): void {
     if (this.signupForm.invalid) {
       this.signupForm.markAllAsTouched();
+
       this.showMessage(
-        'Complete all fields. Your password must contain at least 8 characters.'
+        'Complete all fields and meet the password requirements.'
       );
       return;
     }
 
-    this.showMessage(
-      'The form is valid. Connect the registration API to request QMS access.',
-      'success'
-    );
+    if (this.isLoading || this.isLoadingDepartments) {
+      return;
+    }
+
+    const form = this.signupForm.getRawValue();
+
+    const employeeId = form.employeeId.trim();
+    const fullName = form.name.trim();
+    const email = form.email.trim();
+
+    if (!employeeId || !fullName || !email || form.departmentId < 1) {
+      this.showMessage(
+        'Enter valid employee details and select a department.'
+      );
+      return;
+    }
+
+    this.isLoading = true;
+    this.message = '';
+
+    this.authService
+      .submitSignup({
+        employeeId,
+        fullName,
+        email,
+        departmentId: Number(form.departmentId),
+        role: form.role,
+        password: form.password
+      })
+      .pipe(
+        finalize(() => {
+          this.isLoading = false;
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          this.showMessage(
+            response.message ||
+              'Your signup request has been submitted for QMS Admin review.',
+            'success'
+          );
+
+          this.signupForm.reset({
+            employeeId: '',
+            name: '',
+            email: '',
+            departmentId: 0,
+            role: 'User',
+            password: ''
+          });
+        },
+        error: (error: HttpErrorResponse) => {
+          if (error.status === 409) {
+            this.showMessage(
+              error.error?.message ||
+                'An account or pending request already exists for these details.'
+            );
+          } else if (error.status === 0) {
+            this.showMessage(
+              'Cannot connect to the QMS server. Check that the backend is running.'
+            );
+          } else if (error.status === 400) {
+            this.showMessage(
+              error.error?.message ||
+                'Please check your details, selected department, and password.'
+            );
+          } else {
+            this.showMessage(
+              'Signup failed. Please try again or contact the QMS administrator.'
+            );
+          }
+        }
+      });
   }
 
   private showMessage(

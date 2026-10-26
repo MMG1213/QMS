@@ -1,7 +1,4 @@
 
-using System.Diagnostics.SymbolStore;
-using System.Dynamic;
-//using System.Reflection.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Qms.Api.Models;
 
@@ -21,14 +18,15 @@ public class QmsDbContext : DbContext
         => Set<DepartmentApprovalMapping>();
 
     public DbSet<AppUser> AppUsers => Set<AppUser>();
-
-    //Master list models
+    public DbSet<AccountRequest> AccountRequests => Set<AccountRequest>();
 
    public  DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentRevision> DocumentRevisions => Set<DocumentRevision>();
 
    public  DbSet<DocumentType> DocumentTypes => Set<DocumentType>();
    public  DbSet<QMSDepartment> QMSDepartments => Set<QMSDepartment>();
+   public DbSet<PasswordResetToken> PasswordResetTokens
+    => Set<PasswordResetToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -62,6 +60,17 @@ public class QmsDbContext : DbContext
                 .HasMaxLength(256)
                 .IsRequired();
 
+            entity.Property(u => u.PasswordHash)
+                .HasMaxLength(500)
+                .IsRequired();
+
+            entity.Property(u => u.Role)
+                .HasMaxLength(30)
+                .IsRequired();
+
+            entity.Property(u => u.CreatedAtUtc)
+                .IsRequired();
+
             entity.HasIndex(u => u.EmployeeId)
                 .IsUnique();
 
@@ -71,6 +80,7 @@ public class QmsDbContext : DbContext
             entity.HasOne(u => u.Department)
                 .WithMany()
                 .HasForeignKey(u => u.DepartmentId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -116,26 +126,26 @@ public class QmsDbContext : DbContext
 
 
         modelBuilder.Entity<Document>(entity =>
- {
-     entity.HasKey(d => d.DocumentId);
+        {
+            entity.HasKey(d => d.DocumentId);
 
-     entity.Property(d => d.DocumentNo)
-         .HasMaxLength(100)
-         .IsRequired();
+            entity.Property(d => d.DocumentNo)
+                .HasMaxLength(100)
+                .IsRequired();
 
-     entity.Property(d => d.Title)
-         .HasMaxLength(250)
-         .IsRequired();
+            entity.Property(d => d.Title)
+                .HasMaxLength(250)
+                .IsRequired();
 
-     entity.HasOne(d => d.QMSDepartment)
-         .WithMany(department => department.Documents)
-         .HasForeignKey(d => d.DepartmentId)
-         .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.QMSDepartment)
+                .WithMany(department => department.Documents)
+                .HasForeignKey(d => d.DepartmentId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-     entity.HasOne(d => d.DocumentType)
-         .WithMany(type => type.Documents)
-         .HasForeignKey(d => d.DocumentTypeId)
-         .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.DocumentType)
+                .WithMany(type => type.Documents)
+                .HasForeignKey(d => d.DocumentTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
 
      entity.Property(d => d.RetentionPeriod).HasMaxLength(50)
      .IsRequired(false);
@@ -147,30 +157,109 @@ public class QmsDbContext : DbContext
          .IsUnique();
  });
 
-    modelBuilder.Entity<DocumentRevision>(entity =>
-{
-    entity.HasKey(r => r.Id);
+        modelBuilder.Entity<DocumentRevision>(entity =>
+        {
+            entity.HasKey(r => r.Id);
 
-    entity.Property(r => r.RevisionNumber)
-        .IsRequired();
+            entity.Property(r => r.RevisionNumber)
+                .IsRequired();
 
-    entity.Property(r => r.PageCount)
-        .IsRequired();
+            entity.Property(r => r.PageCount)
+                .IsRequired();
 
-    entity.Property(r => r.RevisionDate)
-        .HasColumnType("date")
-        .IsRequired();
+            entity.Property(r => r.RevisionDate)
+                .HasColumnType("date")
+                .IsRequired();
 
-    entity.HasOne(r => r.Document)
-        .WithMany(d => d.Revisions)
-        .HasForeignKey(r => r.DocumentId)
-        .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(r => r.Document)
+                .WithMany(d => d.Revisions)
+                .HasForeignKey(r => r.DocumentId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-    entity.HasIndex(r => new
-    {
-        r.DocumentId,
-        r.RevisionNumber
-    }).IsUnique();
-});
+            entity.HasIndex(r => new
+            {
+                r.DocumentId,
+                r.RevisionNumber
+            }).IsUnique();
+        });
+
+        modelBuilder.Entity<AccountRequest>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+
+            entity.Property(r => r.EmployeeId)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(r => r.FullName)
+                .HasMaxLength(150)
+                .IsRequired();
+
+            entity.Property(r => r.Email)
+                .HasMaxLength(256)
+                .IsRequired();
+
+            entity.Property(r => r.Status)
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entity.HasOne(r => r.Department)
+                .WithMany()
+                .HasForeignKey(r => r.DepartmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(r => r.ReviewedByUser)
+                .WithMany()
+                .HasForeignKey(r => r.ReviewedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(r => r.Email);
+
+            entity.HasIndex(r => r.EmployeeId);
+
+            entity.HasIndex(r => r.Status);
+
+            entity.Property(r => r.PasswordSetupTokenHash)
+                .HasMaxLength(64);
+
+            entity.Property(r => r.PasswordSetupTokenExpiresAtUtc);
+
+            entity.Property(r => r.Role)
+                .HasMaxLength(30)
+                .HasDefaultValue(QmsRole.User)
+                .IsRequired();
+
+            entity.Property(r => r.PasswordHash)
+                .HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            entity.HasKey(t => t.Id);
+
+            entity.Property(t => t.TokenHash)
+                .HasMaxLength(64)
+                .IsRequired();
+
+            entity.Property(t => t.CreatedAtUtc)
+                .IsRequired();
+
+            entity.Property(t => t.ExpiresAtUtc)
+                .IsRequired();
+
+            entity.HasIndex(t => t.TokenHash)
+                .IsUnique();
+
+            entity.HasIndex(t => new
+            {
+                t.UserId,
+                t.ExpiresAtUtc
+            });
+
+            entity.HasOne(t => t.User)
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }

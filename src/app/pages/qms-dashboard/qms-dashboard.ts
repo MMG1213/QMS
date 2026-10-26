@@ -4,11 +4,13 @@ import {
   HostListener,
   OnInit,
   ChangeDetectorRef,
-  ChangeDetectionStrategy
+  ChangeDetectionStrategy,
+  inject
 } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import {
   MasterListService,
@@ -17,6 +19,8 @@ import {
   MasterListDocument,
   DocumentRevision
 } from '../../services/master-list';
+
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-home',
@@ -27,6 +31,9 @@ import {
   changeDetection: ChangeDetectionStrategy.Default
 })
 export class QmsDashboardComponent implements OnInit {
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+
   tabs: string[] = [
     'MasterList',
     'DCR',
@@ -38,8 +45,14 @@ export class QmsDashboardComponent implements OnInit {
   activeTab = 'MasterList';
   profileMenuOpen = false;
 
-  userName = 'QMS User';
-  userRole = 'Quality Department';
+  private readonly currentUser = this.authService.getCurrentUser();
+
+  userName =
+    this.currentUser?.fullName ||
+    this.currentUser?.employeeId ||
+    'QMS User';
+
+  userRole = this.currentUser?.role || 'User';
 
   documentTypes: DocumentType[] = [];
   departments: Department[] = [];
@@ -110,7 +123,6 @@ export class QmsDashboardComponent implements OnInit {
       },
       error: error => {
         console.error('Failed to load document types:', error);
-
         this.filterError = 'Could not load document types.';
         typesLoaded = true;
         finishLoading();
@@ -125,7 +137,6 @@ export class QmsDashboardComponent implements OnInit {
       },
       error: error => {
         console.error('Failed to load departments:', error);
-
         this.filterError = 'Could not load departments.';
         departmentsLoaded = true;
         finishLoading();
@@ -147,17 +158,14 @@ export class QmsDashboardComponent implements OnInit {
       next: documents => {
         this.documents = documents;
         this.isLoadingDocuments = false;
-
         this.cdr.markForCheck();
       },
       error: error => {
         console.error('Failed to load documents:', error);
-
         this.documents = [];
         this.documentError =
           'Could not load documents. Check that the backend API is running.';
         this.isLoadingDocuments = false;
-
         this.cdr.markForCheck();
       }
     });
@@ -185,7 +193,6 @@ export class QmsDashboardComponent implements OnInit {
     this.selectedDocumentTypeId = null;
     this.selectedDepartmentId = null;
     this.searchText = '';
-
     this.loadDocuments();
   }
 
@@ -246,11 +253,16 @@ export class QmsDashboardComponent implements OnInit {
 
   openProfile(): void {
     this.closeProfileMenu();
-    console.log('Open user profile');
+    // Profile page can be implemented separately.
+  }
+
+  openSignupRequests(): void {
+    void this.router.navigate(['/qms/admin/signup-requests']);
   }
 
   logout(): void {
     this.closeProfileMenu();
-    console.log('Logout requested');
+    this.authService.logout();
+    void this.router.navigate(['/']);
   }
 }
