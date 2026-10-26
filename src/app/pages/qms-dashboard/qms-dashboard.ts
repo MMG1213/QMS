@@ -3,7 +3,8 @@ import {
   Component,
   HostListener,
   OnInit,
-  ChangeDetectorRef
+  ChangeDetectorRef,
+  ChangeDetectionStrategy
 } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
@@ -22,7 +23,8 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './qms-dashboard.html',
-  styleUrl: './qms-dashboard.css'
+  styleUrl: './qms-dashboard.css',
+  changeDetection: ChangeDetectionStrategy.Default
 })
 export class QmsDashboardComponent implements OnInit {
   tabs: string[] = [
