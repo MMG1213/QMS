@@ -21,14 +21,16 @@
 
 .login-card {
   width: 100%;
-  max-width: 440px;
-  padding: 36px;
+  max-width: 480px;
+  min-width: 0;
+  padding: 36px 38px;
   background: #ffffff;
   border: 1px solid #e7e8ec;
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: 0 12px 40px rgba(26, 31, 44, 0.06);
 }
 
+/* Fujitec branding */
 .brand {
   display: flex;
   flex-direction: column;
@@ -60,15 +62,18 @@
   letter-spacing: 1.5px;
 }
 
+/* Page heading */
 .heading {
-  margin-bottom: 24px;
+  margin-bottom: 26px;
 }
 
 .heading h1 {
   margin: 0 0 8px;
+  color: #24252b;
   font-size: 26px;
   font-weight: 650;
   letter-spacing: -0.5px;
+  line-height: 1.3;
 }
 
 .heading p {
@@ -78,81 +83,160 @@
   line-height: 1.6;
 }
 
+/* Form layout */
 form {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  width: 100%;
+  min-width: 0;
 }
 
 .form-field {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
 }
 
 .form-field label {
+  display: block;
+  margin: 0;
+  color: #343640;
   font-size: 13px;
   font-weight: 600;
-  color: #363943;
+  line-height: 1.5;
 }
 
-.form-field input {
+/* Text inputs and department selector */
+.form-field input,
+.form-field select {
+  display: block;
   width: 100%;
   min-width: 0;
   height: 46px;
   padding: 0 13px;
   border: 1px solid #dfe1e6;
-  border-radius: 6px;
-  background: #fff;
+  border-radius: 7px;
+  background: #ffffff;
   color: #24252b;
-  font: inherit;
+  font-family: inherit;
   font-size: 14px;
+  line-height: normal;
   outline: none;
-  transition: border-color 160ms, box-shadow 160ms;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .form-field input::placeholder {
-  color: #a0a3ad;
+  color: #9296a1;
+  opacity: 1;
 }
 
-.form-field input:focus {
+.form-field input:hover,
+.form-field select:hover {
+  border-color: #c4c7cf;
+}
+
+.form-field input:focus,
+.form-field select:focus {
   border-color: #c82032;
-  box-shadow: 0 0 0 3px rgba(200, 32, 50, 0.10);
+  box-shadow: 0 0 0 3px rgba(200, 32, 50, 0.1);
 }
 
+.form-field select {
+  cursor: pointer;
+}
+
+.form-field select:disabled,
+.form-field input:disabled {
+  background: #f5f6f8;
+  color: #777c89;
+  cursor: not-allowed;
+}
+
+/* Password input and Show/Hide control */
 .password-wrapper {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-right: 10px;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0;
+  overflow: hidden;
   border: 1px solid #dfe1e6;
-  border-radius: 6px;
+  border-radius: 7px;
+  background: #ffffff;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .password-wrapper:focus-within {
   border-color: #c82032;
-  box-shadow: 0 0 0 3px rgba(200, 32, 50, 0.10);
+  box-shadow: 0 0 0 3px rgba(200, 32, 50, 0.1);
 }
 
-.password-wrapper input {
+.password-wrapper input,
+.form-field .password-wrapper input {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 13px;
   border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
   box-shadow: none;
 }
 
+.password-wrapper input:hover,
 .password-wrapper input:focus {
   border: 0;
   box-shadow: none;
 }
 
 .toggle-password {
+  display: inline-flex;
+  flex: 0 0 64px;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 10px;
   border: 0;
   background: transparent;
   color: #c82032;
+  font-family: inherit;
   font-size: 12px;
   font-weight: 650;
   cursor: pointer;
 }
 
+.toggle-password:hover {
+  color: #981727;
+  background: #fff7f8;
+}
+
+/* Password requirements and validation */
+.password-help {
+  display: block;
+  margin: 0;
+  color: #737784;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.field-error,
+.form-field .field-error {
+  display: block;
+  margin: 0;
+  color: #b42332;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Forgot password */
 .forgot-row {
   display: flex;
   justify-content: flex-end;
@@ -160,11 +244,12 @@ form {
 }
 
 .text-link {
+  display: inline;
   padding: 0;
   border: 0;
   background: transparent;
   color: #c82032;
-  font: inherit;
+  font-family: inherit;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -175,51 +260,54 @@ form {
   text-decoration: underline;
 }
 
+/* Primary and secondary buttons */
 .primary-button,
 .secondary-button {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 46px;
+  min-width: 0;
+  min-height: 48px;
   padding: 12px 16px;
-  border-radius: 6px;
-  font: inherit;
+  border-radius: 7px;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 650;
+  text-align: center;
   cursor: pointer;
-  transition: background 160ms, border-color 160ms;
+  transition: background 160ms ease, border-color 160ms ease;
 }
 
 .primary-button {
   border: 1px solid #c82032;
   background: #c82032;
-  color: white;
+  color: #ffffff;
 }
 
-.primary-button:hover {
+.primary-button:hover:not(:disabled) {
   background: #a91b2b;
   border-color: #a91b2b;
 }
 
 .secondary-button {
   border: 1px solid #dedfe4;
-  background: white;
+  background: #ffffff;
   color: #363943;
 }
 
-.secondary-button:hover {
+.secondary-button:hover:not(:disabled) {
   background: #f7f7f9;
+  border-color: #c8cbd3;
 }
 
-.primary-button:focus-visible,
-.secondary-button:focus-visible,
-.text-link:focus-visible,
-.toggle-password:focus-visible {
-  outline: 3px solid rgba(200, 32, 50, 0.3);
-  outline-offset: 3px;
+.primary-button:disabled,
+.secondary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
+/* Signup prompt */
 .signup-prompt {
   display: flex;
   justify-content: center;
@@ -229,33 +317,34 @@ form {
   margin-top: 24px;
   color: #737784;
   font-size: 13px;
+  text-align: center;
 }
 
+/* Success and error messages */
 .feedback {
+  width: 100%;
   margin-top: 18px;
-  padding: 12px;
-  border-radius: 6px;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 7px;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .feedback-error {
   background: #fff0f1;
   color: #a51e2b;
-  border: 1px solid #f4d2d6;
+  border-color: #f4d2d6;
 }
 
 .feedback-success {
   background: #effaf2;
   color: #216b38;
-  border: 1px solid #ccebd4;
+  border-color: #ccebd4;
 }
 
-.field-error {
-  color: #b42332;
-  font-size: 12px;
-}
-
+/* Footer */
 footer {
   display: flex;
   flex-wrap: wrap;
@@ -267,10 +356,12 @@ footer {
   border-top: 1px solid #eceef1;
   color: #7b7f89;
   font-size: 10px;
+  line-height: 1.6;
   text-align: center;
 }
 
 .footer-dot {
+  flex: 0 0 6px;
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -281,21 +372,93 @@ footer {
   color: #c82032;
 }
 
-@media (max-width: 480px) {
+/* Keyboard accessibility */
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.text-link:focus-visible,
+.toggle-password:focus-visible {
+  outline: 3px solid rgba(200, 32, 50, 0.3);
+  outline-offset: 3px;
+}
+
+/* Responsive layout */
+@media (max-width: 600px) {
   .login-page {
-    padding: 18px 12px;
     align-items: flex-start;
+    padding: 22px 14px;
   }
 
   .login-card {
-    padding: 26px 20px;
+    max-width: 480px;
+    padding: 28px 22px;
+    border-radius: 12px;
+  }
+
+  .brand {
+    margin-bottom: 27px;
   }
 
   .brand-logo {
     width: min(100%, 230px);
   }
 
+  .heading {
+    margin-bottom: 23px;
+  }
+
   .heading h1 {
     font-size: 23px;
+  }
+
+  form {
+    gap: 16px;
+  }
+
+  .form-field input,
+  .form-field select {
+    height: 45px;
+  }
+
+  .password-wrapper {
+    min-height: 45px;
+  }
+
+  .password-wrapper input,
+  .form-field .password-wrapper input {
+    height: 43px;
+  }
+
+  .toggle-password {
+    min-height: 43px;
+  }
+}
+
+@media (max-width: 360px) {
+  .login-page {
+    padding: 14px 9px;
+  }
+
+  .login-card {
+    padding: 24px 16px;
+  }
+
+  .brand p {
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+
+  .heading h1 {
+    font-size: 21px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
