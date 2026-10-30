@@ -15,6 +15,7 @@ export interface Department {
 }
 
 export interface DocumentRevision {
+  id: number;
   revisionNumber: number;
   pageCount: number;
   revisionDate: string;
@@ -27,9 +28,26 @@ export interface MasterListDocument {
   documentTypeId: number;
   departmentId: number;
   departmentName: string;
-  retentionPeriod:string;
-  status:string;
+  retentionPeriod: string | null;
+  status: string;
+  obseleteDate: string | null;
   revisions: DocumentRevision[];
+  typeName: string | null;
+}
+
+export interface UpdateMasterListDocument {
+  documentNo: string;
+  title: string;
+  documentTypeId: number;
+  departmentId: number;
+  retentionPeriod: string | null;
+  status: string;
+  obseleteDate: string | null;
+  revisions: {
+    revisionNumber: number;
+    pageCount: number;
+    revisionDate: string;
+  }[];
 }
 
 @Injectable({
@@ -74,6 +92,16 @@ export class MasterListService {
     return this.http.get<MasterListDocument[]>(
       `${this.apiUrl}/documents`,
       { params }
+    );
+  }
+
+  updateDocument(
+    documentId: number,
+    request: UpdateMasterListDocument
+  ): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(
+      `${this.apiUrl}/documents/${documentId}`,
+      request
     );
   }
 }

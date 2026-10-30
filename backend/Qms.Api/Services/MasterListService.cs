@@ -6,6 +6,7 @@ using System.Reflection.Metadata;
 using System.Transactions;
 using System.Reflection;
 using System.Linq;
+using System.Data.Common;
 namespace Qms.Api.Services;
 
 public class MasterListService
@@ -39,18 +40,18 @@ public class MasterListService
         }).ToListAsync();
     }
 
-    public async Task<List<MasterListDocumentDto>> GetDocumentsAsync(int? documentTypeId, int? departmentId,String? Search)
+    public async Task<List<MasterListDocumentDto>> GetDocumentsAsync(int? documentTypeId, int? departmentId, String? Search)
     {
         var query = _context.Documents.AsNoTracking().AsQueryable();
 
         if (documentTypeId.HasValue)
         {
-            query = query.Where(d=>d.DocumentTypeId == documentTypeId.Value);
+            query = query.Where(d => d.DocumentTypeId == documentTypeId.Value);
         }
 
         if (departmentId.HasValue)
         {
-            query = query.Where(d=>d.DepartmentId == departmentId.Value);
+            query = query.Where(d => d.DepartmentId == departmentId.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(Search))
@@ -61,6 +62,7 @@ public class MasterListService
         return await query.OrderBy(d => d.DocumentNo)
         .Select(document => new MasterListDocumentDto
         {
+            DocumentId = document.DocumentId,
             Title = document.Title,
             DocumentNo = document.DocumentNo,
             DepartmentName = _context.QMSDepartments
@@ -68,17 +70,90 @@ public class MasterListService
                     department.DepartmentId == document.DepartmentId)
                 .Select(department => department.DepartmentName)
                 .FirstOrDefault(),
-            RetentionPeriod =document.RetentionPeriod,
-            Status=document.Status,
+            TypeName=_context.DocumentTypes.Where(documenttype=>documenttype.DocumentTypeId==document.DocumentTypeId)
+            .Select(documenttype=>documenttype.TypeName).FirstOrDefault(),
+            RetentionPeriod = document.RetentionPeriod,
+            Status = document.Status,
+            ObseleteDate = document.ObseleteDate,
 
             Revisions = document.Revisions.OrderBy(d => d.RevisionNumber).Select(
                 d => new DocumentRevisionDto
                 {
+                    Id = d.Id,
                     RevisionNumber = d.RevisionNumber,
                     PageCount = d.PageCount,
                     RevisionDate = d.RevisionDate,
                 }
             ).ToList()
         }).ToListAsync();
+    }
+
+    public async Task<bool> UpdateDocumentAsync(int documentid, UpdateMasterListDto request)
+    {
+        var document = await _context.Documents.Include(d => d.Revisions).FirstOrDefaultAsync(d => d.DocumentId==documentid);
+
+        if (document == null) return false;
+
+        request.DocumentNo = request.DocumentNo.Trim();
+        request.Title = request.Title.Trim();
+
+        if (string.IsNullOrWhiteSpace(request.Title))
+            throw new ArgumentException("Title Is Required.");
+
+        if (string.IsNullOrWhiteSpace(request.DocumentNo))
+            throw new ArgumentException("Document Number Is Required.");
+
+        var duplicateDocumentNo = await _context.Documents.AnyAsync(d => d.DocumentId != documentid && d.DocumentNo == request.DocumentNo);
+        if (duplicateDocumentNo)
+            throw new ArgumentException("The Document Number Is Already In Use!");
+
+        if (!await _context.Documents.AnyAsync(t => t.DocumentTypeId == request.DocumentTypeId))
+            throw new ArgumentException("Invalid Document Type.");
+
+        if (!await _context.Documents.AnyAsync(t => t.DepartmentId == request.DepartmentId))
+            throw new ArgumentException("Invalid Department.");
+
+        if (request.Status == "Obsolete" && request.ObseleteDate == null)
+            throw new ArgumentException("An obsolete date is required for an obsolete document.");
+
+        if (request.Status == "Active" && request.ObseleteDate != null)
+            throw new ArgumentException("An Active Document cannot have an Obselete Date");
+
+        var existingNumbers = document.Revisions.Select(r => r.RevisionNumber).OrderBy(n => n).ToList();
+
+        var submittedNumber = request.Revisions.Select(r => r.RevisionNumber).OrderBy(n => n).ToList();
+        
+        if (submittedNumber.Count != submittedNumber
+        .Distinct().Count() || !existingNumbers.SequenceEqual(submittedNumber))
+            throw new ArgumentException("Revision numbers cannot be added, deleted, or changed here.");
+
+        foreach (var revisionDto in request.Revisions)
+        {
+            if (revisionDto.PageCount < 1)
+            {
+                throw new ArgumentException("Page Count Must be Greater than Zero.");
+            }
+
+            if (revisionDto.RevisionDate == default)
+                throw new ArgumentException("Every Revision must have a  Valid Date");
+        }
+
+        document.DocumentNo = request.DocumentNo;
+        document.Title = request.Title;
+        document.DepartmentId = request.DepartmentId;
+        document.DocumentTypeId = request.DocumentTypeId;
+        document.RetentionPeriod = string.IsNullOrWhiteSpace(request.RetentionPeriod) ? null : request.RetentionPeriod.Trim();
+        document.Status = request.Status;
+        document.ObseleteDate = request.ObseleteDate;
+
+        foreach (var revisionDto in request.Revisions)
+        {
+            var revision = document.Revisions.First(r => r.RevisionNumber == revisionDto.RevisionNumber);
+
+            revision.PageCount = revisionDto.PageCount;
+            revision.RevisionDate = revisionDto.RevisionDate.Date;
+        }
+        await _context.SaveChangesAsync();
+        return true;
     }
 }

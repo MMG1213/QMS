@@ -19,6 +19,10 @@ public class Document
 
     public string Status { get; set; } = "Active";
 
+    public DateOnly? ObseleteDate{ get; set; }
+
     public ICollection<DocumentRevision> Revisions { get; set; }
         = new List<DocumentRevision>();
 }
+
+

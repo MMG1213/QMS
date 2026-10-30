@@ -218,130 +218,259 @@
           </span>
         </div>
 
-        <div class="table-scroll">
-          <table class="master-table">
         
-            <thead>
-              <tr>
-                <th rowspan="2" class="serial-column">Sl. No.</th>
-                <th rowspan="2" class="title-column">Title / Description</th>
-                <th rowspan="2" class="document-number-column">
-                  Document No.
-                </th>
-                <th rowspan="2" class="department-column">
-                  Department Name
-                </th>
-                <th rowspan="2" class="retention-column">
-                  Retention Period
-                </th>
-                <th rowspan="2" class="status-column">Status</th>
-        
-                @for (
-                  revisionNumber of revisionColumns;
-                  track revisionNumber
-                ) {
-                  <th colspan="2" class="revision-column">
-                    {{ formatRevision(revisionNumber) }}
-                  </th>
+<div class="table-scroll">
+  <table class="master-table">
+    <thead>
+      <tr>
+        <th rowspan="2" class="serial-column">Sl. No.</th>
+        <th rowspan="2" class="title-column">Title / Description</th>
+        <th rowspan="2" class="document-number-column">Document No.</th>
+        <th rowspan="2" class="document-type-column">Document Type</th>
+        <th rowspan="2" class="department-column">Department Name</th>
+        <th rowspan="2" class="retention-column">Retention Period</th>
+        <th rowspan="2" class="status-column">Status</th>
+        <th rowspan="2" class="obsolete-date-column">Obsolete Date</th>
+
+        @for (revisionNumber of revisionColumns; track revisionNumber) {
+          <th colspan="2" class="revision-column">
+            {{ formatRevision(revisionNumber) }}
+          </th>
+        }
+
+        <th rowspan="2" class="actions-column">Actions</th>
+      </tr>
+
+      <tr>
+        @for (revisionNumber of revisionColumns; track revisionNumber) {
+          <th class="revision-subcolumn">Pages</th>
+          <th class="revision-subcolumn">Date</th>
+        }
+      </tr>
+    </thead>
+
+    <tbody>
+      @if (isLoadingDocuments) {
+        <tr>
+          <td class="table-message" [attr.colspan]="9 + revisionColumns.length * 2">
+            Loading documents...
+          </td>
+        </tr>
+      } @else if (documents.length > 0) {
+        @for (document of documents; track document.documentId; let i = $index) {
+          @if (editingDocumentId === document.documentId && editDraft; as draft) {
+            <tr class="editing-row">
+              <td class="serial-cell">{{ i + 1 }}</td>
+
+              <td>
+                <input
+                  class="edit-input"
+                  type="text"
+                  [(ngModel)]="draft.title"
+                  aria-label="Document title"
+                />
+              </td>
+
+              <td>
+                <input
+                  class="edit-input"
+                  type="text"
+                  [(ngModel)]="draft.documentNo"
+                  aria-label="Document number"
+                />
+              </td>
+
+              <td>
+                <select
+                  class="edit-input"
+                  [(ngModel)]="draft.documentTypeId"
+                  aria-label="Document type"
+                >
+                  @for (type of documentTypes; track type.documentTypeId) {
+                    <option [ngValue]="type.documentTypeId">
+                      {{ type.typeName }}
+                    </option>
+                  }
+                </select>
+              </td>
+
+              <td>
+                <select
+                  class="edit-input"
+                  [(ngModel)]="draft.departmentId"
+                  aria-label="Department"
+                >
+                  @for (department of departments; track department.departmentId) {
+                    <option [ngValue]="department.departmentId">
+                      {{ department.departmentName }}
+                    </option>
+                  }
+                </select>
+              </td>
+
+              <td>
+                <input
+                  class="edit-input"
+                  type="text"
+                  [(ngModel)]="draft.retentionPeriod"
+                  aria-label="Retention period"
+                />
+              </td>
+
+              <td>
+                <select
+                  class="edit-input"
+                  [ngModel]="draft.status"
+                  (ngModelChange)="onEditStatusChange($event)"
+                  aria-label="Document status"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Obsolete">Obsolete</option>
+                </select>
+              </td>
+
+              <td>
+                @if (draft.status === 'Obsolete') {
+                  <input
+                    class="edit-input"
+                    type="date"
+                    [(ngModel)]="draft.obseleteDate"
+                    aria-label="Obsolete date"
+                  />
+                } @else {
+                  <span>—</span>
                 }
-              </tr>
-        
-              <tr>
-                @for (
-                  revisionNumber of revisionColumns;
-                  track revisionNumber
-                ) {
-                  <th class="revision-subcolumn">Pages</th>
-                  <th class="revision-subcolumn">Date</th>
-                }
-              </tr>
-            </thead>
-        
-            <tbody>
-              @if (isLoadingDocuments) {
-                <tr>
-                  <td
-                    class="table-message"
-                    [attr.colspan]="6 + revisionColumns.length * 2"
-                  >
-                    Loading documents...
+              </td>
+
+              @for (revisionNumber of revisionColumns; track revisionNumber) {
+                @if (getRevision(draft, revisionNumber); as revision) {
+                  <td>
+                    <input
+                      class="revision-input"
+                      type="number"
+                      min="1"
+                      step="1"
+                      [(ngModel)]="revision.pageCount"
+                      [attr.aria-label]="formatRevision(revisionNumber) + ' pages'"
+                    />
                   </td>
-                </tr>
-              } @else if (documents.length > 0) {
-        
-                @for (
-                  document of documents;
-                  track document.documentId;
-                  let i = $index
-                ) {
-                  <tr>
-                    <td class="serial-cell">{{ i + 1 }}</td>
-        
-                    <td class="title-cell">
-                      <span class="document-title">
-                        {{ document.title }}
-                      </span>
-                    </td>
-        
-                    <td class="document-number-cell">
-                      {{ document.documentNo }}
-                    </td>
-        
-                    <td class="department-cell">
-                      {{ document.departmentName || '—' }}
-                    </td>
-        
-                    <td class="retention-cell">
-                      {{ document.retentionPeriod ?? '—' }}
-                    </td>
-        
-                    <td class="status-cell">
-                      <span class="status-badge">
-                        {{ document.status ?? '—' }}
-                      </span>
-                    </td>
-        
-                    @for (
-                      revisionNumber of revisionColumns;
-                      track revisionNumber
-                    ) {
-                      @if (
-                        getRevision(document, revisionNumber);
-                        as revision
-                      ) {
-                        <td class="revision-cell page-count">
-                          {{ revision.pageCount }}
-                        </td>
-        
-                        <td class="revision-cell revision-date">
-                          {{ formatDate(revision.revisionDate) }}
-                        </td>
-                      } @else {
-                        <td class="revision-cell empty-revision">—</td>
-                        <td class="revision-cell empty-revision">—</td>
-                      }
-                    }
-                  </tr>
-                }
-        
-              } @else if (!documentError) {
-                <tr>
-                  <td
-                    class="table-message empty-state"
-                    [attr.colspan]="6 + revisionColumns.length * 2"
-                  >
-                    <strong>No documents found</strong>
-                    <span>
-                      Matching documents will appear here when records
-                      are available in the database.
-                    </span>
+
+                  <td>
+                    <input
+                      class="revision-input"
+                      type="date"
+                      [(ngModel)]="revision.revisionDate"
+                      [attr.aria-label]="formatRevision(revisionNumber) + ' date'"
+                    />
                   </td>
-                </tr>
+                } @else {
+                  <td class="empty-revision">—</td>
+                  <td class="empty-revision">—</td>
+                }
               }
-            </tbody>
-        
-          </table>
-        </div>
+
+              <td class="actions-cell">
+                <button
+                  type="button"
+                  class="save-button"
+                  (click)="saveEdit()"
+                  [disabled]="isSavingDocument"
+                >
+                  {{ isSavingDocument ? 'Saving...' : 'Save' }}
+                </button>
+
+                <button
+                  type="button"
+                  class="cancel-button"
+                  (click)="cancelEdit()"
+                  [disabled]="isSavingDocument"
+                >
+                  Cancel
+                </button>
+              </td>
+            </tr>
+          } @else {
+            <tr>
+              <td class="serial-cell">{{ i + 1 }}</td>
+
+              <td class="title-cell">
+                <span class="document-title">{{ document.title }}</span>
+              </td>
+
+              <td class="document-number-cell">{{ document.documentNo }}</td>
+
+              <td>{{ document.typeName || '—' }}</td>
+
+              <td class="department-cell">{{ document.departmentName || '—' }}</td>
+
+              <td class="retention-cell">{{ document.retentionPeriod ?? '—' }}</td>
+
+              <td class="status-cell">
+                <span
+                  class="status-badge"
+                  [ngClass]="{
+                    'status-active': document.status === 'Active',
+                    'status-obsolete': document.status === 'Obsolete'
+                  }"
+                >
+                  {{ document.status ?? '—' }}
+                </span>
+              </td>
+
+              <td class="obsolete-date-cell">
+                {{ formatDate(document.obseleteDate) }}
+              </td>
+
+              @for (revisionNumber of revisionColumns; track revisionNumber) {
+                @if (getRevision(document, revisionNumber); as revision) {
+                  <td class="revision-cell page-count">{{ revision.pageCount }}</td>
+                  <td class="revision-cell revision-date">
+                    {{ formatDate(revision.revisionDate) }}
+                  </td>
+                } @else {
+                  <td class="revision-cell empty-revision">—</td>
+                  <td class="revision-cell empty-revision">—</td>
+                }
+              }
+
+              <td class="actions-cell">
+                <button
+                  type="button"
+                  class="edit-button"
+                  (click)="startEdit(document)"
+                  [disabled]="isSavingDocument"
+                >
+                  Edit
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      } @else if (!documentError) {
+        <tr>
+          <td
+            class="table-message empty-state"
+            [attr.colspan]="9 + revisionColumns.length * 2"
+          >
+            <strong>No documents found</strong>
+            <span>
+              Matching documents will appear here when records are available.
+            </span>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (saveMessage) {
+  <div class="success-message">{{ saveMessage }}</div>
+}
+
+@if (saveError) {
+  <div class="error-message">{{ saveError }}</div>
+}
+
         
 
         <div class="table-footer">
