@@ -1,12 +1,12 @@
 
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { AuthService } from '../services/auth.service';
+import { SigninService } from '../services/signin.service';
 
 export const qmsAdminGuard: CanActivateFn = () => {
-  const authService = inject(AuthService);
+  const signinService = inject(SigninService);
   const router = inject(Router);
-  const user = authService.getCurrentUser();
+  const user = signinService.getCurrentUser();
 
   if (!user) {
     return router.createUrlTree(['/']);

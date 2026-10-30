@@ -1,26 +1,22 @@
-
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Qms.Api.Data;
 using Qms.Api.DTOs;
 using Qms.Api.Models;
 
-namespace Qms.Api.Controllers;
+namespace Qms.Api.Services;
 
-[ApiController]
-[Route("api/auth")]
-public class AuthController : ControllerBase
+public class SigninService : ISigninService
 {
     private readonly QmsDbContext _context;
     private readonly IPasswordHasher<AppUser> _passwordHasher;
     private readonly IConfiguration _configuration;
 
-    public AuthController(
+    public SigninService(
         QmsDbContext context,
         IPasswordHasher<AppUser> passwordHasher,
         IConfiguration configuration)
@@ -30,10 +26,15 @@ public class AuthController : ControllerBase
         _configuration = configuration;
     }
 
-    [HttpPost("login")]
-    public async Task<ActionResult<LoginResponse>> Login(
-        [FromBody] LoginRequest request)
+    public async Task<LoginServiceResult> LoginAsync(LoginRequest request)
     {
+        if (string.IsNullOrWhiteSpace(request.LoginId) ||
+            string.IsNullOrWhiteSpace(request.Password))
+        {
+            return LoginServiceResult.Failure(
+                "Invalid credentials or inactive account.");
+        }
+
         var loginId = request.LoginId.Trim();
 
         var user = await _context.AppUsers
@@ -42,16 +43,12 @@ public class AuthController : ControllerBase
                 u.EmployeeId == loginId ||
                 u.Email == loginId);
 
-        // Do not allow inactive accounts or accounts without initialized
-        // password hashes to authenticate.
         if (user == null ||
             !user.IsActive ||
             string.IsNullOrWhiteSpace(user.PasswordHash))
         {
-            return Unauthorized(new
-            {
-                message = "Invalid credentials or inactive account."
-            });
+            return LoginServiceResult.Failure(
+                "Invalid credentials or inactive account.");
         }
 
         var passwordResult = _passwordHasher.VerifyHashedPassword(
@@ -61,13 +58,10 @@ public class AuthController : ControllerBase
 
         if (passwordResult == PasswordVerificationResult.Failed)
         {
-            return Unauthorized(new
-            {
-                message = "Invalid credentials or inactive account."
-            });
+            return LoginServiceResult.Failure(
+                "Invalid credentials or inactive account.");
         }
 
-        // Reject unknown roles rather than issuing an unexpected role claim.
         var validRoles = new[]
         {
             QmsRole.User,
@@ -77,23 +71,19 @@ public class AuthController : ControllerBase
 
         if (!validRoles.Contains(user.Role, StringComparer.Ordinal))
         {
-            return Unauthorized(new
-            {
-                message = "This account has an invalid role configuration."
-            });
+            return LoginServiceResult.Failure(
+                "This account has an invalid role configuration.");
         }
 
-        // All non-admin accounts must belong to a department.
         if (user.Role != QmsRole.QmsAdmin &&
             user.DepartmentId == null)
         {
-            return Unauthorized(new
-            {
-                message = "This account has no department assigned."
-            });
+            return LoginServiceResult.Failure(
+                "This account has no department assigned.");
         }
 
-        if (passwordResult == PasswordVerificationResult.SuccessRehashNeeded)
+        if (passwordResult ==
+            PasswordVerificationResult.SuccessRehashNeeded)
         {
             user.PasswordHash = _passwordHasher.HashPassword(
                 user,
@@ -112,12 +102,23 @@ public class AuthController : ControllerBase
             string.IsNullOrWhiteSpace(issuer) ||
             string.IsNullOrWhiteSpace(audience))
         {
-            throw new InvalidOperationException(
+            return LoginServiceResult.ConfigurationError(
                 "JWT configuration is incomplete.");
         }
 
-        var key = new SymmetricSecurityKey(
-            Convert.FromBase64String(tokenKey));
+        byte[] keyBytes;
+
+        try
+        {
+            keyBytes = Convert.FromBase64String(tokenKey);
+        }
+        catch (FormatException)
+        {
+            return LoginServiceResult.ConfigurationError(
+                "JWT signing key configuration is invalid.");
+        }
+
+        var key = new SymmetricSecurityKey(keyBytes);
 
         var credentials = new SigningCredentials(
             key,
@@ -151,7 +152,7 @@ public class AuthController : ControllerBase
         var tokenString = new JwtSecurityTokenHandler()
             .WriteToken(token);
 
-        return Ok(new LoginResponse
+        var response = new LoginResponse
         {
             Token = tokenString,
             ExpiresAtUtc = expiresAtUtc,
@@ -161,6 +162,8 @@ public class AuthController : ControllerBase
             Email = user.Email,
             DepartmentId = user.DepartmentId,
             Role = user.Role
-        });
+        };
+
+        return LoginServiceResult.Success(response);
     }
 }

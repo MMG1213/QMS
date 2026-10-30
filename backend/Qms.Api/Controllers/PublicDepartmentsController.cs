@@ -17,8 +17,6 @@ public class PublicDepartmentsController : ControllerBase
         _db = db;
     }
 
-    // GET: api/departments/active
-    // Returns only the information needed for the public signup form.
     [AllowAnonymous]
     [HttpGet("active")]
     public async Task<IActionResult> GetActiveDepartments()
@@ -26,11 +24,11 @@ public class PublicDepartmentsController : ControllerBase
         var departments = await _db.Departments
             .AsNoTracking()
             .Where(d => d.IsActive)
-            .OrderBy(d => d.Name)
+            .OrderBy(d => d.DeptName)
             .Select(d => new
             {
                 d.Id,
-                d.Name
+                d.DeptName
             })
             .ToListAsync();
 
