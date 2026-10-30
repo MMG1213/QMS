@@ -41,7 +41,7 @@ public class AdminUsersController : ControllerBase
                 u.DepartmentId,
                 DepartmentName = u.Department == null
                     ? null
-                    : u.Department.Name,
+                    : u.Department.DeptName,
                 u.Role,
                 u.IsActive,
                 u.CreatedAtUtc
@@ -58,11 +58,11 @@ public class AdminUsersController : ControllerBase
         var departments = await _context.Departments
             .AsNoTracking()
             .Where(d => d.IsActive)
-            .OrderBy(d => d.Name)
+            .OrderBy(d => d.DeptName)
             .Select(d => new
             {
                 d.Id,
-                d.Name
+                d.DeptName
             })
             .ToListAsync();
 

@@ -9,13 +9,17 @@ namespace Qms.Api.Controllers;
 public class MasterListImportController : ControllerBase
 {
     private readonly MasterListExcelPreviewService _previewService;
+    private readonly IMasterListImportService _importService;
 
     public MasterListImportController(
-        MasterListExcelPreviewService previewService)
+        MasterListExcelPreviewService previewService,
+        IMasterListImportService importService)
     {
         _previewService = previewService;
+        _importService = importService;
     }
 
+    // Existing preview endpoint.
     [HttpGet("preview")]
     public IActionResult Preview()
     {
@@ -35,8 +39,7 @@ public class MasterListImportController : ControllerBase
 
         try
         {
-            var result = _previewService.Preview(filePath);
-            return Ok(result);
+            return Ok(_previewService.Preview(filePath));
         }
         catch (Exception ex)
         {
@@ -46,5 +49,34 @@ public class MasterListImportController : ControllerBase
                 details = ex.Message
             });
         }
+    }
+
+    // Imports the four master lists through the service.
+    [HttpPost("import")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(20_000_000)]
+    public async Task<IActionResult> Import(
+        [FromForm] IFormFile? file,
+        CancellationToken cancellationToken)
+    {
+        var result = await _importService.ImportAsync(
+            file,
+            cancellationToken);
+
+        return result.Status switch
+        {
+            MasterListImportStatus.Success =>
+                Ok(result.Body),
+
+            MasterListImportStatus.InvalidInput =>
+                BadRequest(result.Body),
+
+            MasterListImportStatus.Conflict =>
+                Conflict(result.Body),
+
+            _ => StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "An unexpected error occurred." })
+        };
     }
 }

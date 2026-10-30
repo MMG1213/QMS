@@ -1,4 +1,5 @@
 
+using DocumentFormat.OpenXml.Office2010.Excel;
 using Microsoft.EntityFrameworkCore;
 using Qms.Api.Models;
 
@@ -28,6 +29,14 @@ public class QmsDbContext : DbContext
    public DbSet<PasswordResetToken> PasswordResetTokens
     => Set<PasswordResetToken>();
 
+    public DbSet<MachinesList> MachinesLists => Set<MachinesList>();
+
+    public DbSet<Standards> Standards => Set<Standards>();
+
+    public DbSet<TestingOrMeasuringInstruments> TestingOrMeasuringInstruments => Set<TestingOrMeasuringInstruments>();
+    
+    public DbSet<QualityPerformanceIndex> QualityPerformanceIndex => Set<QualityPerformanceIndex>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -36,11 +45,18 @@ public class QmsDbContext : DbContext
         {
             entity.HasKey(d => d.Id);
 
-            entity.Property(d => d.Name)
+            entity.Property(d => d.DeptName)
                 .HasMaxLength(100)
                 .IsRequired();
 
-            entity.HasIndex(d => d.Name)
+            entity.Property(d => d.DeptId)
+                .HasMaxLength(10)
+                .IsRequired();
+
+            entity.HasIndex(d => d.DeptName)
+                .IsUnique();
+
+            entity.HasIndex(d => d.DeptId)
                 .IsUnique();
         });
 
@@ -260,6 +276,121 @@ public class QmsDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(t => t.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MachinesList>(entity =>
+        {
+           entity.HasKey(m => m.Id);
+
+           entity.Property(m => m.MachineName)
+               .HasMaxLength(150);
+            
+            entity.Property(m => m.MachineCategory)
+                .HasMaxLength(50);
+
+            entity.Property(m => m.MachineCodeNum)
+                .HasMaxLength(50);
+            
+            entity.Property(m => m.MachineSlNum)
+                .HasMaxLength(50);
+
+            entity.Property(m => m.Make)
+                .HasMaxLength(100);
+
+            entity.Property(m => m.CapacityOrSpecification)
+                .HasMaxLength(500);
+
+            entity.Property(m => m.CommissionedOn)
+                .HasColumnType("date");
+
+            entity.Property(m => m.LoadInHP)
+                .HasPrecision(10, 2);
+            
+            entity.Property(m => m.Location)
+                .HasMaxLength(100);
+
+            entity.HasOne(d => d.DocumentType).WithMany().HasForeignKey(d => d.DocumentTypeId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Standards>(entity =>
+        {
+            entity.HasKey(m => m.Id);
+
+            entity.Property(m => m.Description)
+                .HasMaxLength(250);
+
+            entity.Property(m => m.Pages);
+
+            entity.Property(m => m.Revision);
+
+            entity.Property(m => m.Remarks)
+                .HasMaxLength(100);
+
+            entity.HasOne(d => d.DocumentType).WithMany().HasForeignKey(d => d.DocumentTypeId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TestingOrMeasuringInstruments>(entity =>
+        {
+            entity.HasKey(m => m.Id);
+
+            entity.Property(m => m.InstrumentDescription)
+                .HasMaxLength(100);
+
+            entity.Property(m => m.InstrumentCodeNum)
+                .HasMaxLength(100);
+
+            entity.Property(m => m.InstrumentSlNum)
+                .HasMaxLength(50);
+            
+            entity.Property(m => m.InstrumentRange)
+                .HasMaxLength(75);
+
+            entity.Property(m => m.Make)
+                .HasMaxLength(75);
+            
+            entity.Property(m => m.Location)
+                .HasMaxLength(50);
+
+            entity.Property(m => m.CalibrationFrequency)
+                .HasMaxLength(50);
+            
+            entity.Property(m => m.Remarks)
+                .HasMaxLength(100);
+            
+            entity.HasOne(d => d.DocumentType).WithMany().HasForeignKey(d => d.DocumentTypeId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<QualityPerformanceIndex>(entity =>
+        {
+            entity.ToTable("QualityPerformanceIndex");
+
+            entity.HasKey(m => m.Id);
+
+            entity.Property(m => m.ProcessOrDept)
+                .HasMaxLength(100);
+
+            entity.Property(m => m.MeasurementTitle)
+                .HasMaxLength(150);
+
+            entity.Property(m => m.QualityPerformanceIndexFormula)
+                .HasMaxLength(500);
+
+            entity.Property(m => m.Targets)
+                .HasMaxLength(50);
+
+            entity.Property(m => m.Responsibilities)
+                .HasMaxLength(100);
+
+            entity.Property(m => m.DepartmentReview)
+                .HasMaxLength(20);
+
+            entity.Property(m => m.QPIReview)
+                .HasMaxLength(20);
+
+            entity.HasOne(m => m.DocumentType)
+                .WithMany()
+                .HasForeignKey(m => m.DocumentTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

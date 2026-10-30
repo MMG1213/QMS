@@ -18,10 +18,24 @@ import { finalize } from 'rxjs';
 import {
   AdminCreateUserRequest,
   AdminCreatedUser,
-  AuthService,
-  DepartmentOption,
+  SigninService
+} from '../../services/signin.service';
+
+import {
+  SignupService
+} from '../../services/signup.service';
+
+import {
   SignupRequestItem
-} from '../../services/auth.service';
+} from '../../services/signin.service';
+
+import {
+  DepartmentService,
+  DepartmentOption
+} from '../../services/department.service';
+
+import { AdminUsersService } from '../../services/admin-users.service';
+
 
 type AccountRole = 'User' | 'Department Head';
 
@@ -33,7 +47,10 @@ type AccountRole = 'User' | 'Department Head';
   styleUrl: './admin-signup-requests.css'
 })
 export class AdminSignupRequestsComponent implements OnInit {
-  private readonly authService = inject(AuthService);
+  private readonly SigninService = inject(SigninService);
+  private readonly departmentService = inject(DepartmentService);
+  private readonly signupService = inject(SignupService);
+  private readonly adminUsersService = inject(AdminUsersService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -120,8 +137,8 @@ export class AdminSignupRequestsComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    this.authService
-      .getSignupRequests(this.selectedStatus)
+  this.signupService
+    .getSignupRequests(this.selectedStatus)
       .pipe(
         finalize(() => {
           this.isLoading = false;
@@ -165,7 +182,7 @@ export class AdminSignupRequestsComponent implements OnInit {
     this.isLoadingDepartments = true;
     this.createAccountError = '';
 
-    this.authService
+    this.departmentService
       .getAdminDepartments()
       .pipe(
         finalize(() => {
@@ -250,7 +267,7 @@ export class AdminSignupRequestsComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    this.authService
+    this.signupService
       .reviewSignupRequest(request.id, decision)
       .pipe(
         finalize(() => {
@@ -329,7 +346,7 @@ export class AdminSignupRequestsComponent implements OnInit {
 
     this.isCreatingAccount = true;
 
-    this.authService
+    this.adminUsersService
       .createAdminUser(request)
       .pipe(
         finalize(() => {

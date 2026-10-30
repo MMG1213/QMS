@@ -11,4 +11,5 @@ public class DocumentType
     // Navigation property
     public ICollection<Document> Documents { get; set; }
         = new List<Document>();
+
 }
