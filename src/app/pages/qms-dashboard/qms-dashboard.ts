@@ -17,7 +17,8 @@ import {
   DocumentType,
   Department,
   MasterListDocument,
-  DocumentRevision
+  DocumentRevision,
+  UpdateMasterListDocument
 } from '../../services/master-list';
 
 import { AuthService } from '../../services/auth.service';
@@ -68,6 +69,14 @@ export class QmsDashboardComponent implements OnInit {
   filterError = '';
   documentError = '';
 
+  // Inline editing state
+  editingDocumentId: number | null = null;
+  editDraft: MasterListDocument | null = null;
+
+  isSavingDocument = false;
+  saveMessage = '';
+  saveError = '';
+
   constructor(
     private readonly masterListService: MasterListService,
     private readonly cdr: ChangeDetectorRef
@@ -82,6 +91,7 @@ export class QmsDashboardComponent implements OnInit {
     return this.userName.trim().charAt(0).toUpperCase() || 'U';
   }
 
+  // Generate revision columns from the loaded documents
   get revisionColumns(): number[] {
     const revisionNumbers = this.documents.flatMap(document =>
       document.revisions.map(revision => revision.revisionNumber)
@@ -100,6 +110,7 @@ export class QmsDashboardComponent implements OnInit {
     );
   }
 
+  // Load document types and departments
   loadFilters(): void {
     this.isLoadingFilters = true;
     this.filterError = '';
@@ -123,6 +134,7 @@ export class QmsDashboardComponent implements OnInit {
       },
       error: error => {
         console.error('Failed to load document types:', error);
+
         this.filterError = 'Could not load document types.';
         typesLoaded = true;
         finishLoading();
@@ -137,6 +149,7 @@ export class QmsDashboardComponent implements OnInit {
       },
       error: error => {
         console.error('Failed to load departments:', error);
+
         this.filterError = 'Could not load departments.';
         departmentsLoaded = true;
         finishLoading();
@@ -144,6 +157,7 @@ export class QmsDashboardComponent implements OnInit {
     });
   }
 
+  // Load Master List documents
   loadDocuments(): void {
     this.isLoadingDocuments = true;
     this.documentError = '';
@@ -162,15 +176,18 @@ export class QmsDashboardComponent implements OnInit {
       },
       error: error => {
         console.error('Failed to load documents:', error);
+
         this.documents = [];
         this.documentError =
           'Could not load documents. Check that the backend API is running.';
+
         this.isLoadingDocuments = false;
         this.cdr.markForCheck();
       }
     });
   }
 
+  // Document type filter
   onDocumentTypeChange(value: string | number): void {
     this.selectedDocumentTypeId =
       value === '' ? null : Number(value);
@@ -178,6 +195,7 @@ export class QmsDashboardComponent implements OnInit {
     this.loadDocuments();
   }
 
+  // Department filter
   onDepartmentChange(value: string | number): void {
     this.selectedDepartmentId =
       value === '' ? null : Number(value);
@@ -185,17 +203,21 @@ export class QmsDashboardComponent implements OnInit {
     this.loadDocuments();
   }
 
+  // Search documents
   onSearch(): void {
     this.loadDocuments();
   }
 
+  // Reset filters
   clearFilters(): void {
     this.selectedDocumentTypeId = null;
     this.selectedDepartmentId = null;
     this.searchText = '';
+
     this.loadDocuments();
   }
 
+  // Dashboard navigation
   selectTab(tab: string): void {
     this.activeTab = tab;
     this.profileMenuOpen = false;
@@ -206,6 +228,7 @@ export class QmsDashboardComponent implements OnInit {
     this.loadDocuments();
   }
 
+  // Find a document's revision for a specific revision number
   getRevision(
     document: MasterListDocument,
     revisionNumber: number
@@ -215,29 +238,194 @@ export class QmsDashboardComponent implements OnInit {
     );
   }
 
+  // Get document type name for display
+  getDocumentTypeName(documentTypeId: number): string {
+    return this.documentTypes.find(
+      type => type.documentTypeId === documentTypeId
+    )?.typeName ?? '—';
+  }
+
+  // Format revision number, e.g. Rev 000
   formatRevision(revisionNumber: number): string {
     return `Rev ${String(revisionNumber).padStart(3, '0')}`;
   }
 
+  // Format date for display
   formatDate(date: string | null | undefined): string {
     if (!date) {
       return '—';
     }
 
-    const parsedDate = new Date(date);
+    const datePart = date.substring(0, 10);
+    const [year, month, day] = datePart.split('-');
 
-    if (Number.isNaN(parsedDate.getTime())) {
+    if (!year || !month || !day) {
       return date;
     }
 
-    return new Intl.DateTimeFormat('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      timeZone: 'UTC'
-    }).format(parsedDate);
+    return `${day}/${month}/${year}`;
   }
 
+  // Start editing a document
+  startEdit(document: MasterListDocument): void {
+    if (this.isSavingDocument) {
+      return;
+    }
+
+    this.editingDocumentId = document.documentId;
+
+    // Create a copy so Cancel does not change the displayed document
+    this.editDraft = JSON.parse(
+      JSON.stringify(document)
+    ) as MasterListDocument;
+
+    this.saveMessage = '';
+    this.saveError = '';
+
+    this.cdr.markForCheck();
+  }
+
+  // Cancel editing and discard unsaved changes
+  cancelEdit(): void {
+    if (this.isSavingDocument) {
+      return;
+    }
+
+    this.editingDocumentId = null;
+    this.editDraft = null;
+
+    this.saveMessage = '';
+    this.saveError = '';
+
+    this.cdr.markForCheck();
+  }
+
+  // Update status and obsolete date together
+  onEditStatusChange(status: string): void {
+    if (!this.editDraft) {
+      return;
+    }
+
+    this.editDraft.status = status;
+
+    if (status === 'Active') {
+      this.editDraft.obseleteDate = null;
+    }
+
+    this.saveError = '';
+  }
+
+  // Validate and save the edited document
+  saveEdit(): void {
+    const draft = this.editDraft;
+
+    if (
+      !draft ||
+      this.editingDocumentId === null ||
+      this.isSavingDocument
+    ) {
+      return;
+    }
+
+    if (!draft.documentNo.trim()) {
+      this.saveError = 'Document number is required.';
+      return;
+    }
+
+    if (!draft.title.trim()) {
+      this.saveError = 'Document title is required.';
+      return;
+    }
+
+    if (!draft.documentTypeId || !draft.departmentId) {
+      this.saveError = 'Select a document type and department.';
+      return;
+    }
+
+    if (
+      draft.status !== 'Active' &&
+      draft.status !== 'Obsolete'
+    ) {
+      this.saveError = 'Select a valid document status.';
+      return;
+    }
+
+    if (
+      draft.status === 'Obsolete' &&
+      !draft.obseleteDate
+    ) {
+      this.saveError =
+        'Select an obsolete date for obsolete documents.';
+      return;
+    }
+
+    if (
+      draft.revisions.some(revision =>
+        !Number.isInteger(Number(revision.pageCount)) ||
+        Number(revision.pageCount) < 1 ||
+        !revision.revisionDate
+      )
+    ) {
+      this.saveError =
+        'Every revision needs a valid page count and date.';
+      return;
+    }
+
+    const request: UpdateMasterListDocument = {
+      documentNo: draft.documentNo.trim(),
+      title: draft.title.trim(),
+      documentTypeId: Number(draft.documentTypeId),
+      departmentId: Number(draft.departmentId),
+      retentionPeriod: draft.retentionPeriod?.trim() || null,
+      status: draft.status,
+      obseleteDate:
+        draft.status === 'Obsolete'
+          ? draft.obseleteDate?.slice(0, 10) ?? null
+          : null,
+      revisions: draft.revisions.map(revision => ({
+        revisionNumber: revision.revisionNumber,
+        pageCount: Number(revision.pageCount),
+        revisionDate: revision.revisionDate.slice(0, 10)
+      }))
+    };
+
+    this.isSavingDocument = true;
+    this.saveError = '';
+    this.saveMessage = '';
+
+    this.masterListService
+      .updateDocument(draft.documentId, request)
+      .subscribe({
+        next: response => {
+          this.isSavingDocument = false;
+          this.editingDocumentId = null;
+          this.editDraft = null;
+
+          this.saveMessage =
+            response?.message ?? 'Document updated successfully.';
+
+          // Reload the saved data from the backend
+          this.loadDocuments();
+          this.cdr.markForCheck();
+        },
+        error: error => {
+          console.error(
+            'Failed to update Master List document:',
+            error
+          );
+
+          this.isSavingDocument = false;
+
+          this.saveError =
+            error?.error?.message ??
+            'Could not save changes. Check the entered values and try again.';
+
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  // Profile menu
   toggleProfileMenu(): void {
     this.profileMenuOpen = !this.profileMenuOpen;
   }
@@ -249,11 +437,18 @@ export class QmsDashboardComponent implements OnInit {
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.closeProfileMenu();
+
+    if (
+      this.editingDocumentId !== null &&
+      !this.isSavingDocument
+    ) {
+      this.cancelEdit();
+    }
   }
 
   openProfile(): void {
     this.closeProfileMenu();
-    // Profile page can be implemented separately.
+    // Add profile navigation here if needed.
   }
 
   openSignupRequests(): void {
@@ -263,6 +458,7 @@ export class QmsDashboardComponent implements OnInit {
   logout(): void {
     this.closeProfileMenu();
     this.authService.logout();
+
     void this.router.navigate(['/']);
   }
 }

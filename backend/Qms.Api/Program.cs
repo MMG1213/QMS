@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Qms.Api.Data;
 using Qms.Api.Models;
 using Qms.Api.Services;
+using Microsoft.AspNetCore.Routing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -115,5 +116,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+foreach (var endpoint in app.Services
+    .GetRequiredService<EndpointDataSource>()
+    .Endpoints)
+{
+    Console.WriteLine(endpoint.DisplayName);
+}
 
 app.Run();

@@ -152,6 +152,7 @@ public class QmsDbContext : DbContext
 
      entity.Property(d => d.Status).HasMaxLength(20).HasDefaultValue("Active")
      .IsRequired();
+            entity.Property(d => d.ObseleteDate).HasColumnType("date");
 
      entity.HasIndex(d => d.DocumentNo)
          .IsUnique();

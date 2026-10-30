@@ -227,6 +227,9 @@ namespace Qms.Api.Migrations
                     b.Property<int>("DocumentTypeId")
                         .HasColumnType("int");
 
+                    b.Property<DateOnly?>("ObseleteDate")
+                        .HasColumnType("date");
+
                     b.Property<string>("RetentionPeriod")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");

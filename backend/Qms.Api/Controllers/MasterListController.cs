@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Qms.Api.Services;
+using Qms.Api.Dtos;
 namespace Qms.Api.Controllers;
 
 [ApiController]
@@ -44,6 +45,33 @@ public class MasterListController : ControllerBase
         var document = await _service.GetDocumentsAsync(documentTypeId, departmentId, Search);
 
         return Ok(document);
+    }
+
+    [HttpPut("documents/{documentId:int}")]
+
+    public async Task<IActionResult> UpdateDocuments(int documentId, [FromBody] UpdateMasterListDto request)
+    {
+        try
+        {
+            var updated = await _service.UpdateDocumentAsync(documentId, request);
+
+            if (!updated)
+            {
+                return NotFound(new
+                {
+                    message = "Document not found"
+                });
+            }
+
+            return Ok(new
+            {
+                message = "Master List Document Updated Sucessfully"
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }
 
