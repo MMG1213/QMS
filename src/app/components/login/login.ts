@@ -1,7 +1,10 @@
-
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  inject
+} from '@angular/core';
 import {
   FormBuilder,
   ReactiveFormsModule,
@@ -10,10 +13,11 @@ import {
 import { Router } from '@angular/router';
 import { finalize, timeout } from 'rxjs';
 
+import { SigninService } from '../../services/signin.service';
 import {
-  AuthService,
+  DepartmentService,
   DepartmentOption
-} from '../../services/auth.service';
+} from '../../services/department.service';
 
 type PageMode = 'login' | 'forgot' | 'signup';
 type SignupRole = 'User' | 'Department Head';
@@ -28,7 +32,9 @@ type SignupRole = 'User' | 'Department Head';
 export class Login {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
-  private readonly authService = inject(AuthService);
+  private readonly SigninService = inject(SigninService);
+  private readonly departmentService = inject(DepartmentService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   mode: PageMode = 'login';
   showPassword = false;
@@ -114,7 +120,6 @@ export class Login {
     this.message = '';
     this.messageType = 'error';
     this.showPassword = false;
-    this.isLoading = false;
 
     if (mode === 'signup' && this.departments.length === 0) {
       this.loadDepartments();
@@ -129,11 +134,13 @@ export class Login {
     this.isLoadingDepartments = true;
     this.message = '';
 
-    this.authService
+    this.departmentService
       .getActiveDepartments()
       .pipe(
+        timeout(15000),
         finalize(() => {
           this.isLoadingDepartments = false;
+          this.cdr.detectChanges();
         })
       )
       .subscribe({
@@ -145,89 +152,99 @@ export class Login {
               'No active departments are available.'
             );
           }
+
+          this.cdr.detectChanges();
         },
         error: (error: HttpErrorResponse) => {
           this.departments = [];
 
           this.showMessage(
             error.status === 0
-              ? 'Cannot connect to the QMS server. Check that the backend is running.'
+              ? 'Cannot connect to the QMS server, or the request timed out. Check the backend and try again.'
               : 'Unable to load departments. Please try again.'
           );
+
+          this.cdr.detectChanges();
         }
       });
   }
 
   signIn(): void {
+    // Prevent duplicate login requests.
     if (this.isLoading) {
       return;
     }
 
+    // Validate the form before sending a request.
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
+
       this.showMessage(
         'Enter your employee ID or email and password.'
       );
+
       return;
     }
 
     const { username, password } =
       this.loginForm.getRawValue();
 
+    // Start loading and clear any previous error.
     this.isLoading = true;
     this.message = '';
     this.messageType = 'error';
 
-    this.authService
+    // Immediately update the button to "Signing in...".
+    this.cdr.detectChanges();
+
+    this.SigninService
       .login({
         loginId: username.trim(),
         password
       })
       .pipe(
-        timeout({ first: 15000 }),
+        // Do not apply the artificial 15-second login timeout.
+        // Handle the actual HTTP response as soon as it arrives.
         finalize(() => {
           this.isLoading = false;
+          this.cdr.detectChanges();
         })
       )
       .subscribe({
+        // Login succeeded.
         next: () => {
           this.isLoading = false;
+          this.cdr.detectChanges();
+
           void this.router.navigate(['/qms']);
         },
-        error: (error: HttpErrorResponse | Error) => {
-          // Reset immediately on failure; finalize is an additional safeguard.
-          this.isLoading = false;
 
-          if (
-            error instanceof HttpErrorResponse &&
-            error.status === 401
-          ) {
+        // Login failed.
+        error: (error: HttpErrorResponse) => {
+          if (error.status === 401) {
             this.showMessage(
-              'Invalid credentials or inactive account.'
+              error.error?.message ||
+                'Invalid credentials or inactive account.'
             );
-          } else if (
-            error instanceof HttpErrorResponse &&
-            error.status === 400
-          ) {
+          } else if (error.status === 0) {
             this.showMessage(
-              'Please check your login details and try again.'
+              'Cannot connect to the QMS server. Check your connection and ensure the backend is running.'
             );
-          } else if (
-            error instanceof HttpErrorResponse &&
-            error.status === 0
-          ) {
+          } else if (error.status === 400) {
             this.showMessage(
-              'Cannot connect to the QMS server. Check that the backend is running.'
-            );
-          } else if (error.name === 'TimeoutError') {
-            this.showMessage(
-              'The login request timed out. Check the backend and try again.'
+              error.error?.message ||
+                'Please check the login details and try again.'
             );
           } else {
             this.showMessage(
-              'Sign-in failed. Please try again or contact the QMS administrator.'
+              error.error?.message ||
+                'Sign-in failed. Please try again or contact the QMS administrator.'
             );
           }
+
+          // Ensure the error and enabled button appear immediately.
+          this.isLoading = false;
+          this.cdr.detectChanges();
         }
       });
   }
@@ -235,10 +252,15 @@ export class Login {
   requestPasswordReset(): void {
     if (this.forgotForm.invalid) {
       this.forgotForm.markAllAsTouched();
-      this.showMessage('Enter a valid work email address.');
+
+      this.showMessage(
+        'Enter a valid work email address.'
+      );
+
       return;
     }
 
+    // Actual password-reset functionality is not connected yet.
     this.showMessage(
       'Password reset is not connected yet. Please contact your QMS administrator.'
     );
@@ -251,6 +273,7 @@ export class Login {
       this.showMessage(
         'Complete all fields and meet the password requirements.'
       );
+
       return;
     }
 
@@ -264,17 +287,24 @@ export class Login {
     const fullName = form.name.trim();
     const email = form.email.trim();
 
-    if (!employeeId || !fullName || !email || form.departmentId < 1) {
+    if (
+      !employeeId ||
+      !fullName ||
+      !email ||
+      form.departmentId < 1
+    ) {
       this.showMessage(
         'Enter valid employee details and select a department.'
       );
+
       return;
     }
 
     this.isLoading = true;
     this.message = '';
+    this.messageType = 'error';
 
-    this.authService
+    this.SigninService
       .submitSignup({
         employeeId,
         fullName,
@@ -284,8 +314,10 @@ export class Login {
         password: form.password
       })
       .pipe(
+        timeout(15000),
         finalize(() => {
           this.isLoading = false;
+          this.cdr.detectChanges();
         })
       )
       .subscribe({
@@ -304,7 +336,10 @@ export class Login {
             role: 'User',
             password: ''
           });
+
+          this.cdr.detectChanges();
         },
+
         error: (error: HttpErrorResponse) => {
           if (error.status === 409) {
             this.showMessage(
@@ -322,9 +357,12 @@ export class Login {
             );
           } else {
             this.showMessage(
-              'Signup failed. Please try again or contact the QMS administrator.'
+              error.error?.message ||
+                'Signup failed. Please try again or contact the QMS administrator.'
             );
           }
+
+          this.cdr.detectChanges();
         }
       });
   }

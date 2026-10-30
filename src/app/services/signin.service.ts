@@ -21,13 +21,6 @@ export interface LoginResponse {
   role: string;
 }
 
-// ─── Department ─────────────────────────────────────────
-
-export interface DepartmentOption {
-  id: number;
-  name: string;
-}
-
 // ─── Employee Signup ────────────────────────────────────
 
 export type SignupRole = 'User' | 'Department Head';
@@ -61,13 +54,11 @@ export interface SignupRequestItem {
   reviewedAtUtc: string | null;
 }
 
-
 export interface SignupReviewResponse {
   message: string;
   requestId: number;
   status: string;
 }
-
 
 // ─── Admin: Create Active Account ───────────────────────
 
@@ -99,7 +90,7 @@ export type CurrentUser = Omit<LoginResponse, 'token'>;
 @Injectable({
   providedIn: 'root'
 })
-export class AuthService {
+export class SigninService {
   private readonly http = inject(HttpClient);
 
   private readonly apiUrl = '/api/auth';
@@ -182,14 +173,6 @@ export class AuthService {
     sessionStorage.removeItem('qms.user');
   }
 
-  // ─── Public Signup Departments ───────────────────────
-
-  getActiveDepartments(): Observable<DepartmentOption[]> {
-    return this.http.get<DepartmentOption[]>(
-      '/api/departments/active'
-    );
-  }
-
   // ─── Submit Signup Request ───────────────────────────
 
   submitSignup(
@@ -223,18 +206,14 @@ export class AuthService {
     );
   }
 
-  getAdminDepartments(): Observable<DepartmentOption[]> {
-  return this.http.get<DepartmentOption[]>(
-    `${this.adminUsersApiUrl}/departments`
-  );
-}
+  // ─── Admin: Create Active Account ────────────────────
 
-createAdminUser(
-  request: AdminCreateUserRequest
-): Observable<AdminCreatedUser> {
-  return this.http.post<AdminCreatedUser>(
-    this.adminUsersApiUrl,
-    request
-  );
-}
+  createAdminUser(
+    request: AdminCreateUserRequest
+  ): Observable<AdminCreatedUser> {
+    return this.http.post<AdminCreatedUser>(
+      this.adminUsersApiUrl,
+      request
+    );
+  }
 }

@@ -1,17 +1,20 @@
 
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { AuthService } from '../services/auth.service';
+import { SigninService } from '../services/signin.service';
 
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
-  const authService = inject(AuthService);
+  const signinService = inject(SigninService);
 
-  // Only attach the token to this application's API requests.
-  if (!request.url.startsWith('/api/')) {
+  const isApiRequest =
+    request.url.startsWith('/api/') ||
+    request.url.startsWith('http://localhost:5193/api/');
+
+  if (!isApiRequest) {
     return next(request);
   }
 
-  const token = authService.getToken();
+  const token = signinService.getToken();
 
   if (!token) {
     return next(request);

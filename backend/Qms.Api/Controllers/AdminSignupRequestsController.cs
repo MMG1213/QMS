@@ -64,7 +64,7 @@ public class AdminSignupRequestsController : ControllerBase
                 r.DepartmentId,
                 DepartmentName = r.Department == null
                     ? null
-                    : r.Department.Name,
+                    : r.Department.DeptName,
                 r.Role,
                 r.Status,
                 r.RequestedAtUtc,

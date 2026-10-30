@@ -21,7 +21,13 @@ import {
   UpdateMasterListDocument
 } from '../../services/master-list';
 
-import { AuthService } from '../../services/auth.service';
+import {
+  MasterDataService,
+  MasterDataTable,
+  MasterDataRow
+} from '../../services/master-data.service';
+
+import { SigninService } from '../../services/signin.service';
 
 @Component({
   selector: 'app-home',
@@ -32,8 +38,9 @@ import { AuthService } from '../../services/auth.service';
   changeDetection: ChangeDetectionStrategy.Default
 })
 export class QmsDashboardComponent implements OnInit {
-  private readonly authService = inject(AuthService);
+  private readonly SigninService = inject(SigninService);
   private readonly router = inject(Router);
+  private readonly masterDataService = inject(MasterDataService);
 
   tabs: string[] = [
     'MasterList',
@@ -46,7 +53,7 @@ export class QmsDashboardComponent implements OnInit {
   activeTab = 'MasterList';
   profileMenuOpen = false;
 
-  private readonly currentUser = this.authService.getCurrentUser();
+  private readonly currentUser = this.SigninService.getCurrentUser();
 
   userName =
     this.currentUser?.fullName ||
@@ -65,9 +72,11 @@ export class QmsDashboardComponent implements OnInit {
 
   isLoadingFilters = false;
   isLoadingDocuments = false;
+  isLoadingMasterData = false;
 
   filterError = '';
   documentError = '';
+  masterDataError = '';
 
   // Inline editing state
   editingDocumentId: number | null = null;
@@ -77,14 +86,93 @@ export class QmsDashboardComponent implements OnInit {
   saveMessage = '';
   saveError = '';
 
+  masterDataRows: MasterDataRow[] = [];
+
+  readonly specialDocumentTypes: Record<number, {
+    table: MasterDataTable;
+    title: string;
+    columns: { key: string; label: string }[];
+  }> = {
+      6: {
+        table: 'machines',
+        title: 'Machines / Equipment',
+        columns: [
+          { key: 'machineName', label: 'Machine Name' },
+          { key: 'machineCategory', label: 'Machine Category' },
+          { key: 'machineCodeNum', label: 'Machine Code No.' },
+          { key: 'machineSlNum', label: 'Machine Serial No.' },
+          { key: 'make', label: 'Make' },
+          { key: 'capacityOrSpecification', label: 'Capacity / Specification' },
+          { key: 'commissionedOn', label: 'Commissioned On' },
+          { key: 'loadInHP', label: 'Load in HP' },
+          { key: 'location', label: 'Location' }
+        ]
+      },
+      7: {
+        table: 'standards',
+        title: 'Standards',
+        columns: [
+          { key: 'description', label: 'Description' },
+          { key: 'pages', label: 'Pages' },
+          { key: 'revision', label: 'Revision' },
+          { key: 'remarks', label: 'Remarks' }
+        ]
+      },
+      8: {
+        table: 'instruments',
+        title: 'Testing and Measuring Instruments',
+        columns: [
+          { key: 'instrumentDescription', label: 'Instrument Description' },
+          { key: 'instrumentCodeNum', label: 'Instrument Code No.' },
+          { key: 'instrumentSlNum', label: 'Instrument Serial No.' },
+          { key: 'instrumentRange', label: 'Range' },
+          { key: 'make', label: 'Make' },
+          { key: 'location', label: 'Location' },
+          { key: 'calibrationFrequency', label: 'Calibration Frequency' },
+          { key: 'remarks', label: 'Remarks' }
+        ]
+      },
+      9: {
+        table: 'qpi',
+        title: 'Quality Performance Index (QPI)',
+        columns: [
+          { key: 'processOrDept', label: 'Process / Department' },
+          { key: 'measurementTitle', label: 'Measurement Title' },
+          { key: 'qualityPerformanceIndexFormula', label: 'QPI Formula' },
+          { key: 'targets', label: 'Targets' },
+          { key: 'responsibilities', label: 'Responsibilities' },
+          { key: 'departmentReview', label: 'Department Review' },
+          { key: 'qpiReview', label: 'QPI Review' }
+        ]
+      }
+    };
   constructor(
     private readonly masterListService: MasterListService,
     private readonly cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadFilters();
     this.loadDocuments();
+  }
+
+  /**
+   * A special table is shown only when one of the four supported
+   * document types is selected and no department is selected.
+   */
+  get selectedSpecialType(): {
+    table: MasterDataTable;
+    title: string;
+    columns: { key: string; label: string }[];
+  } | null {
+    if (
+      this.selectedDocumentTypeId === null ||
+      this.selectedDepartmentId !== null
+    ) {
+      return null;
+    }
+
+    return this.specialDocumentTypes[this.selectedDocumentTypeId] ?? null;
   }
 
   get userInitial(): string {
@@ -188,11 +276,58 @@ export class QmsDashboardComponent implements OnInit {
   }
 
   // Document type filter
+  /**
+   * Loads data from the endpoint mapped to the selected document type.
+   * If a department is selected, the special table is cleared and hidden.
+   */
+  loadMasterData(): void {
+    const config = this.selectedSpecialType;
+
+    this.masterDataRows = [];
+    this.masterDataError = '';
+
+    if (!config) {
+      this.isLoadingMasterData = false;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.isLoadingMasterData = true;
+    this.cdr.markForCheck();
+
+    this.masterDataService.getRows(config.table).subscribe({
+      next: rows => {
+        // Ignore a response if the user changed filters while it was loading.
+        if (this.selectedSpecialType?.table !== config.table) {
+          return;
+        }
+
+        this.masterDataRows = rows;
+        this.isLoadingMasterData = false;
+        this.cdr.markForCheck();
+      },
+      error: error => {
+        console.error('Failed to load master data:', error);
+
+        if (this.selectedSpecialType?.table !== config.table) {
+          return;
+        }
+
+        this.masterDataRows = [];
+        this.masterDataError =
+          'Could not load the selected master data. Please try again.';
+        this.isLoadingMasterData = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   onDocumentTypeChange(value: string | number): void {
     this.selectedDocumentTypeId =
       value === '' ? null : Number(value);
 
     this.loadDocuments();
+    this.loadMasterData();
   }
 
   // Department filter
@@ -201,6 +336,7 @@ export class QmsDashboardComponent implements OnInit {
       value === '' ? null : Number(value);
 
     this.loadDocuments();
+    this.loadMasterData();
   }
 
   // Search documents
@@ -209,12 +345,18 @@ export class QmsDashboardComponent implements OnInit {
   }
 
   // Reset filters
+  refreshCurrentTable(): void {
+    this.loadDocuments();
+    this.loadMasterData();
+  }
+
   clearFilters(): void {
     this.selectedDocumentTypeId = null;
     this.selectedDepartmentId = null;
     this.searchText = '';
 
     this.loadDocuments();
+    this.loadMasterData();
   }
 
   // Dashboard navigation
@@ -225,7 +367,9 @@ export class QmsDashboardComponent implements OnInit {
 
   selectDocumentType(type: DocumentType): void {
     this.selectedDocumentTypeId = type.documentTypeId;
+
     this.loadDocuments();
+    this.loadMasterData();
   }
 
   // Find a document's revision for a specific revision number
@@ -457,8 +601,7 @@ export class QmsDashboardComponent implements OnInit {
 
   logout(): void {
     this.closeProfileMenu();
-    this.authService.logout();
-
+    this.SigninService.logout();
     void this.router.navigate(['/']);
   }
 }

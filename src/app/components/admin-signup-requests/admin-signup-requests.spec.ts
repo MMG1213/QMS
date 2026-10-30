@@ -18,7 +18,7 @@ import { finalize } from 'rxjs';
 import {
   AdminCreateUserRequest,
   AdminCreatedUser,
-  AuthService,
+  SigninService,
   DepartmentOption,
   SignupRequestItem
 } from '../../services/auth.service';
@@ -31,7 +31,7 @@ import {
   styleUrl: './admin-signup-requests.css'
 })
 export class AdminSignupRequestsComponent implements OnInit {
-  private readonly authService = inject(AuthService);
+  private readonly SigninService = inject(SigninService);
   private readonly http = inject(HttpClient);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
@@ -113,7 +113,7 @@ export class AdminSignupRequestsComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    this.authService
+    this.SigninService
       .getSignupRequests(this.selectedStatus)
       .pipe(
         finalize(() => {
@@ -150,7 +150,7 @@ export class AdminSignupRequestsComponent implements OnInit {
   loadAdminDepartments(): void {
     this.createAccountError = '';
 
-    this.authService.getAdminDepartments().subscribe({
+    this.SigninService.getAdminDepartments().subscribe({
       next: (departments: DepartmentOption[]) => {
         this.adminDepartments = departments ?? [];
 
@@ -219,7 +219,7 @@ export class AdminSignupRequestsComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    this.authService
+    this.SigninService
       .reviewSignupRequest(request.id, decision)
       .pipe(
         finalize(() => {
@@ -295,7 +295,7 @@ export class AdminSignupRequestsComponent implements OnInit {
 
     this.isCreatingAccount = true;
 
-    this.authService
+    this.SigninService
       .createAdminUser(request)
       .pipe(
         finalize(() => {
