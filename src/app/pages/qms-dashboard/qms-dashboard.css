@@ -1031,3 +1031,223 @@ button:disabled {
   color: #17652b;
   background: #effaf1;
 }
+
+
+
+/* ML07-ML10 master-data management */
+
+.master-data-toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.master-data-add-button {
+  min-height: 36px;
+  padding: 0 14px;
+  color: #fff;
+  background: #c8102e;
+  border: 1px solid #c8102e;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.master-data-add-button:hover {
+  background: #a80c25;
+}
+
+.master-data-search {
+  padding: 12px 20px;
+  background: #fff;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.master-data-search input {
+  width: min(100%, 360px);
+  min-height: 36px;
+  padding: 0 11px;
+  color: #343740;
+  background: #fff;
+  border: 1px solid #d9dce2;
+  border-radius: 5px;
+  outline: none;
+  font: inherit;
+}
+
+.master-data-search input:focus {
+  border-color: #c8102e;
+  box-shadow: 0 0 0 2px rgb(200 16 46 / 8%);
+}
+
+.master-data-actions-column {
+  min-width: 150px;
+}
+
+.master-data-row-actions {
+  min-width: 150px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.master-data-row-actions .edit-button,
+.master-data-row-actions .delete-button {
+  min-height: 30px;
+  padding: 0 9px;
+  margin: 2px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.master-data-row-actions .delete-button {
+  color: #b4232f;
+  background: #fff;
+  border: 1px solid #f0c6cf;
+}
+
+.master-data-row-actions .delete-button:hover {
+  background: #fff1f3;
+  border-color: #c8102e;
+}
+
+.success-message {
+  padding: 10px 13px;
+  margin: 12px 16px;
+  color: #067647;
+  background: #ecfdf3;
+  border: 1px solid #d0eadb;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.master-data-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgb(16 24 40 / 52%);
+}
+
+.master-data-modal {
+  width: min(720px, 100%);
+  max-height: min(88vh, 850px);
+  overflow: auto;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #e4e6ea;
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgb(16 24 40 / 24%);
+}
+
+.master-data-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.master-data-modal-header .eyebrow {
+  margin-bottom: 6px;
+}
+
+.master-data-modal-header h2 {
+  margin: 0;
+  color: #202939;
+  font-size: 21px;
+}
+
+.modal-close-button {
+  width: 34px;
+  height: 34px;
+  color: #667085;
+  background: #fff;
+  border: 1px solid #e4e6ea;
+  border-radius: 7px;
+  font-size: 23px;
+  line-height: 1;
+}
+
+.modal-close-button:hover {
+  color: #c8102e;
+  border-color: #c8102e;
+}
+
+.master-data-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.master-data-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.master-data-form-field label {
+  color: #464a53;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.master-data-form-field input {
+  width: 100%;
+  min-height: 39px;
+  padding: 0 11px;
+  color: #343740;
+  background: #fff;
+  border: 1px solid #d9dce2;
+  border-radius: 5px;
+  outline: none;
+  font: inherit;
+}
+
+.master-data-form-field input:focus {
+  border-color: #c8102e;
+  box-shadow: 0 0 0 2px rgb(200 16 46 / 8%);
+}
+
+.required-mark {
+  color: #c8102e;
+}
+
+.master-data-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-top: 22px;
+  margin-top: 22px;
+  border-top: 1px solid #edf0f4;
+}
+
+.master-data-modal-actions .save-button,
+.master-data-modal-actions .cancel-button {
+  min-height: 37px;
+  padding: 0 15px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .master-data-toolbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .master-data-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .master-data-modal {
+    padding: 18px;
+  }
+}

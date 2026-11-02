@@ -132,7 +132,8 @@ public class SigninService : ISigninService
             new(ClaimTypes.Name, user.EmployeeId),
             new(ClaimTypes.Email, user.Email),
             new(ClaimTypes.Role, user.Role),
-            new("employeeId", user.EmployeeId)
+            new("employeeId", user.EmployeeId),
+            new("tokenVersion", user.TokenVersion.ToString())
         };
 
         if (user.DepartmentId.HasValue)

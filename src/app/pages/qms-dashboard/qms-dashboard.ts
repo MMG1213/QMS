@@ -29,6 +29,16 @@ import {
 
 import { SigninService } from '../../services/signin.service';
 
+
+type MasterDataFieldType = 'text' | 'number' | 'date';
+
+interface MasterDataField {
+  key: string;
+  label: string;
+  type: MasterDataFieldType;
+  required?: boolean;
+}
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -87,11 +97,21 @@ export class QmsDashboardComponent implements OnInit {
   saveError = '';
 
   masterDataRows: MasterDataRow[] = [];
+  masterDataSearchText = '';
+
+  masterDataFormOpen = false;
+  masterDataDraft: Record<string, any> = {};
+  editingMasterDataId: number | null = null;
+  isSavingMasterData = false;
+  masterDataSaveError = '';
+  masterDataSaveMessage = '';
+  masterDataDeleteError = '';
 
   readonly specialDocumentTypes: Record<number, {
     table: MasterDataTable;
     title: string;
     columns: { key: string; label: string }[];
+    fields: MasterDataField[];
   }> = {
       6: {
         table: 'machines',
@@ -106,6 +126,17 @@ export class QmsDashboardComponent implements OnInit {
           { key: 'commissionedOn', label: 'Commissioned On' },
           { key: 'loadInHP', label: 'Load in HP' },
           { key: 'location', label: 'Location' }
+        ],
+        fields: [
+          { key: 'machineName', label: 'Machine Name', type: 'text', required: false },
+          { key: 'machineCategory', label: 'Machine Category', type: 'text', required: false },
+          { key: 'machineCodeNum', label: 'Machine Code No.', type: 'text' },
+          { key: 'machineSlNum', label: 'Machine Serial No.', type: 'text' },
+          { key: 'make', label: 'Make', type: 'text' },
+          { key: 'capacityOrSpecification', label: 'Capacity / Specification', type: 'text', required: false },
+          { key: 'commissionedOn', label: 'Commissioned On', type: 'date', required: false },
+          { key: 'loadInHP', label: 'Load in HP', type: 'number' },
+          { key: 'location', label: 'Location', type: 'text', required: false }
         ]
       },
       7: {
@@ -116,6 +147,12 @@ export class QmsDashboardComponent implements OnInit {
           { key: 'pages', label: 'Pages' },
           { key: 'revision', label: 'Revision' },
           { key: 'remarks', label: 'Remarks' }
+        ],
+        fields: [
+          { key: 'description', label: 'Description', type: 'text', required: false },
+          { key: 'pages', label: 'Pages', type: 'number' },
+          { key: 'revision', label: 'Revision', type: 'number' },
+          { key: 'remarks', label: 'Remarks', type: 'text' }
         ]
       },
       8: {
@@ -130,6 +167,16 @@ export class QmsDashboardComponent implements OnInit {
           { key: 'location', label: 'Location' },
           { key: 'calibrationFrequency', label: 'Calibration Frequency' },
           { key: 'remarks', label: 'Remarks' }
+        ],
+        fields: [
+          { key: 'instrumentDescription', label: 'Instrument Description', type: 'text', required: false },
+          { key: 'instrumentCodeNum', label: 'Instrument Code No.', type: 'text', required: false },
+          { key: 'instrumentSlNum', label: 'Instrument Serial No.', type: 'text', required: false },
+          { key: 'instrumentRange', label: 'Range', type: 'text', required: false },
+          { key: 'make', label: 'Make', type: 'text', required: false },
+          { key: 'location', label: 'Location', type: 'text', required: false },
+          { key: 'calibrationFrequency', label: 'Calibration Frequency', type: 'text', required: false },
+          { key: 'remarks', label: 'Remarks', type: 'text' }
         ]
       },
       9: {
@@ -143,6 +190,15 @@ export class QmsDashboardComponent implements OnInit {
           { key: 'responsibilities', label: 'Responsibilities' },
           { key: 'departmentReview', label: 'Department Review' },
           { key: 'qpiReview', label: 'QPI Review' }
+        ],
+        fields: [
+          { key: 'processOrDept', label: 'Process / Department', type: 'text', required: false },
+          { key: 'measurementTitle', label: 'Measurement Title', type: 'text', required: false },
+          { key: 'qualityPerformanceIndexFormula', label: 'QPI Formula', type: 'text', required: false },
+          { key: 'targets', label: 'Targets', type: 'text', required: false },
+          { key: 'responsibilities', label: 'Responsibilities', type: 'text', required: false },
+          { key: 'departmentReview', label: 'Department Review', type: 'text', required: false },
+          { key: 'qpiReview', label: 'QPI Review', type: 'text', required: false }
         ]
       }
     };
@@ -164,6 +220,7 @@ export class QmsDashboardComponent implements OnInit {
     table: MasterDataTable;
     title: string;
     columns: { key: string; label: string }[];
+    fields: MasterDataField[];
   } | null {
     if (
       this.selectedDocumentTypeId === null ||
@@ -173,6 +230,28 @@ export class QmsDashboardComponent implements OnInit {
     }
 
     return this.specialDocumentTypes[this.selectedDocumentTypeId] ?? null;
+  }
+
+  get canManageMasterData(): boolean {
+    return this.userRole === 'QMS Admin';
+  }
+
+  get filteredMasterDataRows(): MasterDataRow[] {
+    const search = this.masterDataSearchText.trim().toLowerCase();
+    if (!search) {
+      return this.masterDataRows;
+    }
+
+    const config = this.selectedSpecialType;
+    if (!config) {
+      return this.masterDataRows;
+    }
+
+    return this.masterDataRows.filter(row =>
+      config.columns.some(column =>
+        String(row[column.key] ?? '').toLowerCase().includes(search)
+      )
+    );
   }
 
   get userInitial(): string {
@@ -322,6 +401,168 @@ export class QmsDashboardComponent implements OnInit {
     });
   }
 
+  openCreateMasterData(): void {
+    const config = this.selectedSpecialType;
+    if (!config || !this.canManageMasterData || this.isSavingMasterData) {
+      return;
+    }
+
+    this.editingMasterDataId = null;
+    this.masterDataDraft = {};
+    for (const field of config.fields) {
+      this.masterDataDraft[field.key] =
+        field.type === 'number' ? null : '';
+    }
+
+    this.masterDataSaveError = '';
+    this.masterDataSaveMessage = '';
+    this.masterDataDeleteError = '';
+    this.masterDataFormOpen = true;
+  }
+
+  openEditMasterData(row: MasterDataRow): void {
+    const config = this.selectedSpecialType;
+    if (!config || !this.canManageMasterData || this.isSavingMasterData) {
+      return;
+    }
+
+    this.editingMasterDataId = row.id;
+    this.masterDataDraft = {};
+    for (const field of config.fields) {
+      const value = row[field.key];
+      this.masterDataDraft[field.key] =
+        value === null || value === undefined ? '' : value;
+    }
+
+    for (const field of config.fields) {
+      if (field.type === 'date' && this.masterDataDraft[field.key]) {
+        this.masterDataDraft[field.key] =
+          String(this.masterDataDraft[field.key]).slice(0, 10);
+      }
+    }
+
+    this.masterDataSaveError = '';
+    this.masterDataSaveMessage = '';
+    this.masterDataDeleteError = '';
+    this.masterDataFormOpen = true;
+  }
+
+  cancelMasterDataForm(): void {
+    if (this.isSavingMasterData) {
+      return;
+    }
+    this.masterDataFormOpen = false;
+    this.masterDataDraft = {};
+    this.editingMasterDataId = null;
+    this.masterDataSaveError = '';
+  }
+
+  saveMasterData(): void {
+    const config = this.selectedSpecialType;
+    if (!config || !this.canManageMasterData || this.isSavingMasterData) {
+      return;
+    }
+
+    const payload: Record<string, any> = {};
+    for (const field of config.fields) {
+      const rawValue = this.masterDataDraft[field.key];
+
+      if (field.required && (
+        rawValue === null ||
+        rawValue === undefined ||
+        String(rawValue).trim() === ''
+      )) {
+        this.masterDataSaveError = `${field.label} is required.`;
+        return;
+      }
+
+      if (field.type === 'number') {
+        payload[field.key] =
+          rawValue === '' || rawValue === null || rawValue === undefined
+            ? null
+            : Number(rawValue);
+
+        if (
+          payload[field.key] !== null &&
+          !Number.isFinite(payload[field.key])
+        ) {
+          this.masterDataSaveError = `Enter a valid number for ${field.label}.`;
+          return;
+        }
+      } else {
+        payload[field.key] =
+          rawValue === null || rawValue === undefined
+            ? ''
+            : String(rawValue).trim();
+      }
+    }
+
+    this.isSavingMasterData = true;
+    this.masterDataSaveError = '';
+    this.masterDataSaveMessage = '';
+    this.masterDataDeleteError = '';
+
+    const request$ = this.editingMasterDataId === null
+      ? this.masterDataService.createRow(config.table, payload)
+      : this.masterDataService.updateRow(
+          config.table,
+          this.editingMasterDataId,
+          payload
+        );
+
+    request$.subscribe({
+      next: () => {
+        this.isSavingMasterData = false;
+        this.masterDataFormOpen = false;
+        this.masterDataDraft = {};
+        this.editingMasterDataId = null;
+        this.masterDataSaveMessage = 'Master data saved successfully.';
+        this.loadMasterData();
+        this.cdr.markForCheck();
+      },
+      error: error => {
+        console.error('Failed to save master data:', error);
+        this.isSavingMasterData = false;
+        this.masterDataSaveError =
+          error?.error?.message ||
+          'Could not save this record. Please check the values and try again.';
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  deleteMasterData(row: MasterDataRow): void {
+    const config = this.selectedSpecialType;
+    if (!config || !this.canManageMasterData || this.isSavingMasterData) {
+      return;
+    }
+
+    const label = String(
+      row[config.columns[0]?.key] ?? `record ${row.id}`
+    );
+    if (!window.confirm(`Delete "${label}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    this.masterDataDeleteError = '';
+    this.masterDataSaveMessage = '';
+
+    this.masterDataService.deleteRow(config.table, row.id).subscribe({
+      next: () => {
+        this.masterDataSaveMessage = 'Record deleted successfully.';
+        this.loadMasterData();
+        this.cdr.markForCheck();
+      },
+      error: error => {
+        console.error('Failed to delete master data:', error);
+        this.masterDataDeleteError =
+          error?.error?.message ||
+          'Could not delete this record. Please try again.';
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   onDocumentTypeChange(value: string | number): void {
     this.selectedDocumentTypeId =
       value === '' ? null : Number(value);
@@ -354,6 +595,7 @@ export class QmsDashboardComponent implements OnInit {
     this.selectedDocumentTypeId = null;
     this.selectedDepartmentId = null;
     this.searchText = '';
+    this.masterDataSearchText = '';
 
     this.loadDocuments();
     this.loadMasterData();

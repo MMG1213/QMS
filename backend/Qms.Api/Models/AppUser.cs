@@ -23,4 +23,6 @@ public class AppUser
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAtUtc { get; set; }
+
+    public int TokenVersion { get; set; } = 0;
 }

@@ -177,7 +177,7 @@
     </p>
     }
 
-    <!-- Special master-data tables: only shown when no department is selected. -->
+    <!-- ML07, ML08, ML09 and ML10 Master Data Tables -->
     @if (selectedSpecialType; as specialType) {
     <section class="table-card">
 
@@ -187,11 +187,36 @@
           <p>Master data retrieved from the database</p>
         </div>
 
-        <span class="record-count">
-          {{ masterDataRows.length }}
-          {{ masterDataRows.length === 1 ? 'record' : 'records' }}
-        </span>
+        <div class="master-data-toolbar-actions">
+          <span class="record-count">
+            {{ filteredMasterDataRows.length }}
+            {{ filteredMasterDataRows.length === 1 ? 'record' : 'records' }}
+          </span>
+
+          @if (canManageMasterData) {
+          <button type="button"
+                  class="master-data-add-button"
+                  (click)="openCreateMasterData()">
+            + Add Record
+          </button>
+          }
+        </div>
       </div>
+
+      <div class="master-data-search">
+        <input type="search"
+               aria-label="Search master data"
+               placeholder="Search this table..."
+               [(ngModel)]="masterDataSearchText" />
+      </div>
+
+      @if (masterDataSaveMessage) {
+      <div class="success-message">{{ masterDataSaveMessage }}</div>
+      }
+
+      @if (masterDataDeleteError) {
+      <div class="error-message">{{ masterDataDeleteError }}</div>
+      }
 
       @if (isLoadingMasterData) {
       <p class="loading-message">Loading master data...</p>
@@ -210,15 +235,19 @@
               @for (column of specialType.columns; track column.key) {
               <th>{{ column.label }}</th>
               }
+
+              @if (canManageMasterData) {
+              <th class="master-data-actions-column">Actions</th>
+              }
             </tr>
           </thead>
 
           <tbody>
-            @if (masterDataRows.length > 0) {
+            @if (filteredMasterDataRows.length > 0) {
             @for (
-            row of masterDataRows;
-            track row.id;
-            let i = $index
+              row of filteredMasterDataRows;
+              track row.id;
+              let i = $index
             ) {
             <tr>
               <td class="serial-cell">{{ i + 1 }}</td>
@@ -226,12 +255,30 @@
               @for (column of specialType.columns; track column.key) {
               <td>{{ row[column.key] ?? '—' }}</td>
               }
+
+              @if (canManageMasterData) {
+              <td class="master-data-row-actions">
+                <button type="button"
+                        class="edit-button"
+                        (click)="openEditMasterData(row)"
+                        [disabled]="isSavingMasterData">
+                  Edit
+                </button>
+
+                <button type="button"
+                        class="delete-button"
+                        (click)="deleteMasterData(row)"
+                        [disabled]="isSavingMasterData">
+                  Delete
+                </button>
+              </td>
+              }
             </tr>
             }
             } @else {
             <tr>
               <td class="table-message empty-state"
-                  [attr.colspan]="specialType.columns.length + 1">
+                  [attr.colspan]="specialType.columns.length + (canManageMasterData ? 2 : 1)">
                 <strong>No records found</strong>
                 <span>
                   No records are available for this document type.
@@ -243,292 +290,87 @@
         </table>
       </div>
 
+      @if (masterDataFormOpen) {
+      <div class="master-data-modal-backdrop"
+           (click)="cancelMasterDataForm()">
+        <section class="master-data-modal"
+                 role="dialog"
+                 aria-modal="true"
+                 [attr.aria-label]="editingMasterDataId === null ? 'Add master data record' : 'Edit master data record'"
+                 (click)="$event.stopPropagation()">
+
+          <div class="master-data-modal-header">
+            <div>
+              <p class="eyebrow">
+                FUJITEC QMS · {{ selectedSpecialType?.title }}
+              </p>
+              <h2>
+                {{ editingMasterDataId === null ? 'Add Record' : 'Edit Record' }}
+              </h2>
+            </div>
+
+            <button type="button"
+                    class="modal-close-button"
+                    aria-label="Close form"
+                    (click)="cancelMasterDataForm()"
+                    [disabled]="isSavingMasterData">×</button>
+          </div>
+
+          @if (masterDataSaveError) {
+          <div class="error-message">{{ masterDataSaveError }}</div>
+          }
+
+          <div class="master-data-form-grid">
+            @for (field of specialType.fields; track field.key) {
+            <div class="master-data-form-field">
+              <label [for]="'master-data-' + field.key">
+                {{ field.label }}
+              </label>
+              
+              <input [id]="'master-data-' + field.key"
+                    [type]="field.type"
+                    [step]="field.type === 'number' ? 'any' : null"
+                    [ngModel]="masterDataDraft[field.key]"
+                    (ngModelChange)="masterDataDraft[field.key] = $event"
+                    [disabled]="isSavingMasterData" />
+            </div>
+            }
+          </div>
+
+          <div class="master-data-modal-actions">
+            <button type="button"
+                    class="cancel-button"
+                    (click)="cancelMasterDataForm()"
+                    [disabled]="isSavingMasterData">
+              Cancel
+            </button>
+
+            <button type="button"
+                    class="save-button"
+                    (click)="saveMasterData()"
+                    [disabled]="isSavingMasterData">
+              {{ isSavingMasterData ? 'Saving...' : 'Save Record' }}
+            </button>
+          </div>
+        </section>
+      </div>
+      }
+
       <div class="table-footer">
-        <span>Showing {{ masterDataRows.length }} record(s)</span>
+        <span>Showing {{ filteredMasterDataRows.length }} record(s)</span>
         <span>Data retrieved from SQL Server</span>
       </div>
       }
 
-      <section class="table-card">
-
-        <div class="table-toolbar">
-          <div>
-            <h2>Controlled Documents</h2>
-            <p>Document details and revision records</p>
-          </div>
-
-          <span class="record-count">
-            {{ documents.length }}
-            {{ documents.length === 1 ? 'document' : 'documents' }}
-          </span>
-        </div>
-
-        
-<div class="table-scroll">
-  <table class="master-table">
-    <thead>
-      <tr>
-        <th rowspan="2" class="serial-column">Sl. No.</th>
-        <th rowspan="2" class="title-column">Title / Description</th>
-        <th rowspan="2" class="document-number-column">Document No.</th>
-        <th rowspan="2" class="document-type-column">Document Type</th>
-        <th rowspan="2" class="department-column">Department Name</th>
-        <th rowspan="2" class="retention-column">Retention Period</th>
-        <th rowspan="2" class="status-column">Status</th>
-        <th rowspan="2" class="obsolete-date-column">Obsolete Date</th>
-
-        @for (revisionNumber of revisionColumns; track revisionNumber) {
-          <th colspan="2" class="revision-column">
-            {{ formatRevision(revisionNumber) }}
-          </th>
-        }
-
-        <th rowspan="2" class="actions-column">Actions</th>
-      </tr>
-
-      <tr>
-        @for (revisionNumber of revisionColumns; track revisionNumber) {
-          <th class="revision-subcolumn">Pages</th>
-          <th class="revision-subcolumn">Date</th>
-        }
-      </tr>
-    </thead>
-
-    <tbody>
-      @if (isLoadingDocuments) {
-        <tr>
-          <td class="table-message" [attr.colspan]="9 + revisionColumns.length * 2">
-            Loading documents...
-          </td>
-        </tr>
-      } @else if (documents.length > 0) {
-        @for (document of documents; track document.documentId; let i = $index) {
-          @if (editingDocumentId === document.documentId && editDraft; as draft) {
-            <tr class="editing-row">
-              <td class="serial-cell">{{ i + 1 }}</td>
-
-              <td>
-                <input
-                  class="edit-input"
-                  type="text"
-                  [(ngModel)]="draft.title"
-                  aria-label="Document title"
-                />
-              </td>
-
-              <td>
-                <input
-                  class="edit-input"
-                  type="text"
-                  [(ngModel)]="draft.documentNo"
-                  aria-label="Document number"
-                />
-              </td>
-
-              <td>
-                <select
-                  class="edit-input"
-                  [(ngModel)]="draft.documentTypeId"
-                  aria-label="Document type"
-                >
-                  @for (type of documentTypes; track type.documentTypeId) {
-                    <option [ngValue]="type.documentTypeId">
-                      {{ type.typeName }}
-                    </option>
-                  }
-                </select>
-              </td>
-
-              <td>
-                <select
-                  class="edit-input"
-                  [(ngModel)]="draft.departmentId"
-                  aria-label="Department"
-                >
-                  @for (department of departments; track department.departmentId) {
-                    <option [ngValue]="department.departmentId">
-                      {{ department.departmentName }}
-                    </option>
-                  }
-                </select>
-              </td>
-
-              <td>
-                <input
-                  class="edit-input"
-                  type="text"
-                  [(ngModel)]="draft.retentionPeriod"
-                  aria-label="Retention period"
-                />
-              </td>
-
-              <td>
-                <select
-                  class="edit-input"
-                  [ngModel]="draft.status"
-                  (ngModelChange)="onEditStatusChange($event)"
-                  aria-label="Document status"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Obsolete">Obsolete</option>
-                </select>
-              </td>
-
-              <td>
-                @if (draft.status === 'Obsolete') {
-                  <input
-                    class="edit-input"
-                    type="date"
-                    [(ngModel)]="draft.obseleteDate"
-                    aria-label="Obsolete date"
-                  />
-                } @else {
-                  <span>—</span>
-                }
-              </td>
-
-              @for (revisionNumber of revisionColumns; track revisionNumber) {
-                @if (getRevision(draft, revisionNumber); as revision) {
-                  <td>
-                    <input
-                      class="revision-input"
-                      type="number"
-                      min="1"
-                      step="1"
-                      [(ngModel)]="revision.pageCount"
-                      [attr.aria-label]="formatRevision(revisionNumber) + ' pages'"
-                    />
-                  </td>
-
-                  <td>
-                    <input
-                      class="revision-input"
-                      type="date"
-                      [(ngModel)]="revision.revisionDate"
-                      [attr.aria-label]="formatRevision(revisionNumber) + ' date'"
-                    />
-                  </td>
-                } @else {
-                  <td class="empty-revision">—</td>
-                  <td class="empty-revision">—</td>
-                }
-              }
-
-              <td class="actions-cell">
-                <button
-                  type="button"
-                  class="save-button"
-                  (click)="saveEdit()"
-                  [disabled]="isSavingDocument"
-                >
-                  {{ isSavingDocument ? 'Saving...' : 'Save' }}
-                </button>
-
-                <button
-                  type="button"
-                  class="cancel-button"
-                  (click)="cancelEdit()"
-                  [disabled]="isSavingDocument"
-                >
-                  Cancel
-                </button>
-              </td>
-            </tr>
-          } @else {
-            <tr>
-              <td class="serial-cell">{{ i + 1 }}</td>
-
-              <td class="title-cell">
-                <span class="document-title">{{ document.title }}</span>
-              </td>
-
-              <td class="document-number-cell">{{ document.documentNo }}</td>
-
-              <td>{{ document.typeName || '—' }}</td>
-
-              <td class="department-cell">{{ document.departmentName || '—' }}</td>
-
-              <td class="retention-cell">{{ document.retentionPeriod ?? '—' }}</td>
-
-              <td class="status-cell">
-                <span
-                  class="status-badge"
-                  [ngClass]="{
-                    'status-active': document.status === 'Active',
-                    'status-obsolete': document.status === 'Obsolete'
-                  }"
-                >
-                  {{ document.status ?? '—' }}
-                </span>
-              </td>
-
-              <td class="obsolete-date-cell">
-                {{ formatDate(document.obseleteDate) }}
-              </td>
-
-              @for (revisionNumber of revisionColumns; track revisionNumber) {
-                @if (getRevision(document, revisionNumber); as revision) {
-                  <td class="revision-cell page-count">{{ revision.pageCount }}</td>
-                  <td class="revision-cell revision-date">
-                    {{ formatDate(revision.revisionDate) }}
-                  </td>
-                } @else {
-                  <td class="revision-cell empty-revision">—</td>
-                  <td class="revision-cell empty-revision">—</td>
-                }
-              }
-
-              <td class="actions-cell">
-                <button
-                  type="button"
-                  class="edit-button"
-                  (click)="startEdit(document)"
-                  [disabled]="isSavingDocument"
-                >
-                  Edit
-                </button>
-              </td>
-            </tr>
-          }
-        }
-      } @else if (!documentError) {
-        <tr>
-          <td
-            class="table-message empty-state"
-            [attr.colspan]="9 + revisionColumns.length * 2"
-          >
-            <strong>No documents found</strong>
-            <span>
-              Matching documents will appear here when records are available.
-            </span>
-          </td>
-        </tr>
-      }
-    </tbody>
-  </table>
-</div>
-
-@if (saveMessage) {
-  <div class="success-message">{{ saveMessage }}</div>
-}
-
-@if (saveError) {
-  <div class="error-message">{{ saveError }}</div>
-}
-
-        
-
-        <div class="table-footer">
-          <span>Showing {{ documents.length }} document(s)</span>
-          <span>Revision data retrieved from the database</span>
-        </div>
-
-      </section>
     </section>
     }
 
-    <!-- Existing Controlled Documents table: retained without redesign. -->
-    @if (!selectedSpecialType) {
+    <!-- Controlled Documents: shown separately from the four master-data tables. -->
+    @if (
+      selectedDepartmentId !== null ||
+      selectedDocumentTypeId === null ||
+      !specialDocumentTypes[selectedDocumentTypeId]
+    ) {
     <section class="table-card">
 
       <div class="table-toolbar">
@@ -562,8 +404,8 @@
               <th rowspan="2" class="status-column">Status</th>
 
               @for (
-              revisionNumber of revisionColumns;
-              track revisionNumber
+                revisionNumber of revisionColumns;
+                track revisionNumber
               ) {
               <th colspan="2" class="revision-column">
                 {{ formatRevision(revisionNumber) }}
@@ -573,8 +415,8 @@
 
             <tr>
               @for (
-              revisionNumber of revisionColumns;
-              track revisionNumber
+                revisionNumber of revisionColumns;
+                track revisionNumber
               ) {
               <th class="revision-subcolumn">Pages</th>
               <th class="revision-subcolumn">Date</th>
@@ -593,9 +435,9 @@
             } @else if (documents.length > 0) {
 
             @for (
-            document of documents;
-            track document.documentId;
-            let i = $index
+              document of documents;
+              track document.documentId;
+              let i = $index
             ) {
             <tr>
               <td class="serial-cell">{{ i + 1 }}</td>
@@ -625,12 +467,12 @@
               </td>
 
               @for (
-              revisionNumber of revisionColumns;
-              track revisionNumber
+                revisionNumber of revisionColumns;
+                track revisionNumber
               ) {
               @if (
-              getRevision(document, revisionNumber);
-              as revision
+                getRevision(document, revisionNumber);
+                as revision
               ) {
               <td class="revision-cell page-count">
                 {{ revision.pageCount }}
