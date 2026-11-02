@@ -93,6 +93,10 @@ public class QmsDbContext : DbContext
             entity.HasIndex(u => u.Email)
                 .IsUnique();
 
+            entity.Property(u => u.TokenVersion)
+                .HasDefaultValue(0)
+                .IsRequired();
+
             entity.HasOne(u => u.Department)
                 .WithMany()
                 .HasForeignKey(u => u.DepartmentId)

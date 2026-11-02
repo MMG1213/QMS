@@ -1,13 +1,15 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Qms.Api.Models;
 using Qms.Api.Services;
 using Qms.Api.Dtos;
 namespace Qms.Api.Controllers;
 
 [ApiController]
 [Route("api/master-list")]
-
+[Authorize]
 public class MasterListController : ControllerBase
 {
     private readonly MasterListService _service;
@@ -48,7 +50,7 @@ public class MasterListController : ControllerBase
     }
 
     [HttpPut("documents/{documentId:int}")]
-
+    [Authorize(Roles = QmsRole.QmsAdmin)]
     public async Task<IActionResult> UpdateDocuments(int documentId, [FromBody] UpdateMasterListDto request)
     {
         try

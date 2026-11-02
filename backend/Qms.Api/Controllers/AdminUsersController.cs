@@ -248,6 +248,18 @@ public class AdminUsersController : ControllerBase
             }
         }
 
+        // Revoke all previously issued JWTs when deactivating an account.
+        if (user.IsActive && !request.IsActive)
+        {
+            user.TokenVersion++;
+        }
+
+        if (user.IsActive != request.IsActive)
+        {
+            // Revoke all previously issued JWTs for this account.
+            user.TokenVersion++;
+        }
+
         user.IsActive = request.IsActive;
         user.UpdatedAtUtc = DateTime.UtcNow;
 

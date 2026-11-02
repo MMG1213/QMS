@@ -29,6 +29,16 @@ import {
 
 import { SigninService } from '../../services/signin.service';
 
+
+type MasterDataFieldType = 'text' | 'number' | 'date';
+
+interface MasterDataField {
+  key: string;
+  label: string;
+  type: MasterDataFieldType;
+  required?: boolean;
+}
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -115,6 +125,15 @@ export class QmsDashboardComponent implements OnInit {
   // --------------------------------------------------
 
   masterDataRows: MasterDataRow[] = [];
+  masterDataSearchText = '';
+
+  masterDataFormOpen = false;
+  masterDataDraft: Record<string, any> = {};
+  editingMasterDataId: number | null = null;
+  isSavingMasterData = false;
+  masterDataSaveError = '';
+  masterDataSaveMessage = '';
+  masterDataDeleteError = '';
 
   editingMasterDataId: number | null = null;
   specialEditDraft: MasterDataRow | null = null;
@@ -137,6 +156,7 @@ export class QmsDashboardComponent implements OnInit {
     table: MasterDataTable;
     title: string;
     columns: { key: string; label: string }[];
+    fields: MasterDataField[];
   }> = {
 
     // ML07 - Machines / Equipment
@@ -208,6 +228,7 @@ export class QmsDashboardComponent implements OnInit {
     table: MasterDataTable;
     title: string;
     columns: { key: string; label: string }[];
+    fields: MasterDataField[];
   } | null {
 
     if (this.selectedDocumentTypeId === null) {
@@ -697,6 +718,7 @@ export class QmsDashboardComponent implements OnInit {
     this.selectedDocumentTypeId = null;
     this.selectedDepartmentId = null;
     this.searchText = '';
+    this.masterDataSearchText = '';
 
     this.editingDocumentId = null;
     this.editDraft = null;

@@ -20,6 +20,7 @@ builder.Services.AddScoped<ISigninService, SigninService>();
 builder.Services.AddScoped<ISignupService, SignupService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IMasterListImportService, MasterListImportService>();
+builder.Services.AddScoped<IAdminSignupRequestService, AdminSignupRequestService>();
 
 builder.Services.AddScoped<MasterListExcelPreviewService>();
 builder.Services.AddScoped<MasterListService>();
@@ -75,25 +76,101 @@ builder.Services
       options.DefaultChallengeScheme =
           JwtBearerDefaults.AuthenticationScheme;
     })
+    
     .AddJwtBearer(options =>
     {
-      options.TokenValidationParameters = new TokenValidationParameters
-      {
-        ValidateIssuer = true,
-        ValidIssuer = jwtIssuer,
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
 
-        ValidateAudience = true,
-        ValidAudience = jwtAudience,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
 
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = signingKey,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = signingKey,
 
-        ValidateLifetime = true,
-        ClockSkew = TimeSpan.FromMinutes(1),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1),
 
-        NameClaimType = ClaimTypes.Name,
-        RoleClaimType = ClaimTypes.Role
-      };
+            NameClaimType = ClaimTypes.Name,
+            RoleClaimType = ClaimTypes.Role
+        };
+
+        // Validate account status and token version on every authenticated request.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var userIdClaim = context.Principal?
+                    .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                var tokenVersionClaim = context.Principal?
+                    .FindFirst("tokenVersion")?.Value;
+
+                if (!int.TryParse(userIdClaim, out var userId) ||
+                    !int.TryParse(tokenVersionClaim, out var tokenVersion))
+                {
+                    context.Fail("Invalid authentication token.");
+                    return;
+                }
+
+                var db = context.HttpContext.RequestServices
+                    .GetRequiredService<QmsDbContext>();
+
+                var accountIsValid = await db.AppUsers
+                    .AsNoTracking()
+                    .AnyAsync(user =>
+                        user.Id == userId &&
+                        user.IsActive &&
+                        user.TokenVersion == tokenVersion,
+                        context.HttpContext.RequestAborted);
+
+                if (!accountIsValid)
+                {
+                    context.Fail("Account is inactive or the token has been revoked.");
+                }
+            }
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var userIdValue = context.Principal?
+                    .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                var tokenVersionValue = context.Principal?
+                    .FindFirst("tokenVersion")?.Value;
+
+                if (!int.TryParse(userIdValue, out var userId) ||
+                    !int.TryParse(tokenVersionValue, out var tokenVersion))
+                {
+                    context.Fail("Invalid authentication token.");
+                    return;
+                }
+
+                var db = context.HttpContext.RequestServices
+                    .GetRequiredService<QmsDbContext>();
+
+                var user = await db.AppUsers
+                    .AsNoTracking()
+                    .Where(u => u.Id == userId)
+                    .Select(u => new
+                    {
+                        u.IsActive,
+                        u.TokenVersion
+                    })
+                    .SingleOrDefaultAsync();
+
+                if (user == null ||
+                    !user.IsActive ||
+                    user.TokenVersion != tokenVersion)
+                {
+                    context.Fail("Account is inactive or session has been revoked.");
+                }
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
