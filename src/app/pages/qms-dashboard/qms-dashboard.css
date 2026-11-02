@@ -1065,3 +1065,126 @@ button:disabled {
   border-radius: 5px;
   box-sizing: border-box;
 }
+
+
+/* ML07–ML10 Add form */
+
+.special-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.add-button {
+  min-height: 36px;
+  padding: 0 15px;
+  color: #fff;
+  background: #c8102e;
+  border: 1px solid #c8102e;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.add-button:hover {
+  background: #a80c25;
+}
+
+.add-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.special-form-panel {
+  padding: 20px 24px;
+  background: #fffafa;
+  border-bottom: 1px solid #e7eaf0;
+}
+
+.special-form-panel h3 {
+  margin: 0 0 18px;
+  color: #202939;
+  font-size: 15px;
+}
+
+.special-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.special-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.special-form-field label {
+  color: #464a53;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.special-form-field input {
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid #d9dce2;
+  border-radius: 5px;
+  background: #fff;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.special-form-field input:focus {
+  outline: 2px solid rgb(200 16 46 / 15%);
+  border-color: #c8102e;
+}
+
+.special-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.delete-button {
+  margin: 2px;
+  padding: 7px 10px;
+  color: #fff;
+  background: #b42318;
+  border: 0;
+  border-radius: 4px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  background: #912018;
+}
+
+.delete-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 850px) {
+  .special-form-grid {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 550px) {
+  .special-toolbar-actions {
+    align-items: flex-end;
+    flex-direction: column;
+  }
+
+  .special-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .special-form-panel {
+    padding: 15px;
+  }
+}

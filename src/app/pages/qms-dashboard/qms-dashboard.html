@@ -121,7 +121,6 @@
       <!-- FILTERS -->
       <div class="filter-panel">
 
-        <!-- DOCUMENT TYPE -->
         <div class="filter-field">
           <label for="documentType">Document Type</label>
 
@@ -141,7 +140,7 @@
           </select>
         </div>
 
-        <!-- DEPARTMENT: HIDDEN FOR ML07–ML10 -->
+        <!-- DEPARTMENT FILTER -->
         @if (!selectedSpecialType) {
 
           <div class="filter-field">
@@ -166,7 +165,7 @@
             </select>
           </div>
 
-          <!-- SEARCH: CONTROLLED DOCUMENTS -->
+          <!-- DOCUMENT SEARCH -->
           <div class="filter-field search-field">
             <label for="documentSearch">Search Documents</label>
 
@@ -228,18 +227,102 @@
 
         <section class="table-card">
 
+          <!-- TABLE TOOLBAR -->
           <div class="table-toolbar">
+
             <div>
               <h2>{{ specialType.title }}</h2>
               <p>Master data retrieved from the database</p>
             </div>
 
-            <span class="record-count">
-              {{ masterDataRows.length }}
-              {{ masterDataRows.length === 1 ? 'record' : 'records' }}
-            </span>
+            <div class="special-toolbar-actions">
+
+              <span class="record-count">
+                {{ masterDataRows.length }}
+                {{ masterDataRows.length === 1 ? 'record' : 'records' }}
+              </span>
+
+              <!-- ADD BUTTON -->
+              @if (isQmsAdmin) {
+                <button
+                  type="button"
+                  class="add-button"
+                  (click)="startSpecialAdd()"
+                  [disabled]="
+                    isAddingMasterData ||
+                    editingMasterDataId !== null ||
+                    isSavingMasterData ||
+                    isDeletingMasterData
+                  ">
+                  + Add Record
+                </button>
+              }
+
+            </div>
+
           </div>
 
+          <!-- ADD RECORD FORM -->
+          @if (isAddingMasterData && specialAddDraft; as draft) {
+
+            <div class="special-form-panel">
+
+              <h3>Add {{ specialType.title }} Record</h3>
+
+              <div class="special-form-grid">
+
+                @for (
+                  column of specialType.columns;
+                  track column.key
+                ) {
+
+                  <div class="special-form-field">
+
+                    <label [for]="'add-' + column.key">
+                      {{ column.label }}
+                    </label>
+
+                    <input
+                      [id]="'add-' + column.key"
+                      [type]="getSpecialInputType(column.key)"
+                      [ngModel]="draft[column.key] ?? ''"
+                      (ngModelChange)="updateSpecialAddField(column.key, $event)"
+                      [attr.aria-label]="column.label"
+                    />
+
+                  </div>
+
+                }
+
+              </div>
+
+              <div class="special-form-actions">
+
+                <button
+                  type="button"
+                  class="save-button"
+                  (click)="saveSpecialAdd()"
+                  [disabled]="isSavingMasterData">
+                  {{
+                    isSavingMasterData ? 'Saving...' : 'Save Record'
+                  }}
+                </button>
+
+                <button
+                  type="button"
+                  class="cancel-button"
+                  (click)="cancelSpecialAdd()"
+                  [disabled]="isSavingMasterData">
+                  Cancel
+                </button>
+
+              </div>
+
+            </div>
+
+          }
+
+          <!-- LOADING -->
           @if (isLoadingMasterData) {
 
             <p class="loading-message">
@@ -258,12 +341,14 @@
 
           } @else {
 
+            <!-- SPECIAL TABLE -->
             <div class="table-scroll">
 
               <table class="master-table">
 
                 <thead>
                   <tr>
+
                     <th class="serial-column">Sl. No.</th>
 
                     @for (
@@ -274,6 +359,7 @@
                     }
 
                     <th class="actions-column">Actions</th>
+
                   </tr>
                 </thead>
 
@@ -287,7 +373,7 @@
                       let i = $index
                     ) {
 
-                      <!-- SPECIAL TABLE EDITING ROW -->
+                      <!-- EDITING ROW -->
                       @if (
                         editingMasterDataId === row.id && specialEditDraft;
                         as draft
@@ -316,20 +402,23 @@
 
                           }
 
-                          <!-- SAVE / CANCEL -->
                           <td class="actions-cell">
 
                             <button
                               type="button"
                               class="save-button"
-                              (click)="saveSpecialEdit()">
-                              Save
+                              (click)="saveSpecialEdit()"
+                              [disabled]="isSavingMasterData">
+                              {{
+                                isSavingMasterData ? 'Saving...' : 'Save'
+                              }}
                             </button>
 
                             <button
                               type="button"
                               class="cancel-button"
-                              (click)="cancelSpecialEdit()">
+                              (click)="cancelSpecialEdit()"
+                              [disabled]="isSavingMasterData">
                               Cancel
                             </button>
 
@@ -339,7 +428,7 @@
 
                       } @else {
 
-                        <!-- NORMAL SPECIAL TABLE ROW -->
+                        <!-- NORMAL ROW -->
                         <tr>
 
                           <td class="serial-cell">
@@ -357,18 +446,43 @@
 
                           }
 
-                          <!-- EDIT BUTTON: QMS ADMIN ONLY -->
+                          <!-- ACTION BUTTONS -->
                           <td class="actions-cell">
 
                             @if (isQmsAdmin) {
+
                               <button
                                 type="button"
                                 class="edit-button"
                                 (click)="startSpecialEdit(row)"
-                                [disabled]="editingMasterDataId !== null ||
-                                  editingDocumentId !== null || isSavingDocument">
+                                [disabled]="
+                                  editingMasterDataId !== null ||
+                                  editingDocumentId !== null ||
+                                  isSavingDocument ||
+                                  isSavingMasterData ||
+                                  isDeletingMasterData ||
+                                  isAddingMasterData
+                                ">
                                 Edit
                               </button>
+
+                              <button
+                                type="button"
+                                class="delete-button"
+                                (click)="deleteSpecialRecord(row)"
+                                [disabled]="
+                                  isDeletingMasterData ||
+                                  isSavingMasterData ||
+                                  editingMasterDataId !== null ||
+                                  isAddingMasterData
+                                ">
+                                {{
+                                  deletingMasterDataId === row.id
+                                    ? 'Deleting...'
+                                    : 'Delete'
+                                }}
+                              </button>
+
                             }
 
                           </td>
@@ -403,30 +517,34 @@
 
             </div>
 
-            <!-- SPECIAL TABLE SAVE MESSAGES -->
-            @if (specialSaveMessage) {
-              <div class="success-message">
-                {{ specialSaveMessage }}
-              </div>
-            }
-
-            @if (specialSaveError) {
-              <div class="error-message">
-                {{ specialSaveError }}
-              </div>
-            }
-
-            <div class="table-footer">
-              <span>
-                Showing {{ masterDataRows.length }} record(s)
-              </span>
-
-              <span>
-                Frontend editing only — database update API pending
-              </span>
-            </div>
-
           }
+
+          <!-- SUCCESS MESSAGE -->
+          @if (specialSaveMessage) {
+            <div class="success-message">
+              {{ specialSaveMessage }}
+            </div>
+          }
+
+          <!-- ERROR MESSAGE -->
+          @if (specialSaveError) {
+            <div class="error-message">
+              {{ specialSaveError }}
+            </div>
+          }
+
+          <!-- TABLE FOOTER -->
+          <div class="table-footer">
+
+            <span>
+              Showing {{ masterDataRows.length }} record(s)
+            </span>
+
+            <span>
+              Database-connected master data
+            </span>
+
+          </div>
 
         </section>
 
@@ -441,6 +559,7 @@
         <section class="table-card">
 
           <div class="table-toolbar">
+
             <div>
               <h2>Controlled Documents</h2>
               <p>Document details and revision records</p>
@@ -450,6 +569,7 @@
               {{ documents.length }}
               {{ documents.length === 1 ? 'document' : 'documents' }}
             </span>
+
           </div>
 
           <div class="table-scroll">
@@ -553,7 +673,6 @@
                           {{ i + 1 }}
                         </td>
 
-                        <!-- TITLE -->
                         <td>
                           <input
                             class="edit-input"
@@ -563,7 +682,6 @@
                           />
                         </td>
 
-                        <!-- DOCUMENT NUMBER -->
                         <td>
                           <input
                             class="edit-input"
@@ -573,7 +691,6 @@
                           />
                         </td>
 
-                        <!-- DOCUMENT TYPE -->
                         <td>
                           <select
                             class="edit-input"
@@ -592,7 +709,6 @@
                           </select>
                         </td>
 
-                        <!-- DEPARTMENT -->
                         <td>
                           <select
                             class="edit-input"
@@ -611,7 +727,6 @@
                           </select>
                         </td>
 
-                        <!-- RETENTION PERIOD -->
                         <td>
                           <input
                             class="edit-input"
@@ -621,7 +736,6 @@
                           />
                         </td>
 
-                        <!-- STATUS -->
                         <td>
                           <select
                             class="edit-input"
@@ -635,7 +749,6 @@
                           </select>
                         </td>
 
-                        <!-- OBSOLETE DATE -->
                         <td>
 
                           @if (draft.status === 'Obsolete') {
@@ -655,7 +768,6 @@
 
                         </td>
 
-                        <!-- REVISION PAGES AND DATES -->
                         @for (
                           revisionNumber of revisionColumns;
                           track revisionNumber
@@ -695,7 +807,6 @@
 
                         }
 
-                        <!-- SAVE / CANCEL -->
                         <td class="actions-cell">
 
                           <button
@@ -722,7 +833,7 @@
 
                     } @else {
 
-                      <!-- NORMAL DOCUMENT DISPLAY ROW -->
+                      <!-- NORMAL DOCUMENT ROW -->
                       <tr>
 
                         <td class="serial-cell">
@@ -768,7 +879,6 @@
                           {{ formatDate(document.obseleteDate) }}
                         </td>
 
-                        <!-- REVISION DISPLAY -->
                         @for (
                           revisionNumber of revisionColumns;
                           track revisionNumber
@@ -796,7 +906,6 @@
 
                         }
 
-                        <!-- EDIT BUTTON: QMS ADMIN ONLY -->
                         <td class="actions-cell">
 
                           @if (isQmsAdmin) {
@@ -804,8 +913,13 @@
                               type="button"
                               class="edit-button"
                               (click)="startEdit(document)"
-                              [disabled]="editingDocumentId !== null ||
-                                editingMasterDataId !== null || isSavingDocument">
+                              [disabled]="
+                                editingDocumentId !== null ||
+                                editingMasterDataId !== null ||
+                                isSavingDocument ||
+                                isSavingMasterData ||
+                                isAddingMasterData
+                              ">
                               Edit
                             </button>
                           }
@@ -843,7 +957,6 @@
 
           </div>
 
-          <!-- DOCUMENT SAVE MESSAGES -->
           @if (saveMessage) {
             <div class="success-message">
               {{ saveMessage }}
