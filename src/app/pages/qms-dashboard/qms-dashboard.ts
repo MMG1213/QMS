@@ -48,9 +48,19 @@ interface MasterDataField {
   changeDetection: ChangeDetectionStrategy.Default
 })
 export class QmsDashboardComponent implements OnInit {
+
   private readonly SigninService = inject(SigninService);
   private readonly router = inject(Router);
   private readonly masterDataService = inject(MasterDataService);
+
+  constructor(
+    private readonly masterListService: MasterListService,
+    private readonly cdr: ChangeDetectorRef
+  ) {}
+
+  // --------------------------------------------------
+  // DASHBOARD
+  // --------------------------------------------------
 
   tabs: string[] = [
     'MasterList',
@@ -72,6 +82,17 @@ export class QmsDashboardComponent implements OnInit {
 
   userRole = this.currentUser?.role || 'User';
 
+  // Only QMS Admin can edit Master List records.
+  isQmsAdmin = this.userRole === 'QMS Admin';
+
+  get userInitial(): string {
+    return this.userName.trim().charAt(0).toUpperCase() || 'U';
+  }
+
+  // --------------------------------------------------
+  // MASTER LIST DATA
+  // --------------------------------------------------
+
   documentTypes: DocumentType[] = [];
   departments: Department[] = [];
   documents: MasterListDocument[] = [];
@@ -88,13 +109,20 @@ export class QmsDashboardComponent implements OnInit {
   documentError = '';
   masterDataError = '';
 
-  // Inline editing state
+  // --------------------------------------------------
+  // ML02–ML06 DOCUMENT EDITING
+  // --------------------------------------------------
+
   editingDocumentId: number | null = null;
   editDraft: MasterListDocument | null = null;
 
   isSavingDocument = false;
   saveMessage = '';
   saveError = '';
+
+  // --------------------------------------------------
+  // ML07–ML10 SPECIAL TABLE DATA
+  // --------------------------------------------------
 
   masterDataRows: MasterDataRow[] = [];
   masterDataSearchText = '';
@@ -107,159 +135,115 @@ export class QmsDashboardComponent implements OnInit {
   masterDataSaveMessage = '';
   masterDataDeleteError = '';
 
+  editingMasterDataId: number | null = null;
+  specialEditDraft: MasterDataRow | null = null;
+
+  specialSaveMessage = '';
+  specialSaveError = '';
+
+  isAddingMasterData = false;
+  isSavingMasterData = false;
+  isDeletingMasterData = false;
+
+  specialAddDraft: MasterDataRow | null = null;
+  deletingMasterDataId: number | null = null;
+
+  // --------------------------------------------------
+  // SPECIAL DOCUMENT TYPE CONFIGURATION
+  // --------------------------------------------------
+
   readonly specialDocumentTypes: Record<number, {
     table: MasterDataTable;
     title: string;
     columns: { key: string; label: string }[];
     fields: MasterDataField[];
   }> = {
-      6: {
-        table: 'machines',
-        title: 'Machines / Equipment',
-        columns: [
-          { key: 'machineName', label: 'Machine Name' },
-          { key: 'machineCategory', label: 'Machine Category' },
-          { key: 'machineCodeNum', label: 'Machine Code No.' },
-          { key: 'machineSlNum', label: 'Machine Serial No.' },
-          { key: 'make', label: 'Make' },
-          { key: 'capacityOrSpecification', label: 'Capacity / Specification' },
-          { key: 'commissionedOn', label: 'Commissioned On' },
-          { key: 'loadInHP', label: 'Load in HP' },
-          { key: 'location', label: 'Location' }
-        ],
-        fields: [
-          { key: 'machineName', label: 'Machine Name', type: 'text', required: false },
-          { key: 'machineCategory', label: 'Machine Category', type: 'text', required: false },
-          { key: 'machineCodeNum', label: 'Machine Code No.', type: 'text' },
-          { key: 'machineSlNum', label: 'Machine Serial No.', type: 'text' },
-          { key: 'make', label: 'Make', type: 'text' },
-          { key: 'capacityOrSpecification', label: 'Capacity / Specification', type: 'text', required: false },
-          { key: 'commissionedOn', label: 'Commissioned On', type: 'date', required: false },
-          { key: 'loadInHP', label: 'Load in HP', type: 'number' },
-          { key: 'location', label: 'Location', type: 'text', required: false }
-        ]
-      },
-      7: {
-        table: 'standards',
-        title: 'Standards',
-        columns: [
-          { key: 'description', label: 'Description' },
-          { key: 'pages', label: 'Pages' },
-          { key: 'revision', label: 'Revision' },
-          { key: 'remarks', label: 'Remarks' }
-        ],
-        fields: [
-          { key: 'description', label: 'Description', type: 'text', required: false },
-          { key: 'pages', label: 'Pages', type: 'number' },
-          { key: 'revision', label: 'Revision', type: 'number' },
-          { key: 'remarks', label: 'Remarks', type: 'text' }
-        ]
-      },
-      8: {
-        table: 'instruments',
-        title: 'Testing and Measuring Instruments',
-        columns: [
-          { key: 'instrumentDescription', label: 'Instrument Description' },
-          { key: 'instrumentCodeNum', label: 'Instrument Code No.' },
-          { key: 'instrumentSlNum', label: 'Instrument Serial No.' },
-          { key: 'instrumentRange', label: 'Range' },
-          { key: 'make', label: 'Make' },
-          { key: 'location', label: 'Location' },
-          { key: 'calibrationFrequency', label: 'Calibration Frequency' },
-          { key: 'remarks', label: 'Remarks' }
-        ],
-        fields: [
-          { key: 'instrumentDescription', label: 'Instrument Description', type: 'text', required: false },
-          { key: 'instrumentCodeNum', label: 'Instrument Code No.', type: 'text', required: false },
-          { key: 'instrumentSlNum', label: 'Instrument Serial No.', type: 'text', required: false },
-          { key: 'instrumentRange', label: 'Range', type: 'text', required: false },
-          { key: 'make', label: 'Make', type: 'text', required: false },
-          { key: 'location', label: 'Location', type: 'text', required: false },
-          { key: 'calibrationFrequency', label: 'Calibration Frequency', type: 'text', required: false },
-          { key: 'remarks', label: 'Remarks', type: 'text' }
-        ]
-      },
-      9: {
-        table: 'qpi',
-        title: 'Quality Performance Index (QPI)',
-        columns: [
-          { key: 'processOrDept', label: 'Process / Department' },
-          { key: 'measurementTitle', label: 'Measurement Title' },
-          { key: 'qualityPerformanceIndexFormula', label: 'QPI Formula' },
-          { key: 'targets', label: 'Targets' },
-          { key: 'responsibilities', label: 'Responsibilities' },
-          { key: 'departmentReview', label: 'Department Review' },
-          { key: 'qpiReview', label: 'QPI Review' }
-        ],
-        fields: [
-          { key: 'processOrDept', label: 'Process / Department', type: 'text', required: false },
-          { key: 'measurementTitle', label: 'Measurement Title', type: 'text', required: false },
-          { key: 'qualityPerformanceIndexFormula', label: 'QPI Formula', type: 'text', required: false },
-          { key: 'targets', label: 'Targets', type: 'text', required: false },
-          { key: 'responsibilities', label: 'Responsibilities', type: 'text', required: false },
-          { key: 'departmentReview', label: 'Department Review', type: 'text', required: false },
-          { key: 'qpiReview', label: 'QPI Review', type: 'text', required: false }
-        ]
-      }
-    };
-  constructor(
-    private readonly masterListService: MasterListService,
-    private readonly cdr: ChangeDetectorRef
-  ) { }
 
-  ngOnInit(): void {
-    this.loadFilters();
-    this.loadDocuments();
-  }
+    // ML07 - Machines / Equipment
+    6: {
+      table: 'machines',
+      title: 'Machines / Equipment',
+      columns: [
+        { key: 'machineName', label: 'Machine Name' },
+        { key: 'machineCategory', label: 'Machine Category' },
+        { key: 'machineCodeNum', label: 'Machine Code No.' },
+        { key: 'machineSlNum', label: 'Machine Serial No.' },
+        { key: 'make', label: 'Make' },
+        { key: 'capacityOrSpecification', label: 'Capacity / Specification' },
+        { key: 'commissionedOn', label: 'Commissioned On' },
+        { key: 'loadInHP', label: 'Load in HP' },
+        { key: 'location', label: 'Location' }
+      ]
+    },
 
-  /**
-   * A special table is shown only when one of the four supported
-   * document types is selected and no department is selected.
-   */
+    // ML08 - Standards
+    7: {
+      table: 'standards',
+      title: 'Standards',
+      columns: [
+        { key: 'description', label: 'Description' },
+        { key: 'pages', label: 'Pages' },
+        { key: 'revision', label: 'Revision' },
+        { key: 'remarks', label: 'Remarks' }
+      ]
+    },
+
+    // ML09 - Testing and Measuring Instruments
+    8: {
+      table: 'instruments',
+      title: 'Testing and Measuring Instruments',
+      columns: [
+        { key: 'instrumentDescription', label: 'Instrument Description' },
+        { key: 'instrumentCodeNum', label: 'Instrument Code No.' },
+        { key: 'instrumentSlNum', label: 'Instrument Serial No.' },
+        { key: 'instrumentRange', label: 'Range' },
+        { key: 'make', label: 'Make' },
+        { key: 'location', label: 'Location' },
+        { key: 'calibrationFrequency', label: 'Calibration Frequency' },
+        { key: 'remarks', label: 'Remarks' }
+      ]
+    },
+
+    // ML10 - Quality Performance Index
+    9: {
+      table: 'qpi',
+      title: 'Quality Performance Index (QPI)',
+      columns: [
+        { key: 'processOrDept', label: 'Process / Department' },
+        { key: 'measurementTitle', label: 'Measurement Title' },
+        { key: 'qualityPerformanceIndexFormula', label: 'QPI Formula' },
+        { key: 'targets', label: 'Targets' },
+        { key: 'responsibilities', label: 'Responsibilities' },
+        { key: 'departmentReview', label: 'Department Review' },
+        { key: 'qpiReview', label: 'QPI Review' }
+      ]
+    }
+  };
+
+  // --------------------------------------------------
+  // SELECTED SPECIAL TABLE CONFIGURATION
+  // --------------------------------------------------
+
   get selectedSpecialType(): {
     table: MasterDataTable;
     title: string;
     columns: { key: string; label: string }[];
     fields: MasterDataField[];
   } | null {
-    if (
-      this.selectedDocumentTypeId === null ||
-      this.selectedDepartmentId !== null
-    ) {
+
+    if (this.selectedDocumentTypeId === null) {
       return null;
     }
 
     return this.specialDocumentTypes[this.selectedDocumentTypeId] ?? null;
   }
 
-  get canManageMasterData(): boolean {
-    return this.userRole === 'QMS Admin';
-  }
+  // --------------------------------------------------
+  // REVISION COLUMNS
+  // --------------------------------------------------
 
-  get filteredMasterDataRows(): MasterDataRow[] {
-    const search = this.masterDataSearchText.trim().toLowerCase();
-    if (!search) {
-      return this.masterDataRows;
-    }
-
-    const config = this.selectedSpecialType;
-    if (!config) {
-      return this.masterDataRows;
-    }
-
-    return this.masterDataRows.filter(row =>
-      config.columns.some(column =>
-        String(row[column.key] ?? '').toLowerCase().includes(search)
-      )
-    );
-  }
-
-  get userInitial(): string {
-    return this.userName.trim().charAt(0).toUpperCase() || 'U';
-  }
-
-  // Generate revision columns from the loaded documents
   get revisionColumns(): number[] {
+
     const revisionNumbers = this.documents.flatMap(document =>
       document.revisions.map(revision => revision.revisionNumber)
     );
@@ -277,8 +261,21 @@ export class QmsDashboardComponent implements OnInit {
     );
   }
 
-  // Load document types and departments
+  // --------------------------------------------------
+  // INITIALIZATION
+  // --------------------------------------------------
+
+  ngOnInit(): void {
+    this.loadFilters();
+    this.loadDocuments();
+  }
+
+  // --------------------------------------------------
+  // LOAD FILTERS
+  // --------------------------------------------------
+
   loadFilters(): void {
+
     this.isLoadingFilters = true;
     this.filterError = '';
 
@@ -286,6 +283,7 @@ export class QmsDashboardComponent implements OnInit {
     let departmentsLoaded = false;
 
     const finishLoading = (): void => {
+
       if (typesLoaded && departmentsLoaded) {
         this.isLoadingFilters = false;
       }
@@ -294,11 +292,13 @@ export class QmsDashboardComponent implements OnInit {
     };
 
     this.masterListService.getDocumentTypes().subscribe({
+
       next: types => {
         this.documentTypes = types;
         typesLoaded = true;
         finishLoading();
       },
+
       error: error => {
         console.error('Failed to load document types:', error);
 
@@ -309,11 +309,13 @@ export class QmsDashboardComponent implements OnInit {
     });
 
     this.masterListService.getDepartments().subscribe({
+
       next: departments => {
         this.departments = departments;
         departmentsLoaded = true;
         finishLoading();
       },
+
       error: error => {
         console.error('Failed to load departments:', error);
 
@@ -324,8 +326,22 @@ export class QmsDashboardComponent implements OnInit {
     });
   }
 
-  // Load Master List documents
+  // --------------------------------------------------
+  // LOAD ML02–ML06 DOCUMENTS
+  // --------------------------------------------------
+
   loadDocuments(): void {
+
+    if (this.selectedSpecialType) {
+
+      this.documents = [];
+      this.isLoadingDocuments = false;
+      this.documentError = '';
+
+      this.cdr.markForCheck();
+      return;
+    }
+
     this.isLoadingDocuments = true;
     this.documentError = '';
 
@@ -336,56 +352,76 @@ export class QmsDashboardComponent implements OnInit {
       this.selectedDepartmentId ?? undefined,
       this.searchText
     ).subscribe({
+
       next: documents => {
+
         this.documents = documents;
         this.isLoadingDocuments = false;
+
         this.cdr.markForCheck();
       },
+
       error: error => {
+
         console.error('Failed to load documents:', error);
 
         this.documents = [];
+
         this.documentError =
           'Could not load documents. Check that the backend API is running.';
 
         this.isLoadingDocuments = false;
+
         this.cdr.markForCheck();
       }
     });
   }
 
-  // Document type filter
-  /**
-   * Loads data from the endpoint mapped to the selected document type.
-   * If a department is selected, the special table is cleared and hidden.
-   */
+  // --------------------------------------------------
+  // LOAD ML07–ML10 SPECIAL TABLES
+  // --------------------------------------------------
+
   loadMasterData(): void {
+
     const config = this.selectedSpecialType;
 
     this.masterDataRows = [];
     this.masterDataError = '';
 
+    this.editingMasterDataId = null;
+    this.specialEditDraft = null;
+
+    this.isAddingMasterData = false;
+    this.specialAddDraft = null;
+
     if (!config) {
+
       this.isLoadingMasterData = false;
+
       this.cdr.markForCheck();
       return;
     }
 
     this.isLoadingMasterData = true;
+
     this.cdr.markForCheck();
 
     this.masterDataService.getRows(config.table).subscribe({
+
       next: rows => {
-        // Ignore a response if the user changed filters while it was loading.
+
         if (this.selectedSpecialType?.table !== config.table) {
           return;
         }
 
         this.masterDataRows = rows;
         this.isLoadingMasterData = false;
+
         this.cdr.markForCheck();
       },
+
       error: error => {
+
         console.error('Failed to load master data:', error);
 
         if (this.selectedSpecialType?.table !== config.table) {
@@ -393,256 +429,538 @@ export class QmsDashboardComponent implements OnInit {
         }
 
         this.masterDataRows = [];
+
         this.masterDataError =
           'Could not load the selected master data. Please try again.';
+
         this.isLoadingMasterData = false;
+
         this.cdr.markForCheck();
       }
     });
   }
 
-  openCreateMasterData(): void {
+  // --------------------------------------------------
+  // ML07–ML10 ADD RECORD
+  // --------------------------------------------------
+
+  startSpecialAdd(): void {
+
     const config = this.selectedSpecialType;
-    if (!config || !this.canManageMasterData || this.isSavingMasterData) {
+
+    if (
+      !this.isQmsAdmin ||
+      !config ||
+      this.editingMasterDataId !== null ||
+      this.editingDocumentId !== null ||
+      this.isSavingDocument ||
+      this.isSavingMasterData ||
+      this.isDeletingMasterData ||
+      this.isAddingMasterData
+    ) {
       return;
     }
 
-    this.editingMasterDataId = null;
-    this.masterDataDraft = {};
-    for (const field of config.fields) {
-      this.masterDataDraft[field.key] =
-        field.type === 'number' ? null : '';
+    const draft: MasterDataRow = { id: 0 };
+
+    for (const column of config.columns) {
+      draft[column.key] = null;
     }
 
-    this.masterDataSaveError = '';
-    this.masterDataSaveMessage = '';
-    this.masterDataDeleteError = '';
-    this.masterDataFormOpen = true;
+    this.specialAddDraft = draft;
+    this.isAddingMasterData = true;
+
+    this.specialSaveMessage = '';
+    this.specialSaveError = '';
+
+    this.cdr.markForCheck();
   }
 
-  openEditMasterData(row: MasterDataRow): void {
-    const config = this.selectedSpecialType;
-    if (!config || !this.canManageMasterData || this.isSavingMasterData) {
-      return;
-    }
+  cancelSpecialAdd(): void {
 
-    this.editingMasterDataId = row.id;
-    this.masterDataDraft = {};
-    for (const field of config.fields) {
-      const value = row[field.key];
-      this.masterDataDraft[field.key] =
-        value === null || value === undefined ? '' : value;
-    }
-
-    for (const field of config.fields) {
-      if (field.type === 'date' && this.masterDataDraft[field.key]) {
-        this.masterDataDraft[field.key] =
-          String(this.masterDataDraft[field.key]).slice(0, 10);
-      }
-    }
-
-    this.masterDataSaveError = '';
-    this.masterDataSaveMessage = '';
-    this.masterDataDeleteError = '';
-    this.masterDataFormOpen = true;
-  }
-
-  cancelMasterDataForm(): void {
     if (this.isSavingMasterData) {
       return;
     }
-    this.masterDataFormOpen = false;
-    this.masterDataDraft = {};
-    this.editingMasterDataId = null;
-    this.masterDataSaveError = '';
+
+    this.isAddingMasterData = false;
+    this.specialAddDraft = null;
+
+    this.specialSaveError = '';
+
+    this.cdr.markForCheck();
   }
 
-  saveMasterData(): void {
-    const config = this.selectedSpecialType;
-    if (!config || !this.canManageMasterData || this.isSavingMasterData) {
+  updateSpecialAddField(key: string, value: any): void {
+
+    if (!this.specialAddDraft) {
       return;
     }
 
-    const payload: Record<string, any> = {};
-    for (const field of config.fields) {
-      const rawValue = this.masterDataDraft[field.key];
+    if (key === 'pages' || key === 'loadInHP') {
+      this.specialAddDraft[key] =
+        value === '' ? null : Number(value);
+    } else {
+      this.specialAddDraft[key] = value;
+    }
+  }
 
-      if (field.required && (
-        rawValue === null ||
-        rawValue === undefined ||
-        String(rawValue).trim() === ''
-      )) {
-        this.masterDataSaveError = `${field.label} is required.`;
-        return;
+  saveSpecialAdd(): void {
+
+    const config = this.selectedSpecialType;
+    const draft = this.specialAddDraft;
+
+    if (
+      !this.isQmsAdmin ||
+      !config ||
+      !draft ||
+      this.isSavingMasterData
+    ) {
+      return;
+    }
+
+    const payload: Partial<MasterDataRow> = {};
+
+    for (const column of config.columns) {
+
+      const value = draft[column.key];
+
+      if (
+        value !== null &&
+        value !== undefined &&
+        String(value).trim() !== ''
+      ) {
+        payload[column.key] = value;
       }
+    }
 
-      if (field.type === 'number') {
-        payload[field.key] =
-          rawValue === '' || rawValue === null || rawValue === undefined
-            ? null
-            : Number(rawValue);
+    if (Object.keys(payload).length === 0) {
 
-        if (
-          payload[field.key] !== null &&
-          !Number.isFinite(payload[field.key])
-        ) {
-          this.masterDataSaveError = `Enter a valid number for ${field.label}.`;
-          return;
-        }
-      } else {
-        payload[field.key] =
-          rawValue === null || rawValue === undefined
-            ? ''
-            : String(rawValue).trim();
-      }
+      this.specialSaveError =
+        'Please enter at least one field.';
+
+      return;
     }
 
     this.isSavingMasterData = true;
-    this.masterDataSaveError = '';
-    this.masterDataSaveMessage = '';
-    this.masterDataDeleteError = '';
+    this.specialSaveError = '';
+    this.specialSaveMessage = '';
 
-    const request$ = this.editingMasterDataId === null
-      ? this.masterDataService.createRow(config.table, payload)
-      : this.masterDataService.updateRow(
-          config.table,
-          this.editingMasterDataId,
-          payload
-        );
+    this.masterDataService.createRow(
+      config.table,
+      payload
+    ).subscribe({
 
-    request$.subscribe({
       next: () => {
+
         this.isSavingMasterData = false;
-        this.masterDataFormOpen = false;
-        this.masterDataDraft = {};
-        this.editingMasterDataId = null;
-        this.masterDataSaveMessage = 'Master data saved successfully.';
+        this.isAddingMasterData = false;
+        this.specialAddDraft = null;
+
+        this.specialSaveMessage =
+          'Record added successfully.';
+
         this.loadMasterData();
         this.cdr.markForCheck();
       },
+
       error: error => {
-        console.error('Failed to save master data:', error);
+
+        console.error('Failed to add master data:', error);
+
         this.isSavingMasterData = false;
-        this.masterDataSaveError =
-          error?.error?.message ||
-          'Could not save this record. Please check the values and try again.';
+
+        this.specialSaveError =
+          error?.error?.message ??
+          'Could not add the record. Please try again.';
+
         this.cdr.markForCheck();
       }
     });
   }
 
-  deleteMasterData(row: MasterDataRow): void {
+  // --------------------------------------------------
+  // ML07–ML10 DELETE RECORD
+  // --------------------------------------------------
+
+  deleteSpecialRecord(row: MasterDataRow): void {
+
     const config = this.selectedSpecialType;
-    if (!config || !this.canManageMasterData || this.isSavingMasterData) {
+
+    if (
+      !this.isQmsAdmin ||
+      !config ||
+      this.isDeletingMasterData ||
+      this.isSavingMasterData ||
+      this.editingMasterDataId !== null ||
+      this.isAddingMasterData
+    ) {
       return;
     }
 
-    const label = String(
-      row[config.columns[0]?.key] ?? `record ${row.id}`
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this record? This action cannot be undone.'
     );
-    if (!window.confirm(`Delete "${label}"? This action cannot be undone.`)) {
+
+    if (!confirmed) {
       return;
     }
 
-    this.masterDataDeleteError = '';
-    this.masterDataSaveMessage = '';
+    this.isDeletingMasterData = true;
+    this.deletingMasterDataId = row.id;
 
-    this.masterDataService.deleteRow(config.table, row.id).subscribe({
+    this.specialSaveMessage = '';
+    this.specialSaveError = '';
+
+    this.masterDataService.deleteRow(
+      config.table,
+      row.id
+    ).subscribe({
+
       next: () => {
-        this.masterDataSaveMessage = 'Record deleted successfully.';
+
+        this.isDeletingMasterData = false;
+        this.deletingMasterDataId = null;
+
+        this.specialSaveMessage =
+          'Record deleted successfully.';
+
         this.loadMasterData();
         this.cdr.markForCheck();
       },
+
       error: error => {
+
         console.error('Failed to delete master data:', error);
-        this.masterDataDeleteError =
-          error?.error?.message ||
-          'Could not delete this record. Please try again.';
+
+        this.isDeletingMasterData = false;
+        this.deletingMasterDataId = null;
+
+        this.specialSaveError =
+          error?.error?.message ??
+          'Could not delete the record. Please try again.';
+
         this.cdr.markForCheck();
       }
     });
   }
+
+  // --------------------------------------------------
+  // DOCUMENT TYPE FILTER
+  // --------------------------------------------------
 
   onDocumentTypeChange(value: string | number): void {
+
     this.selectedDocumentTypeId =
       value === '' ? null : Number(value);
+
+    this.editingDocumentId = null;
+    this.editDraft = null;
+    this.saveMessage = '';
+    this.saveError = '';
+
+    this.editingMasterDataId = null;
+    this.specialEditDraft = null;
+
+    this.isAddingMasterData = false;
+    this.specialAddDraft = null;
+
+    this.specialSaveMessage = '';
+    this.specialSaveError = '';
+
+    if (this.selectedSpecialType) {
+      this.selectedDepartmentId = null;
+    }
 
     this.loadDocuments();
     this.loadMasterData();
   }
 
-  // Department filter
+  // --------------------------------------------------
+  // DEPARTMENT FILTER
+  // --------------------------------------------------
+
   onDepartmentChange(value: string | number): void {
+
+    if (this.selectedSpecialType) {
+      return;
+    }
+
     this.selectedDepartmentId =
       value === '' ? null : Number(value);
 
     this.loadDocuments();
-    this.loadMasterData();
   }
 
-  // Search documents
+  // --------------------------------------------------
+  // SEARCH
+  // --------------------------------------------------
+
   onSearch(): void {
     this.loadDocuments();
   }
 
-  // Reset filters
+  // --------------------------------------------------
+  // REFRESH
+  // --------------------------------------------------
+
   refreshCurrentTable(): void {
+
     this.loadDocuments();
     this.loadMasterData();
   }
 
+  // --------------------------------------------------
+  // CLEAR FILTERS
+  // --------------------------------------------------
+
   clearFilters(): void {
+
     this.selectedDocumentTypeId = null;
     this.selectedDepartmentId = null;
     this.searchText = '';
     this.masterDataSearchText = '';
 
+    this.editingDocumentId = null;
+    this.editDraft = null;
+
+    this.editingMasterDataId = null;
+    this.specialEditDraft = null;
+
+    this.isAddingMasterData = false;
+    this.specialAddDraft = null;
+
+    this.saveMessage = '';
+    this.saveError = '';
+
+    this.specialSaveMessage = '';
+    this.specialSaveError = '';
+
     this.loadDocuments();
     this.loadMasterData();
   }
 
-  // Dashboard navigation
+  // --------------------------------------------------
+  // DASHBOARD NAVIGATION
+  // --------------------------------------------------
+
   selectTab(tab: string): void {
+
     this.activeTab = tab;
     this.profileMenuOpen = false;
   }
 
   selectDocumentType(type: DocumentType): void {
-    this.selectedDocumentTypeId = type.documentTypeId;
 
-    this.loadDocuments();
-    this.loadMasterData();
+    this.onDocumentTypeChange(type.documentTypeId);
   }
 
-  // Find a document's revision for a specific revision number
+  // --------------------------------------------------
+  // ML07–ML10 SPECIAL TABLE EDITING
+  // --------------------------------------------------
+
+  startSpecialEdit(row: MasterDataRow): void {
+
+    if (
+      !this.isQmsAdmin ||
+      this.editingMasterDataId !== null ||
+      this.editingDocumentId !== null ||
+      this.isSavingDocument ||
+      this.isSavingMasterData ||
+      this.isDeletingMasterData ||
+      this.isAddingMasterData
+    ) {
+      return;
+    }
+
+    this.editingMasterDataId = row.id;
+
+    this.specialEditDraft = {
+      ...row
+    };
+
+    if (this.specialEditDraft['commissionedOn']) {
+
+      this.specialEditDraft['commissionedOn'] =
+        String(this.specialEditDraft['commissionedOn'])
+          .substring(0, 10);
+    }
+
+    this.specialSaveMessage = '';
+    this.specialSaveError = '';
+
+    this.cdr.markForCheck();
+  }
+
+  cancelSpecialEdit(): void {
+
+    if (this.isSavingMasterData) {
+      return;
+    }
+
+    this.editingMasterDataId = null;
+    this.specialEditDraft = null;
+
+    this.specialSaveMessage = '';
+    this.specialSaveError = '';
+
+    this.cdr.markForCheck();
+  }
+
+  getSpecialInputType(key: string): string {
+
+    if (key === 'commissionedOn') {
+      return 'date';
+    }
+
+    if (key === 'pages' || key === 'loadInHP') {
+      return 'number';
+    }
+
+    return 'text';
+  }
+
+  updateSpecialDraftField(key: string, value: any): void {
+
+    if (!this.specialEditDraft) {
+      return;
+    }
+
+    if (key === 'pages' || key === 'loadInHP') {
+
+      this.specialEditDraft[key] =
+        value === '' ? null : Number(value);
+
+    } else {
+
+      this.specialEditDraft[key] = value;
+    }
+  }
+
+  saveSpecialEdit(): void {
+
+    const config = this.selectedSpecialType;
+    const draft = this.specialEditDraft;
+    const id = this.editingMasterDataId;
+
+    if (
+      !this.isQmsAdmin ||
+      !config ||
+      !draft ||
+      id === null ||
+      this.isSavingMasterData
+    ) {
+      return;
+    }
+
+    const payload: Partial<MasterDataRow> = {};
+
+    for (const column of config.columns) {
+
+      const value = draft[column.key];
+
+      if (
+        value !== null &&
+        value !== undefined &&
+        String(value).trim() !== ''
+      ) {
+        payload[column.key] = value;
+      }
+    }
+
+    if (Object.keys(payload).length === 0) {
+
+      this.specialSaveError =
+        'Please enter at least one field.';
+
+      return;
+    }
+
+    this.isSavingMasterData = true;
+
+    this.specialSaveError = '';
+    this.specialSaveMessage = '';
+
+    this.masterDataService.updateRow(
+      config.table,
+      id,
+      payload
+    ).subscribe({
+
+      next: () => {
+
+        this.isSavingMasterData = false;
+
+        this.editingMasterDataId = null;
+        this.specialEditDraft = null;
+
+        this.specialSaveMessage =
+          'Record updated successfully.';
+
+        this.loadMasterData();
+        this.cdr.markForCheck();
+      },
+
+      error: error => {
+
+        console.error('Failed to update master data:', error);
+
+        this.isSavingMasterData = false;
+
+        this.specialSaveError =
+          error?.error?.message ??
+          'Could not update the record. Please try again.';
+
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // --------------------------------------------------
+  // GET DOCUMENT REVISION
+  // --------------------------------------------------
+
   getRevision(
     document: MasterListDocument,
     revisionNumber: number
   ): DocumentRevision | undefined {
+
     return document.revisions.find(
       revision => revision.revisionNumber === revisionNumber
     );
   }
 
-  // Get document type name for display
+  // --------------------------------------------------
+  // DOCUMENT TYPE NAME
+  // --------------------------------------------------
+
   getDocumentTypeName(documentTypeId: number): string {
+
     return this.documentTypes.find(
       type => type.documentTypeId === documentTypeId
     )?.typeName ?? '—';
   }
 
-  // Format revision number, e.g. Rev 000
+  // --------------------------------------------------
+  // REVISION FORMATTING
+  // --------------------------------------------------
+
   formatRevision(revisionNumber: number): string {
+
     return `Rev ${String(revisionNumber).padStart(3, '0')}`;
   }
 
-  // Format date for display
+  // --------------------------------------------------
+  // DATE FORMATTING
+  // --------------------------------------------------
+
   formatDate(date: string | null | undefined): string {
+
     if (!date) {
       return '—';
     }
 
     const datePart = date.substring(0, 10);
+
     const [year, month, day] = datePart.split('-');
 
     if (!year || !month || !day) {
@@ -652,27 +970,60 @@ export class QmsDashboardComponent implements OnInit {
     return `${day}/${month}/${year}`;
   }
 
-  // Start editing a document
+  // --------------------------------------------------
+  // ML02–ML06 DOCUMENT EDITING
+  // --------------------------------------------------
+
   startEdit(document: MasterListDocument): void {
-    if (this.isSavingDocument) {
+
+    if (!this.isQmsAdmin) {
       return;
     }
 
+    if (
+      this.editingDocumentId !== null ||
+      this.editingMasterDataId !== null ||
+      this.isSavingDocument ||
+      this.isSavingMasterData ||
+      this.isAddingMasterData
+    ) {
+      return;
+    }
+
+    console.log('Original Document:', document);
+
     this.editingDocumentId = document.documentId;
 
-    // Create a copy so Cancel does not change the displayed document
-    this.editDraft = JSON.parse(
-      JSON.stringify(document)
-    ) as MasterListDocument;
+    this.editDraft = {
 
-    this.saveMessage = '';
-    this.saveError = '';
+      ...document,
 
-    this.cdr.markForCheck();
+      documentTypeId: Number(document.documentTypeId),
+      departmentId: Number(document.departmentId),
+
+      revisions: (document.revisions ?? []).map(revision => ({
+        ...revision,
+        revisionDate: revision.revisionDate
+          ? String(revision.revisionDate).substring(0, 10)
+          : ''
+      })),
+
+      obseleteDate: document.obseleteDate
+        ? String(document.obseleteDate).substring(0, 10)
+        : null
+    };
+
+    console.log('Edit Draft:', this.editDraft);
+
+    this.cdr.detectChanges();
   }
 
-  // Cancel editing and discard unsaved changes
+  // --------------------------------------------------
+  // CANCEL DOCUMENT EDITING
+  // --------------------------------------------------
+
   cancelEdit(): void {
+
     if (this.isSavingDocument) {
       return;
     }
@@ -686,8 +1037,12 @@ export class QmsDashboardComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  // Update status and obsolete date together
+  // --------------------------------------------------
+  // DOCUMENT STATUS CHANGE
+  // --------------------------------------------------
+
   onEditStatusChange(status: string): void {
+
     if (!this.editDraft) {
       return;
     }
@@ -701,11 +1056,16 @@ export class QmsDashboardComponent implements OnInit {
     this.saveError = '';
   }
 
-  // Validate and save the edited document
+  // --------------------------------------------------
+  // SAVE ML02–ML06 DOCUMENT
+  // --------------------------------------------------
+
   saveEdit(): void {
+
     const draft = this.editDraft;
 
     if (
+      !this.isQmsAdmin ||
       !draft ||
       this.editingDocumentId === null ||
       this.isSavingDocument
@@ -714,16 +1074,19 @@ export class QmsDashboardComponent implements OnInit {
     }
 
     if (!draft.documentNo.trim()) {
+
       this.saveError = 'Document number is required.';
       return;
     }
 
     if (!draft.title.trim()) {
+
       this.saveError = 'Document title is required.';
       return;
     }
 
     if (!draft.documentTypeId || !draft.departmentId) {
+
       this.saveError = 'Select a document type and department.';
       return;
     }
@@ -732,6 +1095,7 @@ export class QmsDashboardComponent implements OnInit {
       draft.status !== 'Active' &&
       draft.status !== 'Obsolete'
     ) {
+
       this.saveError = 'Select a valid document status.';
       return;
     }
@@ -740,8 +1104,10 @@ export class QmsDashboardComponent implements OnInit {
       draft.status === 'Obsolete' &&
       !draft.obseleteDate
     ) {
+
       this.saveError =
         'Select an obsolete date for obsolete documents.';
+
       return;
     }
 
@@ -752,25 +1118,38 @@ export class QmsDashboardComponent implements OnInit {
         !revision.revisionDate
       )
     ) {
+
       this.saveError =
         'Every revision needs a valid page count and date.';
+
       return;
     }
 
     const request: UpdateMasterListDocument = {
+
       documentNo: draft.documentNo.trim(),
+
       title: draft.title.trim(),
+
       documentTypeId: Number(draft.documentTypeId),
+
       departmentId: Number(draft.departmentId),
+
       retentionPeriod: draft.retentionPeriod?.trim() || null,
+
       status: draft.status,
+
       obseleteDate:
         draft.status === 'Obsolete'
           ? draft.obseleteDate?.slice(0, 10) ?? null
           : null,
+
       revisions: draft.revisions.map(revision => ({
+
         revisionNumber: revision.revisionNumber,
+
         pageCount: Number(revision.pageCount),
+
         revisionDate: revision.revisionDate.slice(0, 10)
       }))
     };
@@ -782,19 +1161,24 @@ export class QmsDashboardComponent implements OnInit {
     this.masterListService
       .updateDocument(draft.documentId, request)
       .subscribe({
+
         next: response => {
+
           this.isSavingDocument = false;
+
           this.editingDocumentId = null;
           this.editDraft = null;
 
           this.saveMessage =
             response?.message ?? 'Document updated successfully.';
 
-          // Reload the saved data from the backend
           this.loadDocuments();
+
           this.cdr.markForCheck();
         },
+
         error: error => {
+
           console.error(
             'Failed to update Master List document:',
             error
@@ -811,39 +1195,74 @@ export class QmsDashboardComponent implements OnInit {
       });
   }
 
-  // Profile menu
+  // --------------------------------------------------
+  // PROFILE MENU
+  // --------------------------------------------------
+
   toggleProfileMenu(): void {
+
     this.profileMenuOpen = !this.profileMenuOpen;
   }
 
   closeProfileMenu(): void {
+
     this.profileMenuOpen = false;
   }
 
+  openProfile(): void {
+
+    this.closeProfileMenu();
+  }
+
+  // --------------------------------------------------
+  // SIGNUP REQUESTS
+  // --------------------------------------------------
+
+  openSignupRequests(): void {
+
+    void this.router.navigate(['/qms/admin/signup-requests']);
+  }
+
+  // --------------------------------------------------
+  // KEYBOARD ESCAPE
+  // --------------------------------------------------
+
   @HostListener('document:keydown.escape')
   onEscape(): void {
+
     this.closeProfileMenu();
+
+    if (this.isAddingMasterData && !this.isSavingMasterData) {
+
+      this.cancelSpecialAdd();
+      return;
+    }
+
+    if (this.editingMasterDataId !== null) {
+
+      this.cancelSpecialEdit();
+      return;
+    }
 
     if (
       this.editingDocumentId !== null &&
       !this.isSavingDocument
     ) {
+
       this.cancelEdit();
     }
   }
 
-  openProfile(): void {
-    this.closeProfileMenu();
-    // Add profile navigation here if needed.
-  }
-
-  openSignupRequests(): void {
-    void this.router.navigate(['/qms/admin/signup-requests']);
-  }
+  // --------------------------------------------------
+  // LOGOUT
+  // --------------------------------------------------
 
   logout(): void {
+
     this.closeProfileMenu();
+
     this.SigninService.logout();
+
     void this.router.navigate(['/']);
   }
 }
