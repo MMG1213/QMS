@@ -51,6 +51,31 @@ export interface UpdateMasterListDocument {
     revisionDate: string;
   }[];
 }
+export interface ML01Revision {
+  id: number;
+  revisionNo: number;
+  pageCount: number;
+  revisionDate: string;
+}
+
+export interface ML01Entry {
+  id: number;
+  description: string;
+  documentNo: string;
+  revisions: ML01Revision[];
+}
+
+export interface ML01RevisionRequest {
+  revisionNo: number;
+  pageCount: number;
+  revisionDate: string;
+}
+
+export interface ML01EntryRequest {
+  description: string;
+  documentNo: string;
+  revisions: ML01RevisionRequest[];
+}
 
 @Injectable({
   providedIn: 'root'
@@ -106,4 +131,33 @@ export class MasterListService {
       request
     );
   }
+
+  // --------------------------------------------------
+// ML01 - MASTER LIST OF MASTER LISTS
+// --------------------------------------------------
+
+private readonly ml01ApiUrl = 'http://localhost:5193/api/ML01';
+
+getML01Entries(): Observable<ML01Entry[]> {
+  return this.http.get<ML01Entry[]>(this.ml01ApiUrl);
+}
+
+createML01Entry(
+  request: ML01EntryRequest
+): Observable<ML01Entry> {
+  return this.http.post<ML01Entry>(
+    this.ml01ApiUrl,
+    request
+  );
+}
+
+updateML01Entry(
+  id: number,
+  request: ML01EntryRequest
+): Observable<ML01Entry> {
+  return this.http.put<ML01Entry>(
+    `${this.ml01ApiUrl}/${id}`,
+    request
+  );
+}
 }

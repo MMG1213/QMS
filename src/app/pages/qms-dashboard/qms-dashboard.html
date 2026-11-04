@@ -100,22 +100,40 @@
     <section class="master-list-page">
 
       <!-- PAGE HEADING -->
+
       <div class="master-list-heading">
         <div>
-          <p class="eyebrow">FUJITEC QUALITY MANAGEMENT SYSTEM</p>
+          <p class="eyebrow">FUJITEC INTEGRATED MANAGEMENT SYSTEM</p>
           <h1>Master List</h1>
           <p class="description">
             View controlled documents and their approved revision history.
           </p>
         </div>
 
-        <button
-          type="button"
-          class="refresh-button"
-          (click)="refreshCurrentTable()"
-          [disabled]="isLoadingDocuments || isLoadingMasterData">
-          ↻ Refresh
-        </button>
+        <div class="master-list-heading-actions">
+
+          <button
+            type="button"
+            class="export-button"
+            (click)="exportToExcel()"
+            [disabled]="isExporting || isLoadingFilters">
+
+            <span aria-hidden="true">↓</span>
+            {{ isExporting ? 'Exporting...' : 'Export to Excel' }}
+
+          </button>
+
+          <button
+            type="button"
+            class="refresh-button"
+            (click)="refreshCurrentTable()"
+            [disabled]="isLoadingDocuments || isLoadingMasterData || isLoadingML01">
+
+            ↻ Refresh
+
+          </button>
+
+        </div>
       </div>
 
       <!-- COMPACT DOCUMENT APPROVAL BOX -->
@@ -184,8 +202,20 @@
           @if (approvalMatrixSaveError) { <div class="master-approval-error">{{ approvalMatrixSaveError }}</div> }
         }
       </section>
+      @if (exportSuccessMessage) {
+        <div class="success-message" role="status">
+          {{ exportSuccessMessage }}
+        </div>
+      }
+
+      @if (exportError) {
+        <div class="error-message" role="alert">
+          {{ exportError }}
+        </div>
+      }
 
       <!-- FILTERS -->
+
       <div class="filter-panel">
 
         <div class="filter-field">
@@ -207,8 +237,9 @@
           </select>
         </div>
 
-        <!-- DEPARTMENT FILTER -->
-        @if (!selectedSpecialType) {
+        <!-- DEPARTMENT FILTER AND SEARCH -->
+
+        @if (!selectedSpecialType && !isML01Selected) {
 
           <div class="filter-field">
             <label for="department">Department</label>
@@ -232,7 +263,6 @@
             </select>
           </div>
 
-          <!-- DOCUMENT SEARCH -->
           <div class="filter-field search-field">
             <label for="documentSearch">Search Documents</label>
 
@@ -264,13 +294,14 @@
       </div>
 
       <!-- FILTER ERRORS -->
+
       @if (filterError) {
         <div class="error-message">
           {{ filterError }}
         </div>
       }
 
-      @if (documentError && !selectedSpecialType) {
+      @if (documentError && !selectedSpecialType && !isML01Selected) {
         <div class="error-message">
           {{ documentError }}
 
@@ -325,6 +356,7 @@
           </div>
 
           <!-- ADD RECORD FORM -->
+
           @if (isAddingMasterData && specialAddDraft; as draft) {
 
             <div class="special-form-panel">
@@ -383,6 +415,8 @@
             </div>
 
           }
+
+          <!-- LOADING AND DATA -->
 
           @if (isLoadingMasterData) {
 
@@ -604,8 +638,437 @@
 
       }
 
-      <!-- ML02–ML06 CONTROLLED DOCUMENTS TABLE -->
-      @if (!selectedSpecialType) {
+      <!-- ======================================= -->
+      <!-- ML01 - MASTER LIST OF MASTER LISTS      -->
+      <!-- ======================================= -->
+
+      @if (isML01Selected) {
+
+        <section class="table-card">
+
+          <div class="table-toolbar">
+
+            <div>
+              <h2>Master List of Master Lists</h2>
+              <p>Document register and revision history</p>
+            </div>
+
+            <div class="special-toolbar-actions">
+
+              <span class="record-count">
+                {{ ml01Entries.length }}
+                {{ ml01Entries.length === 1 ? 'record' : 'records' }}
+              </span>
+
+              @if (isQmsAdmin) {
+                <button
+                  type="button"
+                  class="add-button"
+                  (click)="startML01Add()"
+                  [disabled]="
+                    isSavingML01 ||
+                    editingML01Id !== null ||
+                    isAddingML01
+                  ">
+                  + Add Record
+                </button>
+              }
+
+            </div>
+
+          </div>
+
+          @if (ml01SaveMessage) {
+            <div class="success-message">
+              {{ ml01SaveMessage }}
+            </div>
+          }
+
+          @if (ml01SaveError) {
+            <div class="error-message">
+              {{ ml01SaveError }}
+            </div>
+          }
+
+          <!-- ADD ML01 RECORD -->
+
+          @if (isAddingML01 && ml01AddDraft; as draft) {
+
+            <div class="special-form-panel">
+
+              <h3>Add ML01 Record</h3>
+
+              <div class="special-form-grid">
+
+                <div class="special-form-field">
+                  <label>Description</label>
+                  <input
+                    type="text"
+                    [(ngModel)]="draft.description"
+                    placeholder="Enter description"
+                  />
+                </div>
+
+                <div class="special-form-field">
+                  <label>Document No.</label>
+                  <input
+                    type="text"
+                    [(ngModel)]="draft.documentNo"
+                    placeholder="Enter document number"
+                  />
+                </div>
+
+              </div>
+
+              <h3>Revision Details</h3>
+
+              @for (revision of draft.revisions; track $index) {
+
+                <div class="special-form-grid">
+
+                  <div class="special-form-field">
+                    <label>
+                      Revision {{ revision.revisionNo }} Pages
+                    </label>
+
+                    <input
+                      type="number"
+                      min="1"
+                      [(ngModel)]="revision.pageCount"
+                    />
+                  </div>
+
+                  <div class="special-form-field">
+                    <label>
+                      Revision {{ revision.revisionNo }} Date
+                    </label>
+
+                    <input
+                      type="date"
+                      [(ngModel)]="revision.revisionDate"
+                    />
+                  </div>
+
+                </div>
+
+              }
+
+              <div class="special-form-actions">
+
+                <button
+                  type="button"
+                  class="save-button"
+                  (click)="saveML01Add()"
+                  [disabled]="isSavingML01">
+                  {{ isSavingML01 ? 'Saving...' : 'Save Record' }}
+                </button>
+
+                <button
+                  type="button"
+                  class="cancel-button"
+                  (click)="cancelML01Add()"
+                  [disabled]="isSavingML01">
+                  Cancel
+                </button>
+
+              </div>
+
+            </div>
+
+          }
+
+          <!-- ML01 LOADING AND TABLE -->
+
+          @if (isLoadingML01) {
+
+            <p class="loading-message">
+              Loading ML01 records...
+            </p>
+
+          } @else if (ml01Error) {
+
+            <div class="error-message">
+              {{ ml01Error }}
+
+              <button type="button" (click)="loadDocuments()">
+                Retry
+              </button>
+            </div>
+
+          } @else {
+
+            <div class="table-scroll">
+
+              <table class="master-table">
+
+                <thead>
+
+                  <tr>
+
+                    <th rowspan="2" class="serial-column">
+                      Sl. No.
+                    </th>
+
+                    <th rowspan="2">
+                      Description
+                    </th>
+
+                    <th rowspan="2">
+                      Document No.
+                    </th>
+
+                    <th
+                      [attr.colspan]="ml01RevisionColumns.length * 2"
+                      class="revision-column">
+                      Revision Status
+                    </th>
+
+                    <th rowspan="2" class="actions-column">
+                      Actions
+                    </th>
+
+                  </tr>
+
+                  <tr>
+
+                    @for (
+                      revisionNo of ml01RevisionColumns;
+                      track revisionNo
+                    ) {
+
+                      <th class="revision-subcolumn">
+                        Pages {{ revisionNo.toString().padStart(2, '0') }}
+                      </th>
+
+                      <th class="revision-subcolumn">
+                        Date {{ revisionNo.toString().padStart(2, '0') }}
+                      </th>
+
+                    }
+
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  @for (
+                    entry of ml01Entries;
+                    track entry.id;
+                    let i = $index
+                  ) {
+
+                    <!-- EDITING ROW -->
+
+                    @if (
+                      editingML01Id === entry.id && ml01EditDraft;
+                      as draft
+                    ) {
+
+                      <tr class="editing-row">
+
+                        <td class="serial-cell">
+                          {{ i + 1 }}
+                        </td>
+
+                        <td>
+                          <input
+                            class="edit-input"
+                            type="text"
+                            [(ngModel)]="draft.description"
+                          />
+                        </td>
+
+                        <td>
+                          <input
+                            class="edit-input"
+                            type="text"
+                            [(ngModel)]="draft.documentNo"
+                          />
+                        </td>
+
+                        @for (
+                          revisionNo of ml01RevisionColumns;
+                          track revisionNo
+                        ) {
+
+                          @if (
+                            getML01Revision(draft, revisionNo);
+                            as revision
+                          ) {
+
+                            <td>
+                              <input
+                                class="revision-input"
+                                type="number"
+                                min="1"
+                                [(ngModel)]="revision.pageCount"
+                              />
+                            </td>
+
+                            <td>
+                              <input
+                                class="revision-input"
+                                type="date"
+                                [(ngModel)]="revision.revisionDate"
+                              />
+                            </td>
+
+                          } @else {
+
+                            <td class="empty-revision">—</td>
+                            <td class="empty-revision">—</td>
+
+                          }
+
+                        }
+
+                        <td class="actions-cell">
+
+                          <button
+                            type="button"
+                            class="save-button"
+                            (click)="saveML01Edit()"
+                            [disabled]="isSavingML01">
+                            {{ isSavingML01 ? 'Saving...' : 'Save' }}
+                          </button>
+
+                          <button
+                            type="button"
+                            class="cancel-button"
+                            (click)="cancelML01Edit()"
+                            [disabled]="isSavingML01">
+                            Cancel
+                          </button>
+
+                          <button
+                            type="button"
+                            class="add-button"
+                            (click)="addML01Revision()"
+                            [disabled]="isSavingML01">
+                            + Revision
+                          </button>
+
+                        </td>
+
+                      </tr>
+
+                    } @else {
+
+                      <!-- NORMAL ROW -->
+
+                      <tr>
+
+                        <td class="serial-cell">
+                          {{ i + 1 }}
+                        </td>
+
+                        <td>
+                          {{ entry.description }}
+                        </td>
+
+                        <td>
+                          {{ entry.documentNo }}
+                        </td>
+
+                        @for (
+                          revisionNo of ml01RevisionColumns;
+                          track revisionNo
+                        ) {
+
+                          @if (
+                            getML01Revision(entry, revisionNo);
+                            as revision
+                          ) {
+
+                            <td class="revision-cell page-count">
+                              {{ revision.pageCount }}
+                            </td>
+
+                            <td class="revision-cell revision-date">
+                              {{ formatDate(revision.revisionDate) }}
+                            </td>
+
+                          } @else {
+
+                            <td class="revision-cell empty-revision">—</td>
+                            <td class="revision-cell empty-revision">—</td>
+
+                          }
+
+                        }
+
+                        <td class="actions-cell">
+
+                          @if (isQmsAdmin) {
+
+                            <button
+                              type="button"
+                              class="edit-button"
+                              (click)="startML01Edit(entry)"
+                              [disabled]="
+                                editingML01Id !== null ||
+                                isAddingML01 ||
+                                isSavingML01
+                              ">
+                              Edit
+                            </button>
+
+                          }
+
+                        </td>
+
+                      </tr>
+
+                    }
+
+                  } @empty {
+
+                    <tr>
+                      <td
+                        class="table-message empty-state"
+                        [attr.colspan]="4 + ml01RevisionColumns.length * 2">
+
+                        <strong>No ML01 records found</strong>
+
+                        <span>
+                          No records are available for this document type.
+                        </span>
+
+                      </td>
+                    </tr>
+
+                  }
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          }
+
+          <div class="table-footer">
+
+            <span>
+              Showing {{ ml01Entries.length }} record(s)
+            </span>
+
+            <span>
+              ML01 revision history
+            </span>
+
+          </div>
+
+        </section>
+
+      }
+
+      <!-- ======================================= -->
+      <!-- ML02–ML06 CONTROLLED DOCUMENTS TABLE    -->
+      <!-- ======================================= -->
+
+      @if (!selectedSpecialType && !isML01Selected) {
 
         <section class="table-card">
 
@@ -1037,6 +1500,8 @@
     </section>
 
   } @else {
+
+    <!-- COMING SOON -->
 
     <section class="coming-soon" aria-live="polite">
 

@@ -18,7 +18,10 @@ import {
   Department,
   MasterListDocument,
   DocumentRevision,
-  UpdateMasterListDocument
+  UpdateMasterListDocument,
+  ML01Entry,
+  ML01EntryRequest,
+  ML01Revision
 } from '../../services/master-list';
 
 import {
@@ -29,6 +32,25 @@ import {
 
 import { SigninService } from '../../services/signin.service';
 import { DocumentApprovalMatrixService, DocumentApprovalMatrix, SaveDocumentApprovalMatrixRequest } from '../../services/document-approval-matrix.service';
+import { MasterListExportService } from '../../services/master-list-export';
+
+// --------------------------------------------------
+// ML01 DRAFT INTERFACES
+// --------------------------------------------------
+
+interface ML01RevisionDraft {
+  id?: number;
+  revisionNo: number;
+  pageCount: number | null;
+  revisionDate: string;
+}
+
+interface ML01EntryDraft {
+  id: number;
+  description: string;
+  documentNo: string;
+  revisions: ML01RevisionDraft[];
+}
 
 @Component({
   selector: 'app-home',
@@ -44,6 +66,9 @@ export class QmsDashboardComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly masterDataService = inject(MasterDataService);
   private readonly approvalMatrixService = inject(DocumentApprovalMatrixService);
+
+  private readonly masterListExportService =
+    inject(MasterListExportService);
 
   constructor(
     private readonly masterListService: MasterListService,
@@ -74,7 +99,6 @@ export class QmsDashboardComponent implements OnInit {
 
   userRole = this.currentUser?.role || 'User';
 
-  // Only QMS Admin can edit Master List records.
   isQmsAdmin = this.userRole === 'QMS Admin';
 
   get userInitial(): string {
@@ -82,7 +106,68 @@ export class QmsDashboardComponent implements OnInit {
   }
 
   // --------------------------------------------------
-  // MASTER LIST DATA
+  // EXCEL EXPORT
+  // --------------------------------------------------
+
+  isExporting = false;
+  exportError = '';
+  exportSuccessMessage = '';
+
+  exportToExcel(): void {
+
+    if (this.isExporting) {
+      return;
+    }
+
+    this.isExporting = true;
+    this.exportError = '';
+    this.exportSuccessMessage = '';
+
+    this.masterListExportService.exportMasterList(
+      this.selectedDocumentTypeId,
+      this.selectedDepartmentId
+    ).subscribe({
+
+      next: (blob: Blob) => {
+
+        if (!blob || blob.size === 0) {
+          this.exportError = 'The exported Excel file is empty.';
+          this.isExporting = false;
+          this.cdr.markForCheck();
+          return;
+        }
+
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+
+        link.href = url;
+        link.download = 'MasterList.xlsx';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        window.URL.revokeObjectURL(url);
+
+        this.isExporting = false;
+        this.cdr.markForCheck();
+      },
+
+      error: error => {
+
+        console.error('Excel export failed:', error);
+
+        this.exportError =
+          'Unable to export Master List. Please check the backend API and try again.';
+
+        this.isExporting = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // --------------------------------------------------
+  // MASTER LIST FILTERS AND DOCUMENT DATA
   // --------------------------------------------------
 
   documentTypes: DocumentType[] = [];
@@ -100,6 +185,65 @@ export class QmsDashboardComponent implements OnInit {
   filterError = '';
   documentError = '';
   masterDataError = '';
+
+  // --------------------------------------------------
+  // ML01 - MASTER LIST OF MASTER LISTS
+  // --------------------------------------------------
+
+  ml01Entries: ML01Entry[] = [];
+
+  isLoadingML01 = false;
+  ml01Error = '';
+
+  editingML01Id: number | null = null;
+  ml01EditDraft: ML01EntryDraft | null = null;
+
+  isAddingML01 = false;
+  ml01AddDraft: ML01EntryDraft | null = null;
+
+  isSavingML01 = false;
+
+  ml01SaveMessage = '';
+  ml01SaveError = '';
+
+  get isML01Selected(): boolean {
+    return this.selectedDocumentTypeId === 10;
+  }
+
+  // Generate columns dynamically from revision 00 to the highest revision.
+  get ml01RevisionColumns(): number[] {
+
+    const revisionNumbers = this.ml01Entries.flatMap(entry =>
+      entry.revisions.map(revision => revision.revisionNo)
+    );
+
+    if (this.ml01EditDraft) {
+      revisionNumbers.push(
+        ...this.ml01EditDraft.revisions.map(
+          revision => revision.revisionNo
+        )
+      );
+    }
+
+    if (this.ml01AddDraft) {
+      revisionNumbers.push(
+        ...this.ml01AddDraft.revisions.map(
+          revision => revision.revisionNo
+        )
+      );
+    }
+
+    if (revisionNumbers.length === 0) {
+      return [0];
+    }
+
+    const highestRevision = Math.max(0, ...revisionNumbers);
+
+    return Array.from(
+      { length: highestRevision + 1 },
+      (_, index) => index
+    );
+  }
 
   // --------------------------------------------------
   // ML02–ML06 DOCUMENT EDITING
@@ -141,7 +285,6 @@ export class QmsDashboardComponent implements OnInit {
     columns: { key: string; label: string }[];
   }> = {
 
-    // ML07 - Machines / Equipment
     6: {
       table: 'machines',
       title: 'Machines / Equipment',
@@ -158,7 +301,6 @@ export class QmsDashboardComponent implements OnInit {
       ]
     },
 
-    // ML08 - Standards
     7: {
       table: 'standards',
       title: 'Standards',
@@ -170,7 +312,6 @@ export class QmsDashboardComponent implements OnInit {
       ]
     },
 
-    // ML09 - Testing and Measuring Instruments
     8: {
       table: 'instruments',
       title: 'Testing and Measuring Instruments',
@@ -186,7 +327,6 @@ export class QmsDashboardComponent implements OnInit {
       ]
     },
 
-    // ML10 - Quality Performance Index
     9: {
       table: 'qpi',
       title: 'Quality Performance Index (QPI)',
@@ -220,7 +360,7 @@ export class QmsDashboardComponent implements OnInit {
   }
 
   // --------------------------------------------------
-  // REVISION COLUMNS
+  // ML02–ML06 REVISION COLUMNS
   // --------------------------------------------------
 
   get revisionColumns(): number[] {
@@ -283,7 +423,6 @@ export class QmsDashboardComponent implements OnInit {
 
       error: error => {
         console.error('Failed to load document types:', error);
-
         this.filterError = 'Could not load document types.';
         typesLoaded = true;
         finishLoading();
@@ -300,7 +439,6 @@ export class QmsDashboardComponent implements OnInit {
 
       error: error => {
         console.error('Failed to load departments:', error);
-
         this.filterError = 'Could not load departments.';
         departmentsLoaded = true;
         finishLoading();
@@ -309,20 +447,43 @@ export class QmsDashboardComponent implements OnInit {
   }
 
   // --------------------------------------------------
-  // LOAD ML02–ML06 DOCUMENTS
+  // LOAD DOCUMENTS / ML01
   // --------------------------------------------------
 
   loadDocuments(): void {
 
+    // ML01 has its own API and must not use the ML02–ML06 endpoint.
+    if (this.isML01Selected) {
+
+      this.documents = [];
+      this.isLoadingDocuments = false;
+      this.documentError = '';
+
+      this.loadML01Entries();
+
+      this.cdr.markForCheck();
+      return;
+    }
+
+    // ML07–ML10 use their own special-table APIs.
     if (this.selectedSpecialType) {
 
       this.documents = [];
       this.isLoadingDocuments = false;
       this.documentError = '';
 
+      this.isLoadingML01 = false;
+      this.ml01Entries = [];
+      this.ml01Error = '';
+
       this.cdr.markForCheck();
       return;
     }
+
+    // Normal ML02–ML06 documents.
+    this.ml01Entries = [];
+    this.isLoadingML01 = false;
+    this.ml01Error = '';
 
     this.isLoadingDocuments = true;
     this.documentError = '';
@@ -360,6 +521,377 @@ export class QmsDashboardComponent implements OnInit {
   }
 
   // --------------------------------------------------
+  // ML01 LOAD
+  // --------------------------------------------------
+
+  loadML01Entries(): void {
+
+    this.isLoadingML01 = true;
+    this.ml01Error = '';
+
+    this.documents = [];
+
+    this.cdr.markForCheck();
+
+    this.masterListService.getML01Entries().subscribe({
+
+      next: entries => {
+
+        // Ignore a late response if the user selected another type.
+        if (!this.isML01Selected) {
+          return;
+        }
+
+        this.ml01Entries = entries ?? [];
+        this.isLoadingML01 = false;
+
+        this.cdr.markForCheck();
+      },
+
+      error: error => {
+
+        console.error('Failed to load ML01 entries:', error);
+
+        if (!this.isML01Selected) {
+          return;
+        }
+
+        this.ml01Entries = [];
+        this.isLoadingML01 = false;
+
+        this.ml01Error =
+          error?.error?.message ??
+          'Could not load ML01 records. Please check the backend API.';
+
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // --------------------------------------------------
+  // ML01 GET REVISION
+  // --------------------------------------------------
+
+  getML01Revision(
+    entry: ML01Entry | ML01EntryDraft,
+    revisionNo: number
+  ): ML01Revision | ML01RevisionDraft | undefined {
+
+    return entry.revisions.find(
+      revision => revision.revisionNo === revisionNo
+    );
+  }
+
+  // --------------------------------------------------
+  // ML01 CREATE
+  // --------------------------------------------------
+
+  startML01Add(): void {
+
+    if (
+      !this.isQmsAdmin ||
+      !this.isML01Selected ||
+      this.isSavingML01 ||
+      this.isAddingML01 ||
+      this.editingML01Id !== null ||
+      this.editingDocumentId !== null ||
+      this.editingMasterDataId !== null
+    ) {
+      return;
+    }
+
+    this.ml01AddDraft = {
+      id: 0,
+      description: '',
+      documentNo: '',
+      revisions: [
+        {
+          revisionNo: 0,
+          pageCount: null,
+          revisionDate: ''
+        }
+      ]
+    };
+
+    this.isAddingML01 = true;
+    this.ml01SaveMessage = '';
+    this.ml01SaveError = '';
+
+    this.cdr.markForCheck();
+  }
+
+  cancelML01Add(): void {
+
+    if (this.isSavingML01) {
+      return;
+    }
+
+    this.isAddingML01 = false;
+    this.ml01AddDraft = null;
+    this.ml01SaveError = '';
+
+    this.cdr.markForCheck();
+  }
+
+  saveML01Add(): void {
+
+    const draft = this.ml01AddDraft;
+
+    if (
+      !this.isQmsAdmin ||
+      !draft ||
+      !this.isML01Selected ||
+      this.isSavingML01
+    ) {
+      return;
+    }
+
+    const validationError = this.validateML01Draft(draft);
+
+    if (validationError) {
+      this.ml01SaveError = validationError;
+      return;
+    }
+
+    const request = this.buildML01Request(draft);
+
+    this.isSavingML01 = true;
+    this.ml01SaveError = '';
+    this.ml01SaveMessage = '';
+
+    this.masterListService.createML01Entry(request).subscribe({
+
+      next: () => {
+
+        this.isSavingML01 = false;
+        this.isAddingML01 = false;
+        this.ml01AddDraft = null;
+
+        this.ml01SaveMessage = 'ML01 record added successfully.';
+
+        this.loadML01Entries();
+        this.cdr.markForCheck();
+      },
+
+      error: error => {
+
+        console.error('Failed to create ML01 entry:', error);
+
+        this.isSavingML01 = false;
+
+        this.ml01SaveError =
+          error?.error?.message ??
+          'Could not add the ML01 record. Please try again.';
+
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // --------------------------------------------------
+  // ML01 EDIT
+  // --------------------------------------------------
+
+  startML01Edit(entry: ML01Entry): void {
+
+    if (
+      !this.isQmsAdmin ||
+      !this.isML01Selected ||
+      this.isSavingML01 ||
+      this.isAddingML01 ||
+      this.editingML01Id !== null ||
+      this.editingDocumentId !== null ||
+      this.editingMasterDataId !== null
+    ) {
+      return;
+    }
+
+    this.editingML01Id = entry.id;
+
+    this.ml01EditDraft = {
+      id: entry.id,
+      description: entry.description,
+      documentNo: entry.documentNo,
+      revisions: (entry.revisions ?? []).map(revision => ({
+        id: revision.id,
+        revisionNo: revision.revisionNo,
+        pageCount: revision.pageCount,
+        revisionDate: revision.revisionDate
+          ? String(revision.revisionDate).substring(0, 10)
+          : ''
+      }))
+    };
+
+    this.ml01SaveMessage = '';
+    this.ml01SaveError = '';
+
+    this.cdr.markForCheck();
+  }
+
+  cancelML01Edit(): void {
+
+    if (this.isSavingML01) {
+      return;
+    }
+
+    this.editingML01Id = null;
+    this.ml01EditDraft = null;
+    this.ml01SaveError = '';
+
+    this.cdr.markForCheck();
+  }
+
+  saveML01Edit(): void {
+
+    const draft = this.ml01EditDraft;
+    const id = this.editingML01Id;
+
+    if (
+      !this.isQmsAdmin ||
+      !draft ||
+      id === null ||
+      !this.isML01Selected ||
+      this.isSavingML01
+    ) {
+      return;
+    }
+
+    const validationError = this.validateML01Draft(draft);
+
+    if (validationError) {
+      this.ml01SaveError = validationError;
+      return;
+    }
+
+    const request = this.buildML01Request(draft);
+
+    this.isSavingML01 = true;
+    this.ml01SaveError = '';
+    this.ml01SaveMessage = '';
+
+    this.masterListService.updateML01Entry(id, request).subscribe({
+
+      next: () => {
+
+        this.isSavingML01 = false;
+        this.editingML01Id = null;
+        this.ml01EditDraft = null;
+
+        this.ml01SaveMessage = 'ML01 record updated successfully.';
+
+        this.loadML01Entries();
+        this.cdr.markForCheck();
+      },
+
+      error: error => {
+
+        console.error('Failed to update ML01 entry:', error);
+
+        this.isSavingML01 = false;
+
+        this.ml01SaveError =
+          error?.error?.message ??
+          'Could not update the ML01 record. Please try again.';
+
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // --------------------------------------------------
+  // ML01 ADD REVISION
+  // --------------------------------------------------
+
+  addML01Revision(): void {
+
+    const draft = this.ml01EditDraft;
+
+    if (
+      !this.isQmsAdmin ||
+      !draft ||
+      this.isSavingML01
+    ) {
+      return;
+    }
+
+    const highestRevision = draft.revisions.length > 0
+      ? Math.max(...draft.revisions.map(r => r.revisionNo))
+      : -1;
+
+    const nextRevision = highestRevision + 1;
+
+    draft.revisions.push({
+      revisionNo: nextRevision,
+      pageCount: null,
+      revisionDate: ''
+    });
+
+    this.ml01SaveError = '';
+
+    this.cdr.markForCheck();
+  }
+
+  // --------------------------------------------------
+  // ML01 VALIDATION AND REQUEST MAPPING
+  // --------------------------------------------------
+
+  private validateML01Draft(draft: ML01EntryDraft): string | null {
+
+    if (!draft.description.trim()) {
+      return 'Description is required.';
+    }
+
+    if (!draft.documentNo.trim()) {
+      return 'Document number is required.';
+    }
+
+    if (draft.revisions.length === 0) {
+      return 'At least one revision is required.';
+    }
+
+    const revisionNumbers = draft.revisions.map(r => r.revisionNo);
+
+    if (new Set(revisionNumbers).size !== revisionNumbers.length) {
+      return 'Duplicate revision numbers are not allowed.';
+    }
+
+    for (const revision of draft.revisions) {
+
+      if (
+        !Number.isInteger(revision.pageCount) ||
+        revision.pageCount === null ||
+        revision.pageCount < 1
+      ) {
+        return `Enter a valid page count for revision ${revision.revisionNo}.`;
+      }
+
+      if (!revision.revisionDate) {
+        return `Select a date for revision ${revision.revisionNo}.`;
+      }
+    }
+
+    return null;
+  }
+
+  private buildML01Request(
+    draft: ML01EntryDraft
+  ): ML01EntryRequest {
+
+    return {
+      description: draft.description.trim(),
+      documentNo: draft.documentNo.trim(),
+
+      revisions: [...draft.revisions]
+        .sort((a, b) => a.revisionNo - b.revisionNo)
+        .map(revision => ({
+          revisionNo: revision.revisionNo,
+          pageCount: Number(revision.pageCount),
+          revisionDate: revision.revisionDate.substring(0, 10)
+        }))
+    };
+  }
+
+  // --------------------------------------------------
   // LOAD ML07–ML10 SPECIAL TABLES
   // --------------------------------------------------
 
@@ -379,13 +911,11 @@ export class QmsDashboardComponent implements OnInit {
     if (!config) {
 
       this.isLoadingMasterData = false;
-
       this.cdr.markForCheck();
       return;
     }
 
     this.isLoadingMasterData = true;
-
     this.cdr.markForCheck();
 
     this.masterDataService.getRows(config.table).subscribe({
@@ -466,7 +996,6 @@ export class QmsDashboardComponent implements OnInit {
 
     this.isAddingMasterData = false;
     this.specialAddDraft = null;
-
     this.specialSaveError = '';
 
     this.cdr.markForCheck();
@@ -516,10 +1045,7 @@ export class QmsDashboardComponent implements OnInit {
     }
 
     if (Object.keys(payload).length === 0) {
-
-      this.specialSaveError =
-        'Please enter at least one field.';
-
+      this.specialSaveError = 'Please enter at least one field.';
       return;
     }
 
@@ -538,8 +1064,7 @@ export class QmsDashboardComponent implements OnInit {
         this.isAddingMasterData = false;
         this.specialAddDraft = null;
 
-        this.specialSaveMessage =
-          'Record added successfully.';
+        this.specialSaveMessage = 'Record added successfully.';
 
         this.loadMasterData();
         this.cdr.markForCheck();
@@ -603,8 +1128,7 @@ export class QmsDashboardComponent implements OnInit {
         this.isDeletingMasterData = false;
         this.deletingMasterDataId = null;
 
-        this.specialSaveMessage =
-          'Record deleted successfully.';
+        this.specialSaveMessage = 'Record deleted successfully.';
 
         this.loadMasterData();
         this.cdr.markForCheck();
@@ -635,21 +1159,30 @@ export class QmsDashboardComponent implements OnInit {
     this.selectedDocumentTypeId =
       value === '' ? null : Number(value);
 
+    // Clear ML02–ML06 edit state.
     this.editingDocumentId = null;
     this.editDraft = null;
     this.saveMessage = '';
     this.saveError = '';
 
+    // Clear ML01 state.
+    this.editingML01Id = null;
+    this.ml01EditDraft = null;
+    this.isAddingML01 = false;
+    this.ml01AddDraft = null;
+    this.ml01SaveMessage = '';
+    this.ml01SaveError = '';
+
+    // Clear special table state.
     this.editingMasterDataId = null;
     this.specialEditDraft = null;
-
     this.isAddingMasterData = false;
     this.specialAddDraft = null;
-
     this.specialSaveMessage = '';
     this.specialSaveError = '';
 
-    if (this.selectedSpecialType) {
+    // ML01 and ML07–ML10 are not department-specific in this UI.
+    if (this.selectedSpecialType || this.isML01Selected) {
       this.selectedDepartmentId = null;
     }
 
@@ -678,7 +1211,7 @@ export class QmsDashboardComponent implements OnInit {
 
   onDepartmentChange(value: string | number): void {
 
-    if (this.selectedSpecialType) {
+    if (this.selectedSpecialType || this.isML01Selected) {
       return;
     }
 
@@ -725,11 +1258,19 @@ export class QmsDashboardComponent implements OnInit {
     this.isAddingMasterData = false;
     this.specialAddDraft = null;
 
+    this.editingML01Id = null;
+    this.ml01EditDraft = null;
+    this.isAddingML01 = false;
+    this.ml01AddDraft = null;
+
     this.saveMessage = '';
     this.saveError = '';
 
     this.specialSaveMessage = '';
     this.specialSaveError = '';
+
+    this.ml01SaveMessage = '';
+    this.ml01SaveError = '';
 
     this.loadDocuments();
     this.loadMasterData();
@@ -823,12 +1364,9 @@ export class QmsDashboardComponent implements OnInit {
     }
 
     if (key === 'pages' || key === 'loadInHP') {
-
       this.specialEditDraft[key] =
         value === '' ? null : Number(value);
-
     } else {
-
       this.specialEditDraft[key] = value;
     }
   }
@@ -865,10 +1403,7 @@ export class QmsDashboardComponent implements OnInit {
     }
 
     if (Object.keys(payload).length === 0) {
-
-      this.specialSaveError =
-        'Please enter at least one field.';
-
+      this.specialSaveError = 'Please enter at least one field.';
       return;
     }
 
@@ -890,8 +1425,7 @@ export class QmsDashboardComponent implements OnInit {
         this.editingMasterDataId = null;
         this.specialEditDraft = null;
 
-        this.specialSaveMessage =
-          'Record updated successfully.';
+        this.specialSaveMessage = 'Record updated successfully.';
 
         this.loadMasterData();
         this.cdr.markForCheck();
@@ -1071,19 +1605,16 @@ export class QmsDashboardComponent implements OnInit {
     }
 
     if (!draft.documentNo.trim()) {
-
       this.saveError = 'Document number is required.';
       return;
     }
 
     if (!draft.title.trim()) {
-
       this.saveError = 'Document title is required.';
       return;
     }
 
     if (!draft.documentTypeId || !draft.departmentId) {
-
       this.saveError = 'Select a document type and department.';
       return;
     }
@@ -1092,7 +1623,6 @@ export class QmsDashboardComponent implements OnInit {
       draft.status !== 'Active' &&
       draft.status !== 'Obsolete'
     ) {
-
       this.saveError = 'Select a valid document status.';
       return;
     }
@@ -1101,10 +1631,8 @@ export class QmsDashboardComponent implements OnInit {
       draft.status === 'Obsolete' &&
       !draft.obseleteDate
     ) {
-
       this.saveError =
         'Select an obsolete date for obsolete documents.';
-
       return;
     }
 
@@ -1115,10 +1643,8 @@ export class QmsDashboardComponent implements OnInit {
         !revision.revisionDate
       )
     ) {
-
       this.saveError =
         'Every revision needs a valid page count and date.';
-
       return;
     }
 
@@ -1142,11 +1668,8 @@ export class QmsDashboardComponent implements OnInit {
           : null,
 
       revisions: draft.revisions.map(revision => ({
-
         revisionNumber: revision.revisionNumber,
-
         pageCount: Number(revision.pageCount),
-
         revisionDate: revision.revisionDate.slice(0, 10)
       }))
     };
@@ -1197,17 +1720,14 @@ export class QmsDashboardComponent implements OnInit {
   // --------------------------------------------------
 
   toggleProfileMenu(): void {
-
     this.profileMenuOpen = !this.profileMenuOpen;
   }
 
   closeProfileMenu(): void {
-
     this.profileMenuOpen = false;
   }
 
   openProfile(): void {
-
     this.closeProfileMenu();
   }
 
@@ -1216,7 +1736,6 @@ export class QmsDashboardComponent implements OnInit {
   // --------------------------------------------------
 
   openSignupRequests(): void {
-
     void this.router.navigate(['/qms/admin/signup-requests']);
   }
 
@@ -1229,14 +1748,22 @@ export class QmsDashboardComponent implements OnInit {
 
     this.closeProfileMenu();
 
-    if (this.isAddingMasterData && !this.isSavingMasterData) {
+    if (this.isAddingML01 && !this.isSavingML01) {
+      this.cancelML01Add();
+      return;
+    }
 
+    if (this.editingML01Id !== null && !this.isSavingML01) {
+      this.cancelML01Edit();
+      return;
+    }
+
+    if (this.isAddingMasterData && !this.isSavingMasterData) {
       this.cancelSpecialAdd();
       return;
     }
 
     if (this.editingMasterDataId !== null) {
-
       this.cancelSpecialEdit();
       return;
     }
@@ -1245,7 +1772,6 @@ export class QmsDashboardComponent implements OnInit {
       this.editingDocumentId !== null &&
       !this.isSavingDocument
     ) {
-
       this.cancelEdit();
     }
   }

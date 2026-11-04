@@ -1,7 +1,11 @@
 
+using System.Dynamic;
+//using System.Reflection.Metadata;
+using System.Security.Cryptography.X509Certificates;
 using DocumentFormat.OpenXml.Office2010.Excel;
 using Microsoft.EntityFrameworkCore;
 using Qms.Api.Models;
+
 
 namespace Qms.Api.Data;
 
@@ -39,6 +43,8 @@ public class QmsDbContext : DbContext
     public DbSet<TestingOrMeasuringInstruments> TestingOrMeasuringInstruments => Set<TestingOrMeasuringInstruments>();
     
     public DbSet<QualityPerformanceIndex> QualityPerformanceIndex => Set<QualityPerformanceIndex>();
+    public DbSet<ML01Entry> ML01Entries => Set<ML01Entry>();
+    public DbSet<ML01Revision> ML01Revisions => Set<ML01Revision>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -208,7 +214,7 @@ public class QmsDbContext : DbContext
 
             entity.Property(d => d.Status).HasMaxLength(20).HasDefaultValue("Active")
             .IsRequired();
-                    entity.Property(d => d.ObseleteDate).HasColumnType("date");
+            entity.Property(d => d.ObseleteDate).HasColumnType("date");
 
             entity.HasIndex(d => d.DocumentNo)
                 .IsUnique();
@@ -321,17 +327,17 @@ public class QmsDbContext : DbContext
 
         modelBuilder.Entity<MachinesList>(entity =>
         {
-           entity.HasKey(m => m.Id);
+            entity.HasKey(m => m.Id);
 
-           entity.Property(m => m.MachineName)
-               .HasMaxLength(150);
-            
+            entity.Property(m => m.MachineName)
+                .HasMaxLength(150);
+
             entity.Property(m => m.MachineCategory)
                 .HasMaxLength(50);
 
             entity.Property(m => m.MachineCodeNum)
                 .HasMaxLength(50);
-            
+
             entity.Property(m => m.MachineSlNum)
                 .HasMaxLength(50);
 
@@ -346,7 +352,7 @@ public class QmsDbContext : DbContext
 
             entity.Property(m => m.LoadInHP)
                 .HasPrecision(10, 2);
-            
+
             entity.Property(m => m.Location)
                 .HasMaxLength(100);
 
@@ -382,22 +388,22 @@ public class QmsDbContext : DbContext
 
             entity.Property(m => m.InstrumentSlNum)
                 .HasMaxLength(50);
-            
+
             entity.Property(m => m.InstrumentRange)
                 .HasMaxLength(75);
 
             entity.Property(m => m.Make)
                 .HasMaxLength(75);
-            
+
             entity.Property(m => m.Location)
                 .HasMaxLength(50);
 
             entity.Property(m => m.CalibrationFrequency)
                 .HasMaxLength(50);
-            
+
             entity.Property(m => m.Remarks)
                 .HasMaxLength(100);
-            
+
             entity.HasOne(d => d.DocumentType).WithMany().HasForeignKey(d => d.DocumentTypeId).OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -432,6 +438,28 @@ public class QmsDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(m => m.DocumentTypeId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<ML01Entry>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Description).IsRequired().HasMaxLength(200);
+
+            entity.Property(x => x.DocumentNo).IsRequired();
+
+            entity.HasOne(d => d.DocumentType).WithMany().HasForeignKey(d => d.DocumentTypeId).OnDelete(DeleteBehavior.Restrict);
+
+        });
+
+        modelBuilder.Entity<ML01Revision>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(r => new { r.ML01EntryId, r.RevisionNo });
+            entity.Property(x => x.RevisionDate).HasColumnType("date");
+            entity.HasOne(r => r.ML01Entry)
+       .WithMany(e => e.Revisions)
+       .HasForeignKey(r => r.ML01EntryId)
+       .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<DocumentApprovalMatrix>(entity =>
