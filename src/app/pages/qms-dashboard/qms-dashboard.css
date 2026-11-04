@@ -1285,3 +1285,39 @@ button:disabled {
 .master-approval-loading { color:#687385; }
 .master-approval-error { color:#b42318; }
 .master-approval-success { color:#166534; background:#f0fff4; }
+.master-list-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #198754;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.export-button:hover:not(:disabled) {
+  background: #146c43;
+}
+
+.export-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .master-list-heading-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
