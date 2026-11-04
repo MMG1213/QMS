@@ -20,10 +20,11 @@ builder.Services.AddScoped<ISigninService, SigninService>();
 builder.Services.AddScoped<ISignupService, SignupService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IMasterListImportService, MasterListImportService>();
-
+builder.Services.AddScoped<ML01Service>();
 builder.Services.AddScoped<MasterListExcelPreviewService>();
 builder.Services.AddScoped<MasterListService>();
 builder.Services.AddScoped<IMasterDataService, MasterDataService>();
+builder.Services.AddScoped<MasterListExcelExportService>();
 // Controllers
 builder.Services.AddControllers();
 

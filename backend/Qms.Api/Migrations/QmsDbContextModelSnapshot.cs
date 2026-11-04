@@ -320,6 +320,60 @@ namespace Qms.Api.Migrations
                     b.ToTable("DocumentTypes");
                 });
 
+            modelBuilder.Entity("Qms.Api.Models.ML01Entry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DocumentNo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DocumentTypeId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentTypeId");
+
+                    b.ToTable("ML01Entries");
+                });
+
+            modelBuilder.Entity("Qms.Api.Models.ML01Revision", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ML01EntryId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PageCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("RevisionDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("RevisionNo")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ML01EntryId", "RevisionNo");
+
+                    b.ToTable("ML01Revisions");
+                });
+
             modelBuilder.Entity("Qms.Api.Models.MachinesList", b =>
                 {
                     b.Property<int>("Id")
@@ -654,6 +708,28 @@ namespace Qms.Api.Migrations
                     b.Navigation("Document");
                 });
 
+            modelBuilder.Entity("Qms.Api.Models.ML01Entry", b =>
+                {
+                    b.HasOne("Qms.Api.Models.DocumentType", "DocumentType")
+                        .WithMany()
+                        .HasForeignKey("DocumentTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DocumentType");
+                });
+
+            modelBuilder.Entity("Qms.Api.Models.ML01Revision", b =>
+                {
+                    b.HasOne("Qms.Api.Models.ML01Entry", "ML01Entry")
+                        .WithMany("Revisions")
+                        .HasForeignKey("ML01EntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ML01Entry");
+                });
+
             modelBuilder.Entity("Qms.Api.Models.MachinesList", b =>
                 {
                     b.HasOne("Qms.Api.Models.DocumentType", "DocumentType")
@@ -717,6 +793,11 @@ namespace Qms.Api.Migrations
             modelBuilder.Entity("Qms.Api.Models.DocumentType", b =>
                 {
                     b.Navigation("Documents");
+                });
+
+            modelBuilder.Entity("Qms.Api.Models.ML01Entry", b =>
+                {
+                    b.Navigation("Revisions");
                 });
 
             modelBuilder.Entity("Qms.Api.Models.QMSDepartment", b =>
