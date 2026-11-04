@@ -76,7 +76,7 @@ public class AdminDepartmentsController : ControllerBase
         }
 
         return Created(
-            $"/api/admin/departments/{result.Department!.Id}",
+            $"/api/admin/departments/{result.Department!.DepartmentId}",
             new
             {
                 message = result.Message,

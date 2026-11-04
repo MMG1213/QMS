@@ -1,3 +1,4 @@
+
 using Qms.Api.DTOs;
 
 namespace Qms.Api.Services;
@@ -19,8 +20,11 @@ public interface IDepartmentService
 public class DepartmentOperationResult
 {
     public bool Succeeded { get; private set; }
+
     public int StatusCode { get; private set; }
+
     public string Message { get; private set; } = string.Empty;
+
     public DepartmentAdminDto? Department { get; private set; }
 
     public static DepartmentOperationResult Success(

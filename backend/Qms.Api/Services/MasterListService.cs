@@ -19,15 +19,22 @@ public class MasterListService
         _context = context;
     }
 
+    
     public async Task<List<DocumentTypeDto>> GetDocumentTypesAsync()
     {
-
-        return await _context.DocumentTypes.AsNoTracking().OrderBy(type => type.TypeName).Select(type => new DocumentTypeDto
-        {
-            DocumentTypeId = type.DocumentTypeId,
-            TypeName = type.TypeName,
-        }).ToListAsync();
+        return await _context.DocumentTypes
+            .AsNoTracking()
+            .Where(type => type.IsActive)
+            .OrderBy(type => type.TypeName)
+            .Select(type => new DocumentTypeDto
+            {
+                DocumentTypeId = type.DocumentTypeId,
+                TypeCode = type.TypeCode,
+                TypeName = type.TypeName,
+            })
+            .ToListAsync();
     }
+
 
     public async Task<List<QMSDepartmentDto>> GetQMSDepartmentsAsync()
     {

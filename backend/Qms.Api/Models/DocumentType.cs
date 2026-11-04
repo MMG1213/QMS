@@ -1,3 +1,4 @@
+
 namespace Qms.Api.Models;
 
 public class DocumentType
@@ -8,8 +9,8 @@ public class DocumentType
 
     public string TypeName { get; set; } = string.Empty;
 
-    // Navigation property
+    public bool IsActive { get; set; } = true;
+
     public ICollection<Document> Documents { get; set; }
         = new List<Document>();
-
 }

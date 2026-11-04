@@ -39,9 +39,9 @@ public class AdminUsersController : ControllerBase
                 u.FullName,
                 u.Email,
                 u.DepartmentId,
-                DepartmentName = u.Department == null
+                DepartmentName = u.QMSDepartment == null
                     ? null
-                    : u.Department.DeptName,
+                    : u.QMSDepartment.DepartmentName,
                 u.Role,
                 u.IsActive,
                 u.CreatedAtUtc
@@ -55,14 +55,14 @@ public class AdminUsersController : ControllerBase
     [HttpGet("departments")]
     public async Task<IActionResult> GetDepartments()
     {
-        var departments = await _context.Departments
+        var departments = await _context.QMSDepartments
             .AsNoTracking()
             .Where(d => d.IsActive)
-            .OrderBy(d => d.DeptName)
+            .OrderBy(d => d.DepartmentName)
             .Select(d => new
             {
-                d.Id,
-                d.DeptName
+                id = d.DepartmentId,
+                deptName = d.DepartmentName
             })
             .ToListAsync();
 
@@ -121,9 +121,9 @@ public class AdminUsersController : ControllerBase
                 });
             }
 
-            var departmentExists = await _context.Departments
+            var departmentExists = await _context.QMSDepartments
                 .AnyAsync(d =>
-                    d.Id == request.DepartmentId.Value &&
+                    d.DepartmentId == request.DepartmentId.Value &&
                     d.IsActive);
 
             if (!departmentExists)

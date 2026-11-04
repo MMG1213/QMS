@@ -29,9 +29,9 @@ public class AdminSignupRequestService : IAdminSignupRequestService
                 FullName = r.FullName,
                 Email = r.Email,
                 DepartmentId = r.DepartmentId,
-                DepartmentName = r.Department == null
+                DepartmentName = r.QMSDepartment == null
                     ? null
-                    : r.Department.DeptName,
+                    : r.QMSDepartment.DepartmentName,
                 Role = r.Role,
                 Status = r.Status,
                 RequestedAtUtc = r.RequestedAtUtc,
@@ -110,8 +110,8 @@ public class AdminSignupRequestService : IAdminSignupRequestService
                     "The requested role is invalid.");
             }
 
-            var departmentExists = await _db.Departments.AnyAsync(d =>
-                d.Id == accountRequest.DepartmentId &&
+            var departmentExists = await _db.QMSDepartments.AnyAsync(d =>
+                d.DepartmentId == accountRequest.DepartmentId &&
                 d.IsActive);
 
             if (!departmentExists)

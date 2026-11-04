@@ -9,15 +9,17 @@ export interface DepartmentOption {
 }
 
 export interface AdminDepartment {
-  id: number;
-  deptName: string;
-  deptId: string;
+  departmentId: number;
+  departmentCode: string;
+  departmentName: string;
   isActive: boolean;
+  createdAtUtc: string;
+  updatedAtUtc: string | null;
 }
 
 export interface CreateDepartmentRequest {
-  deptName: string;
-  deptId: string;
+  departmentCode: string;
+  departmentName: string;
 }
 
 export interface DepartmentStatusResponse {
@@ -56,7 +58,7 @@ export class DepartmentService {
       );
   }
 
-  // Load departments for the existing admin account-creation form.
+  // Load active departments for QMS Admin account creation.
   getAdminDepartments(): Observable<DepartmentOption[]> {
     return this.http
       .get<DepartmentApiOption[]>(
@@ -72,14 +74,14 @@ export class DepartmentService {
       );
   }
 
-  // Load all departments, including inactive departments.
+  // Load all departments, including restricted departments.
   getAllDepartments(): Observable<AdminDepartment[]> {
     return this.http.get<AdminDepartment[]>(
       this.adminDepartmentsApiUrl
     );
   }
 
-  // Create a new department.
+  // Create a department in QMSDepartments.
   createDepartment(
     request: CreateDepartmentRequest
   ): Observable<DepartmentStatusResponse> {
@@ -89,13 +91,13 @@ export class DepartmentService {
     );
   }
 
-  // Activate or deactivate a department.
+  // Activate or restrict a department.
   updateDepartmentStatus(
-    id: number,
+    departmentId: number,
     isActive: boolean
   ): Observable<DepartmentStatusResponse> {
     return this.http.patch<DepartmentStatusResponse>(
-      `${this.adminDepartmentsApiUrl}/${id}/status`,
+      `${this.adminDepartmentsApiUrl}/${departmentId}/status`,
       { isActive }
     );
   }

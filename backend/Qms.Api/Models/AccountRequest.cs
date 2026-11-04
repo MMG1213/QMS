@@ -20,12 +20,11 @@ public class AccountRequest
 
     public int DepartmentId { get; set; }
 
-    public Department? Department { get; set; }
+    // AccountRequests now references dbo.QMSDepartments.
+    public QMSDepartment? QMSDepartment { get; set; }
 
-    // The role requested by the employee.
     public string Role { get; set; } = QmsRole.User;
 
-    // Signup requests can only be Pending, Approved, or Rejected.
     public string Status { get; set; } = AccountRequestStatus.Pending;
 
     public DateTime RequestedAtUtc { get; set; } = DateTime.UtcNow;
@@ -36,11 +35,8 @@ public class AccountRequest
 
     public DateTime? ReviewedAtUtc { get; set; }
 
-    // Store only the password hash, never the plaintext password.
-    // Nullable so existing requests remain compatible.
     public string? PasswordHash { get; set; }
 
-    // Legacy password-setup fields retained for compatibility.
     public string? PasswordSetupTokenHash { get; set; }
 
     public DateTime? PasswordSetupTokenExpiresAtUtc { get; set; }

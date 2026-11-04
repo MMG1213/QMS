@@ -22,9 +22,8 @@ builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IMasterListImportService, MasterListImportService>();
 builder.Services.AddScoped<IAdminSignupRequestService, AdminSignupRequestService>();
 
-builder.Services.AddScoped<MasterListExcelPreviewService>();
-builder.Services.AddScoped<MasterListService>();
 builder.Services.AddScoped<IMasterDataService, MasterDataService>();
+
 // Controllers
 builder.Services.AddControllers();
 
@@ -51,18 +50,18 @@ byte[] keyBytes;
 
 try
 {
-  keyBytes = Convert.FromBase64String(jwtKey);
+    keyBytes = Convert.FromBase64String(jwtKey);
 }
 catch (FormatException ex)
 {
-  throw new InvalidOperationException(
-      "Jwt:Key must be a Base64-encoded secret.", ex);
+    throw new InvalidOperationException(
+        "Jwt:Key must be a Base64-encoded secret.", ex);
 }
 
 if (keyBytes.Length < 32)
 {
-  throw new InvalidOperationException(
-      "Jwt:Key must contain at least 32 random bytes.");
+    throw new InvalidOperationException(
+        "Jwt:Key must contain at least 32 random bytes.");
 }
 
 var signingKey = new SymmetricSecurityKey(keyBytes);
@@ -70,13 +69,12 @@ var signingKey = new SymmetricSecurityKey(keyBytes);
 builder.Services
     .AddAuthentication(options =>
     {
-      options.DefaultAuthenticateScheme =
-          JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultAuthenticateScheme =
+            JwtBearerDefaults.AuthenticationScheme;
 
-      options.DefaultChallengeScheme =
-          JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme =
+            JwtBearerDefaults.AuthenticationScheme;
     })
-    
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -123,81 +121,59 @@ builder.Services
                     .AnyAsync(user =>
                         user.Id == userId &&
                         user.IsActive &&
-                        user.TokenVersion == tokenVersion,
+                        user.TokenVersion == tokenVersion &&
+                        (
+                            user.Role == QmsRole.QmsAdmin ||
+                            (
+                                user.DepartmentId.HasValue &&
+                                db.QMSDepartments.Any(department =>
+                                    department.DepartmentId == user.DepartmentId.Value &&
+                                    department.IsActive)
+                            )
+                        ),
                         context.HttpContext.RequestAborted);
 
                 if (!accountIsValid)
                 {
-                    context.Fail("Account is inactive or the token has been revoked.");
-                }
-            }
-        };
-
-        options.Events = new JwtBearerEvents
-        {
-            OnTokenValidated = async context =>
-            {
-                var userIdValue = context.Principal?
-                    .FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                var tokenVersionValue = context.Principal?
-                    .FindFirst("tokenVersion")?.Value;
-
-                if (!int.TryParse(userIdValue, out var userId) ||
-                    !int.TryParse(tokenVersionValue, out var tokenVersion))
-                {
-                    context.Fail("Invalid authentication token.");
-                    return;
-                }
-
-                var db = context.HttpContext.RequestServices
-                    .GetRequiredService<QmsDbContext>();
-
-                var user = await db.AppUsers
-                    .AsNoTracking()
-                    .Where(u => u.Id == userId)
-                    .Select(u => new
-                    {
-                        u.IsActive,
-                        u.TokenVersion
-                    })
-                    .SingleOrDefaultAsync();
-
-                if (user == null ||
-                    !user.IsActive ||
-                    user.TokenVersion != tokenVersion)
-                {
-                    context.Fail("Account is inactive or session has been revoked.");
+                    context.Fail(
+                        "Account is inactive, department is restricted, or token has been revoked.");
                 }
             }
         };
     });
 
+// Authorization
 builder.Services.AddAuthorization();
 
 // Angular CORS
 builder.Services.AddCors(options =>
 {
-  options.AddPolicy("QmsAngularPolicy", policy =>
-  {
-    policy
-        .WithOrigins("http://localhost:4200")
-        .AllowAnyHeader()
-        .AllowAnyMethod();
-  });
+    options.AddPolicy("QmsAngularPolicy", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
 });
 
 // Swagger services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddScoped<IDocumentTypeAdminService, DocumentTypeAdminService>();
+
+builder.Services.AddScoped<
+    IDocumentApprovalMatrixService,
+    DocumentApprovalMatrixService>();
+
 var app = builder.Build();
 
 // Swagger is enabled in Development
 if (app.Environment.IsDevelopment())
 {
-  app.UseSwagger();
-  app.UseSwaggerUI();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
@@ -208,6 +184,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
 foreach (var endpoint in app.Services
     .GetRequiredService<EndpointDataSource>()
     .Endpoints)

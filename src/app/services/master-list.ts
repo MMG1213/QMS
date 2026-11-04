@@ -4,6 +4,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 export interface DocumentType {
+  typeCode: string;
   documentTypeId: number;
   typeName: string;
 }
@@ -22,6 +23,7 @@ export interface DocumentRevision {
 }
 
 export interface MasterListDocument {
+typeCode: any;
   documentId: number;
   title: string;
   documentNo: string;

@@ -21,14 +21,14 @@ public class PublicDepartmentsController : ControllerBase
     [HttpGet("active")]
     public async Task<IActionResult> GetActiveDepartments()
     {
-        var departments = await _db.Departments
+        var departments = await _db.QMSDepartments
             .AsNoTracking()
             .Where(d => d.IsActive)
-            .OrderBy(d => d.DeptName)
+            .OrderBy(d => d.DepartmentName)
             .Select(d => new
             {
-                d.Id,
-                d.DeptName
+                id = d.DepartmentId,
+                deptName = d.DepartmentName
             })
             .ToListAsync();
 
