@@ -1,3 +1,4 @@
+
 using Microsoft.EntityFrameworkCore;
 using Qms.Api.Data;
 using Qms.Api.DTOs;
@@ -14,77 +15,83 @@ public class DepartmentService : IDepartmentService
         _db = db;
     }
 
-    public async Task<List<DepartmentAdminDto>>
-        GetAllDepartmentsAsync()
+    public async Task<List<DepartmentAdminDto>> GetAllDepartmentsAsync()
     {
-        return await _db.Departments
+        return await _db.QMSDepartments
             .AsNoTracking()
-            .OrderBy(d => d.DeptName)
+            .OrderBy(d => d.DepartmentName)
             .Select(d => new DepartmentAdminDto
             {
-                Id = d.Id,
-                DeptName = d.DeptName,
-                DeptId = d.DeptId,
+                DepartmentId = d.DepartmentId,
+                DepartmentCode = d.DepartmentCode,
+                DepartmentName = d.DepartmentName,
                 IsActive = d.IsActive
             })
             .ToListAsync();
     }
 
-    public async Task<DepartmentAdminDto?>
-        GetDepartmentByIdAsync(int id)
+    public async Task<DepartmentAdminDto?> GetDepartmentByIdAsync(int id)
     {
-        return await _db.Departments
+        return await _db.QMSDepartments
             .AsNoTracking()
-            .Where(d => d.Id == id)
+            .Where(d => d.DepartmentId == id)
             .Select(d => new DepartmentAdminDto
             {
-                Id = d.Id,
-                DeptName = d.DeptName,
-                DeptId = d.DeptId,
+                DepartmentId = d.DepartmentId,
+                DepartmentCode = d.DepartmentCode,
+                DepartmentName = d.DepartmentName,
                 IsActive = d.IsActive
             })
             .SingleOrDefaultAsync();
     }
 
-    public async Task<DepartmentOperationResult>
-        CreateDepartmentAsync(CreateDepartmentRequest request)
+    public async Task<DepartmentOperationResult> CreateDepartmentAsync(
+        CreateDepartmentRequest request)
     {
-        var deptName = request.DeptName?.Trim() ?? string.Empty;
-        var deptId = request.DeptId?.Trim() ?? string.Empty;
+        var departmentCode =
+            request.DepartmentCode?.Trim() ?? string.Empty;
 
-        if (string.IsNullOrWhiteSpace(deptName) ||
-            string.IsNullOrWhiteSpace(deptId))
+        var departmentName =
+            request.DepartmentName?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(departmentCode) ||
+            string.IsNullOrWhiteSpace(departmentName))
         {
             return DepartmentOperationResult.Failure(
                 400,
-                "Department name and department ID are required.");
+                "Department code and department name are required.");
         }
 
-        if (deptName.Length > 100 || deptId.Length > 10)
+        if (departmentCode.Length > 20 ||
+            departmentName.Length > 100)
         {
             return DepartmentOperationResult.Failure(
                 400,
-                "Department name must be at most 100 characters and department ID at most 10 characters.");
+                "Department code must be at most 20 characters and department name at most 100 characters.");
         }
 
-        var duplicateExists = await _db.Departments.AnyAsync(d =>
-            d.DeptName == deptName || d.DeptId == deptId);
+        var duplicateExists = await _db.QMSDepartments.AnyAsync(d =>
+            d.DepartmentCode == departmentCode ||
+            d.DepartmentName == departmentName);
 
         if (duplicateExists)
         {
             return DepartmentOperationResult.Failure(
                 409,
-                "A department with that name or department ID already exists.");
+                "A department with that code or name already exists.");
         }
 
-        var department = new Department
+        var now = DateTime.UtcNow;
+
+        var department = new QMSDepartment
         {
-            DeptName = deptName,
-            DeptId = deptId,
-            IsActive = true
+            DepartmentCode = departmentCode,
+            DepartmentName = departmentName,
+            IsActive = true,
+            CreatedAtUtc = now
         };
 
-        _db.Departments.Add(department);
+        _db.QMSDepartments.Add(department);
 
         try
         {
@@ -92,18 +99,16 @@ public class DepartmentService : IDepartmentService
         }
         catch (DbUpdateException)
         {
-            // The unique database indexes protect against concurrent
-            // requests creating duplicate names or IDs.
             return DepartmentOperationResult.Failure(
                 409,
-                "The department could not be created because its name or ID may already exist.");
+                "The department could not be created because its code or name may already exist.");
         }
 
         var response = new DepartmentAdminDto
         {
-            Id = department.Id,
-            DeptName = department.DeptName,
-            DeptId = department.DeptId,
+            DepartmentId = department.DepartmentId,
+            DepartmentCode = department.DepartmentCode,
+            DepartmentName = department.DepartmentName,
             IsActive = department.IsActive
         };
 
@@ -112,12 +117,13 @@ public class DepartmentService : IDepartmentService
             "Department created successfully.",
             201);
     }
-
-    public async Task<DepartmentOperationResult>
-        SetDepartmentStatusAsync(int id, bool isActive)
+    
+    public async Task<DepartmentOperationResult> SetDepartmentStatusAsync(
+        int id,
+        bool isActive)
     {
-        var department = await _db.Departments
-            .SingleOrDefaultAsync(d => d.Id == id);
+        var department = await _db.QMSDepartments
+            .SingleOrDefaultAsync(d => d.DepartmentId == id);
 
         if (department == null)
         {
@@ -126,24 +132,39 @@ public class DepartmentService : IDepartmentService
                 "Department not found.");
         }
 
-        department.IsActive = isActive;
+        if (department.IsActive != isActive)
+        {
+            // When restricting a department, revoke all existing user sessions.
+            if (!isActive)
+            {
+                var departmentUsers = await _db.AppUsers
+                    .Where(u => u.DepartmentId == department.DepartmentId)
+                    .ToListAsync();
 
-        await _db.SaveChangesAsync();
+                foreach (var user in departmentUsers)
+                {
+                    user.TokenVersion++;
+                }
+            }
+
+            department.IsActive = isActive;
+            department.UpdatedAtUtc = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+        }
 
         var response = new DepartmentAdminDto
         {
-            Id = department.Id,
-            DeptName = department.DeptName,
-            DeptId = department.DeptId,
+            DepartmentId = department.DepartmentId,
+            DepartmentCode = department.DepartmentCode,
+            DepartmentName = department.DepartmentName,
             IsActive = department.IsActive
         };
 
         var message = isActive
             ? "Department activated successfully."
-            : "Department deactivated successfully.";
+            : "Department restricted successfully.";
 
-        return DepartmentOperationResult.Success(
-            response,
-            message);
+        return DepartmentOperationResult.Success(response, message);
     }
 }

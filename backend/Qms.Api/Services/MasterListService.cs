@@ -19,16 +19,22 @@ public class MasterListService
         _context = context;
     }
 
-
+    
     public async Task<List<DocumentTypeDto>> GetDocumentTypesAsync()
     {
-
-        return await _context.DocumentTypes.AsNoTracking().OrderBy(type => type.TypeName).Select(type => new DocumentTypeDto
-        {
-            DocumentTypeId = type.DocumentTypeId,
-            TypeName = type.TypeName,
-        }).ToListAsync();
+        return await _context.DocumentTypes
+            .AsNoTracking()
+            .Where(type => type.IsActive)
+            .OrderBy(type => type.TypeName)
+            .Select(type => new DocumentTypeDto
+            {
+                DocumentTypeId = type.DocumentTypeId,
+                TypeCode = type.TypeCode,
+                TypeName = type.TypeName,
+            })
+            .ToListAsync();
     }
+
 
     public async Task<List<QMSDepartmentDto>> GetQMSDepartmentsAsync()
     {
@@ -71,7 +77,7 @@ public class MasterListService
                 .Select(department => department.DepartmentName)
                 .FirstOrDefault(),
             TypeName=_context.DocumentTypes.Where(documenttype=>documenttype.DocumentTypeId==document.DocumentTypeId)
-            .Select(documenttype=>documenttype.TypeName).FirstOrDefault(),
+            .Select(documenttype => documenttype.TypeName).FirstOrDefault() ?? string.Empty,
             RetentionPeriod = document.RetentionPeriod,
             Status = document.Status,
             ObseleteDate = document.ObseleteDate,
@@ -94,8 +100,8 @@ public class MasterListService
 
         if (document == null) return false;
 
-        request.DocumentNo = request.DocumentNo.Trim();
-        request.Title = request.Title.Trim();
+        request.DocumentNo = (request.DocumentNo ?? string.Empty).Trim();
+        request.Title = (request.Title ?? string.Empty).Trim();
 
         if (string.IsNullOrWhiteSpace(request.Title))
             throw new ArgumentException("Title Is Required.");
@@ -107,10 +113,12 @@ public class MasterListService
         if (duplicateDocumentNo)
             throw new ArgumentException("The Document Number Is Already In Use!");
 
-        if (!await _context.Documents.AnyAsync(t => t.DocumentTypeId == request.DocumentTypeId))
+        // Validate against the master tables, not Documents. A valid master
+        // record must remain selectable even when no document currently uses it.
+        if (!await _context.DocumentTypes.AnyAsync(t => t.DocumentTypeId == request.DocumentTypeId))
             throw new ArgumentException("Invalid Document Type.");
 
-        if (!await _context.Documents.AnyAsync(t => t.DepartmentId == request.DepartmentId))
+        if (!await _context.QMSDepartments.AnyAsync(d => d.DepartmentId == request.DepartmentId))
             throw new ArgumentException("Invalid Department.");
 
         if (request.Status == "Obsolete" && request.ObseleteDate == null)

@@ -1,11 +1,14 @@
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Qms.Api.Models;
 using Qms.Api.Services;
 
 namespace Qms.Api.Controllers;
 
 [ApiController]
 [Route("api/master-list-import")]
+[Authorize]
 public class MasterListImportController : ControllerBase
 {
     private readonly MasterListExcelPreviewService _previewService;
@@ -53,10 +56,11 @@ public class MasterListImportController : ControllerBase
 
     // Imports the four master lists through the service.
     [HttpPost("import")]
+    [Authorize(Roles = QmsRole.QmsAdmin)]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(20_000_000)]
     public async Task<IActionResult> Import(
-        [FromForm] IFormFile? file,
+        IFormFile? file,
         CancellationToken cancellationToken)
     {
         var result = await _importService.ImportAsync(

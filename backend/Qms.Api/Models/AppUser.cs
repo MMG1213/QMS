@@ -1,3 +1,4 @@
+
 namespace Qms.Api.Models;
 
 public class AppUser
@@ -12,7 +13,8 @@ public class AppUser
 
     public int? DepartmentId { get; set; }
 
-    public Department? Department { get; set; }
+    // AppUsers now references dbo.QMSDepartments.
+    public QMSDepartment? QMSDepartment { get; set; }
 
     public string PasswordHash { get; set; } = string.Empty;
 
@@ -23,4 +25,6 @@ public class AppUser
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAtUtc { get; set; }
+
+    public int TokenVersion { get; set; } = 0;
 }

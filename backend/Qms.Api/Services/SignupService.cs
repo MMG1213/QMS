@@ -45,8 +45,9 @@ public class SignupService : ISignupService
                 "Requested role must be User or Department Head.");
         }
 
-        var departmentExists = await _db.Departments.AnyAsync(d =>
-            d.Id == request.DepartmentId && d.IsActive);
+        var departmentExists = await _db.QMSDepartments.AnyAsync(d =>
+            d.DepartmentId == request.DepartmentId &&
+            d.IsActive);
 
         if (!departmentExists)
         {

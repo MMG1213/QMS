@@ -17,7 +17,7 @@ import { SigninService } from '../../services/signin.service';
 import {
   DepartmentService,
   DepartmentOption
-} from '../../services/department.service';
+} from '../../services/admin-department.service';
 
 type PageMode = 'login' | 'forgot' | 'signup';
 type SignupRole = 'User' | 'Department Head';

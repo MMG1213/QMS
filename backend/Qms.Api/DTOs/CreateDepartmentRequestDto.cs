@@ -6,10 +6,10 @@ namespace Qms.Api.DTOs;
 public class CreateDepartmentRequest
 {
     [Required]
-    [StringLength(100)]
-    public string DeptName { get; set; } = string.Empty;
+    [StringLength(20)]
+    public string DepartmentCode { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(10)]
-    public string DeptId { get; set; } = string.Empty;
+    [StringLength(100)]
+    public string DepartmentName { get; set; } = string.Empty;
 }

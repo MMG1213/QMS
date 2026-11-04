@@ -137,6 +137,11 @@ namespace Qms.Api.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<int>("TokenVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -266,6 +271,43 @@ namespace Qms.Api.Migrations
                     b.ToTable("Documents");
                 });
 
+            modelBuilder.Entity("Qms.Api.Models.DocumentApprovalMatrix", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApprovedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ApprovedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CheckedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("CheckedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DocumentTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IssuedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("IssuedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentTypeId")
+                        .IsUnique();
+
+                    b.ToTable("DocumentApprovalMatrices");
+                });
+
             modelBuilder.Entity("Qms.Api.Models.DocumentRevision", b =>
                 {
                     b.Property<int>("Id")
@@ -301,6 +343,11 @@ namespace Qms.Api.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DocumentTypeId"));
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("TypeCode")
                         .IsRequired()
@@ -474,6 +521,11 @@ namespace Qms.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DepartmentId"));
 
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
                     b.Property<string>("DepartmentCode")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -484,6 +536,14 @@ namespace Qms.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("DepartmentId");
 
                     b.HasIndex("DepartmentCode")
@@ -492,7 +552,7 @@ namespace Qms.Api.Migrations
                     b.HasIndex("DepartmentName")
                         .IsUnique();
 
-                    b.ToTable("QMSDepartments");
+                    b.ToTable("QMSDepartments", (string)null);
                 });
 
             modelBuilder.Entity("Qms.Api.Models.QualityPerformanceIndex", b =>
@@ -641,7 +701,7 @@ namespace Qms.Api.Migrations
 
             modelBuilder.Entity("Qms.Api.Models.AccountRequest", b =>
                 {
-                    b.HasOne("Qms.Api.Models.Department", "Department")
+                    b.HasOne("Qms.Api.Models.QMSDepartment", "QMSDepartment")
                         .WithMany()
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -652,19 +712,19 @@ namespace Qms.Api.Migrations
                         .HasForeignKey("ReviewedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("Department");
+                    b.Navigation("QMSDepartment");
 
                     b.Navigation("ReviewedByUser");
                 });
 
             modelBuilder.Entity("Qms.Api.Models.AppUser", b =>
                 {
-                    b.HasOne("Qms.Api.Models.Department", "Department")
+                    b.HasOne("Qms.Api.Models.QMSDepartment", "QMSDepartment")
                         .WithMany()
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("Department");
+                    b.Navigation("QMSDepartment");
                 });
 
             modelBuilder.Entity("Qms.Api.Models.DepartmentApprovalMapping", b =>
@@ -695,6 +755,17 @@ namespace Qms.Api.Migrations
                     b.Navigation("DocumentType");
 
                     b.Navigation("QMSDepartment");
+                });
+
+            modelBuilder.Entity("Qms.Api.Models.DocumentApprovalMatrix", b =>
+                {
+                    b.HasOne("Qms.Api.Models.DocumentType", "DocumentType")
+                        .WithMany()
+                        .HasForeignKey("DocumentTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DocumentType");
                 });
 
             modelBuilder.Entity("Qms.Api.Models.DocumentRevision", b =>

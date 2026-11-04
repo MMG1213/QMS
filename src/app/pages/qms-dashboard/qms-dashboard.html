@@ -72,7 +72,7 @@
               <path d="M17 8h5" />
               <path d="M19.5 5.5v5" />
             </svg>
-            <span>Manage Signup Requests</span>
+            <span>Manage Permissions</span>
           </button>
         }
 
@@ -118,6 +118,73 @@
         </button>
       </div>
 
+      <!-- COMPACT DOCUMENT APPROVAL BOX -->
+      <section class="master-approval-box" aria-label="Document approval details">
+        <div class="master-approval-box-header">
+          <span class="master-approval-document-type">
+            {{ selectedDocumentTypeId !== null
+                ? getDocumentTypeName(selectedDocumentTypeId)
+                : (approvalMatrixSelectedDocumentTypeId !== null
+                    ? getDocumentTypeName(approvalMatrixSelectedDocumentTypeId)
+                    : 'Document Approval Details') }}
+          </span>
+          @if (canEditApprovalMatrix && !isEditingApprovalMatrix) {
+            <button type="button" class="master-approval-edit-button"
+              [disabled]="isLoadingApprovalMatrix || approvalMatrixSelectedDocumentTypeId === null"
+              (click)="startApprovalMatrixEdit()">✎ Edit</button>
+          }
+        </div>
+
+        @if (isLoadingApprovalMatrix) {
+          <div class="master-approval-loading">Loading approval details…</div>
+        } @else if (approvalMatrixLoadError) {
+          <div class="master-approval-error">{{ approvalMatrixLoadError }}</div>
+        } @else {
+          <table class="master-approval-table">
+            <thead>
+              <tr><th>Approved By</th><th>Checked By</th><th>Issued By</th></tr>
+            </thead>
+            <tbody>
+              @if (isEditingApprovalMatrix && canEditApprovalMatrix) {
+                <tr class="master-approval-edit-row">
+                  <td><input type="text" aria-label="Approved By" [(ngModel)]="approvalMatrix.approvedBy" placeholder="Approved By" /></td>
+                  <td><input type="text" aria-label="Checked By" [(ngModel)]="approvalMatrix.checkedBy" placeholder="Checked By" /></td>
+                  <td><input type="text" aria-label="Issued By" [(ngModel)]="approvalMatrix.issuedBy" placeholder="Issued By" /></td>
+                </tr>
+                <tr class="approval-date-row master-approval-edit-row">
+                  <td><input type="date" aria-label="Approved Date" [(ngModel)]="approvalMatrix.approvedDate" /></td>
+                  <td><input type="date" aria-label="Checked Date" [(ngModel)]="approvalMatrix.checkedDate" /></td>
+                  <td><input type="date" aria-label="Issued Date" [(ngModel)]="approvalMatrix.issuedDate" /></td>
+                </tr>
+              } @else {
+                <tr>
+                  <td>{{ approvalMatrix.approvedBy || '' }}</td>
+                  <td>{{ approvalMatrix.checkedBy || '' }}</td>
+                  <td>{{ approvalMatrix.issuedBy || '' }}</td>
+                </tr>
+                <tr class="approval-date-row">
+                  <td>{{ approvalMatrix.approvedDate ? (approvalMatrix.approvedDate | date:'dd/MM/yyyy') : '' }}</td>
+                  <td>{{ approvalMatrix.checkedDate ? (approvalMatrix.checkedDate | date:'dd/MM/yyyy') : '' }}</td>
+                  <td>{{ approvalMatrix.issuedDate ? (approvalMatrix.issuedDate | date:'dd/MM/yyyy') : '' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (isEditingApprovalMatrix && canEditApprovalMatrix) {
+            <div class="master-approval-edit-actions">
+              <button type="button" class="master-approval-save-button"
+                [disabled]="isSavingApprovalMatrix" (click)="saveApprovalMatrix()">
+                {{ isSavingApprovalMatrix ? 'Saving…' : 'Save' }}
+              </button>
+              <button type="button" class="master-approval-cancel-button"
+                [disabled]="isSavingApprovalMatrix" (click)="cancelApprovalMatrixEdit()">Cancel</button>
+            </div>
+          }
+          @if (approvalMatrixSaveMessage) { <div class="master-approval-success">{{ approvalMatrixSaveMessage }}</div> }
+          @if (approvalMatrixSaveError) { <div class="master-approval-error">{{ approvalMatrixSaveError }}</div> }
+        }
+      </section>
+
       <!-- FILTERS -->
       <div class="filter-panel">
 
@@ -133,7 +200,7 @@
 
             @for (type of documentTypes; track type.documentTypeId) {
               <option [value]="type.documentTypeId">
-                {{ type.typeName }}
+                {{ type.typeCode }} - {{ type.typeName }}
               </option>
             }
 
@@ -158,7 +225,7 @@
                 track department.departmentId
               ) {
                 <option [value]="department.departmentId">
-                  {{ department.departmentName }}
+                  {{ department.departmentCode }} - {{ department.departmentName }}
                 </option>
               }
 
@@ -219,15 +286,11 @@
         </p>
       }
 
-      <!-- ======================================= -->
-      <!-- ML07–ML10 SPECIAL MASTER DATA TABLES    -->
-      <!-- ======================================= -->
-
+      <!-- ML07–ML10 SPECIAL MASTER DATA TABLES -->
       @if (selectedSpecialType; as specialType) {
 
         <section class="table-card">
 
-          <!-- TABLE TOOLBAR -->
           <div class="table-toolbar">
 
             <div>
@@ -242,7 +305,6 @@
                 {{ masterDataRows.length === 1 ? 'record' : 'records' }}
               </span>
 
-              <!-- ADD BUTTON -->
               @if (isQmsAdmin) {
                 <button
                   type="button"
@@ -322,7 +384,6 @@
 
           }
 
-          <!-- LOADING -->
           @if (isLoadingMasterData) {
 
             <p class="loading-message">
@@ -341,7 +402,6 @@
 
           } @else {
 
-            <!-- SPECIAL TABLE -->
             <div class="table-scroll">
 
               <table class="master-table">
@@ -373,7 +433,6 @@
                       let i = $index
                     ) {
 
-                      <!-- EDITING ROW -->
                       @if (
                         editingMasterDataId === row.id && specialEditDraft;
                         as draft
@@ -428,7 +487,6 @@
 
                       } @else {
 
-                        <!-- NORMAL ROW -->
                         <tr>
 
                           <td class="serial-cell">
@@ -446,7 +504,6 @@
 
                           }
 
-                          <!-- ACTION BUTTONS -->
                           <td class="actions-cell">
 
                             @if (isQmsAdmin) {
@@ -519,21 +576,18 @@
 
           }
 
-          <!-- SUCCESS MESSAGE -->
           @if (specialSaveMessage) {
             <div class="success-message">
               {{ specialSaveMessage }}
             </div>
           }
 
-          <!-- ERROR MESSAGE -->
           @if (specialSaveError) {
             <div class="error-message">
               {{ specialSaveError }}
             </div>
           }
 
-          <!-- TABLE FOOTER -->
           <div class="table-footer">
 
             <span>
@@ -550,10 +604,7 @@
 
       }
 
-      <!-- ======================================= -->
-      <!-- ML02–ML06 CONTROLLED DOCUMENTS TABLE    -->
-      <!-- ======================================= -->
-
+      <!-- ML02–ML06 CONTROLLED DOCUMENTS TABLE -->
       @if (!selectedSpecialType) {
 
         <section class="table-card">
@@ -661,7 +712,6 @@
                     let i = $index
                   ) {
 
-                    <!-- DOCUMENT EDITING ROW -->
                     @if (
                       editingDocumentId === document.documentId && editDraft;
                       as draft
@@ -702,7 +752,7 @@
                               track type.documentTypeId
                             ) {
                               <option [ngValue]="type.documentTypeId">
-                                {{ type.typeName }}
+                                {{ type.typeCode }} - {{ type.typeName }}
                               </option>
                             }
 
@@ -720,7 +770,7 @@
                               track department.departmentId
                             ) {
                               <option [ngValue]="department.departmentId">
-                                {{ department.departmentName }}
+                                {{ department.departmentCode }} - {{ department.departmentName }}
                               </option>
                             }
 
@@ -833,7 +883,6 @@
 
                     } @else {
 
-                      <!-- NORMAL DOCUMENT ROW -->
                       <tr>
 
                         <td class="serial-cell">
@@ -851,7 +900,7 @@
                         </td>
 
                         <td>
-                          {{ document.typeName || '—' }}
+                          {{ document.typeCode ? (document.typeCode + ' - ') : '' }}{{ document.typeName || '—' }}
                         </td>
 
                         <td class="department-cell">
@@ -989,7 +1038,6 @@
 
   } @else {
 
-    <!-- COMING SOON -->
     <section class="coming-soon" aria-live="polite">
 
       <div class="icon-wrapper">

@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -37,8 +36,8 @@ public class SigninService : ISigninService
 
         var loginId = request.LoginId.Trim();
 
+        // Department navigation property is not required for login.
         var user = await _context.AppUsers
-            .Include(u => u.Department)
             .SingleOrDefaultAsync(u =>
                 u.EmployeeId == loginId ||
                 u.Email == loginId);
@@ -128,18 +127,38 @@ public class SigninService : ISigninService
 
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.EmployeeId),
-            new(ClaimTypes.Email, user.Email),
-            new(ClaimTypes.Role, user.Role),
-            new("employeeId", user.EmployeeId)
+            new Claim(
+                ClaimTypes.NameIdentifier,
+                user.Id.ToString()),
+
+            new Claim(
+                ClaimTypes.Name,
+                user.EmployeeId),
+
+            new Claim(
+                ClaimTypes.Email,
+                user.Email),
+
+            new Claim(
+                ClaimTypes.Role,
+                user.Role),
+
+            new Claim(
+                "employeeId",
+                user.EmployeeId),
+
+            // REQUIRED: Used by Program.cs to validate token version.
+            new Claim(
+                "tokenVersion",
+                user.TokenVersion.ToString())
         };
 
         if (user.DepartmentId.HasValue)
         {
-            claims.Add(new Claim(
-                "departmentId",
-                user.DepartmentId.Value.ToString()));
+            claims.Add(
+                new Claim(
+                    "departmentId",
+                    user.DepartmentId.Value.ToString()));
         }
 
         var token = new JwtSecurityToken(
@@ -163,6 +182,20 @@ public class SigninService : ISigninService
             DepartmentId = user.DepartmentId,
             Role = user.Role
         };
+        
+        if (user.Role != QmsRole.QmsAdmin)
+        {
+            var departmentIsActive = await _context.QMSDepartments
+                .AnyAsync(d =>
+                    d.DepartmentId == user.DepartmentId &&
+                    d.IsActive);
+
+            if (!departmentIsActive)
+            {
+                return LoginServiceResult.Failure(
+                    "Invalid credentials or inactive account.");
+            }
+        }
 
         return LoginServiceResult.Success(response);
     }

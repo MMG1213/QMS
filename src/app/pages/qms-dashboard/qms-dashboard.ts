@@ -28,6 +28,7 @@ import {
 } from '../../services/master-data.service';
 
 import { SigninService } from '../../services/signin.service';
+import { DocumentApprovalMatrixService, DocumentApprovalMatrix, SaveDocumentApprovalMatrixRequest } from '../../services/document-approval-matrix.service';
 
 @Component({
   selector: 'app-home',
@@ -42,6 +43,7 @@ export class QmsDashboardComponent implements OnInit {
   private readonly SigninService = inject(SigninService);
   private readonly router = inject(Router);
   private readonly masterDataService = inject(MasterDataService);
+  private readonly approvalMatrixService = inject(DocumentApprovalMatrixService);
 
   constructor(
     private readonly masterListService: MasterListService,
@@ -247,6 +249,7 @@ export class QmsDashboardComponent implements OnInit {
   ngOnInit(): void {
     this.loadFilters();
     this.loadDocuments();
+    this.loadApprovalMatrixDocumentTypes();
   }
 
   // --------------------------------------------------
@@ -652,6 +655,21 @@ export class QmsDashboardComponent implements OnInit {
 
     this.loadDocuments();
     this.loadMasterData();
+
+    // Keep the compact approval box in sync with the selected Document Type.
+    if (this.selectedDocumentTypeId !== null) {
+      this.approvalMatrixSelectedDocumentTypeId = this.selectedDocumentTypeId;
+      this.isEditingApprovalMatrix = false;
+      this.approvalMatrixEditBackup = null;
+      this.loadApprovalMatrix();
+    } else if (this.approvalMatrixDocumentTypes.length > 0) {
+      // All Document Types: display the default matrix (first available type).
+      this.approvalMatrixSelectedDocumentTypeId =
+        this.approvalMatrixDocumentTypes[0].documentTypeId;
+      this.isEditingApprovalMatrix = false;
+      this.approvalMatrixEditBackup = null;
+      this.loadApprovalMatrix();
+    }
   }
 
   // --------------------------------------------------
@@ -725,6 +743,7 @@ export class QmsDashboardComponent implements OnInit {
 
     this.activeTab = tab;
     this.profileMenuOpen = false;
+
   }
 
   selectDocumentType(type: DocumentType): void {
@@ -1229,6 +1248,187 @@ export class QmsDashboardComponent implements OnInit {
 
       this.cancelEdit();
     }
+  }
+
+  // --------------------------------------------------
+  // DOCUMENT APPROVAL MATRIX
+  // --------------------------------------------------
+
+  approvalMatrixDocumentTypes: DocumentType[] = [];
+  approvalMatrixSelectedDocumentTypeId: number | null = null;
+  approvalMatrix: DocumentApprovalMatrix = this.createEmptyApprovalMatrix(0);
+
+  isLoadingApprovalMatrixTypes = false;
+  isLoadingApprovalMatrix = false;
+  isSavingApprovalMatrix = false;
+
+  approvalMatrixLoadError = '';
+  approvalMatrixSaveError = '';
+  approvalMatrixSaveMessage = '';
+  isEditingApprovalMatrix = false;
+  private approvalMatrixEditBackup: DocumentApprovalMatrix | null = null;
+
+  get canEditApprovalMatrix(): boolean {
+    return this.userRole === 'QMS Admin';
+  }
+
+  private createEmptyApprovalMatrix(documentTypeId: number): DocumentApprovalMatrix {
+    return {
+      documentTypeId,
+      approvedBy: null,
+      checkedBy: null,
+      issuedBy: null,
+      approvedDate: null,
+      checkedDate: null,
+      issuedDate: null
+    };
+  }
+
+  loadApprovalMatrixDocumentTypes(): void {
+    this.isLoadingApprovalMatrixTypes = true;
+    this.approvalMatrixLoadError = '';
+
+    this.masterListService.getDocumentTypes().subscribe({
+      next: (types) => {
+        this.approvalMatrixDocumentTypes = types ?? [];
+        this.isLoadingApprovalMatrixTypes = false;
+
+        if (this.approvalMatrixDocumentTypes.length > 0) {
+          this.approvalMatrixSelectedDocumentTypeId =
+            this.selectedDocumentTypeId ?? this.approvalMatrixDocumentTypes[0].documentTypeId;
+          this.loadApprovalMatrix();
+        }
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        this.isLoadingApprovalMatrixTypes = false;
+        this.approvalMatrixLoadError = error?.error?.message ??
+          'Unable to load Document Types.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  onApprovalMatrixDocumentTypeChange(): void {
+    this.isEditingApprovalMatrix = false;
+    this.approvalMatrixEditBackup = null;
+    if (this.approvalMatrixSelectedDocumentTypeId === null) {
+      this.approvalMatrix = this.createEmptyApprovalMatrix(0);
+      return;
+    }
+    this.loadApprovalMatrix();
+  }
+
+  loadApprovalMatrix(): void {
+    const documentTypeId = this.approvalMatrixSelectedDocumentTypeId;
+    if (documentTypeId === null) return;
+
+    this.isLoadingApprovalMatrix = true;
+    this.approvalMatrixLoadError = '';
+    this.approvalMatrixSaveError = '';
+    this.approvalMatrixSaveMessage = '';
+
+    this.approvalMatrixService.getMatrix(documentTypeId).subscribe({
+      next: (response) => {
+        this.approvalMatrix = {
+          documentTypeId,
+          approvedBy: response.approvedBy ?? null,
+          checkedBy: response.checkedBy ?? null,
+          issuedBy: response.issuedBy ?? null,
+          approvedDate: this.approvalMatrixDateInput(response.approvedDate),
+          checkedDate: this.approvalMatrixDateInput(response.checkedDate),
+          issuedDate: this.approvalMatrixDateInput(response.issuedDate)
+        };
+        this.isLoadingApprovalMatrix = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        this.isLoadingApprovalMatrix = false;
+        this.approvalMatrixLoadError = error?.error?.message ??
+          'Unable to load Approval Matrix data.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  startApprovalMatrixEdit(): void {
+    if (!this.canEditApprovalMatrix || this.isLoadingApprovalMatrix ||
+        this.approvalMatrixSelectedDocumentTypeId === null) {
+      return;
+    }
+    this.approvalMatrixEditBackup = { ...this.approvalMatrix };
+    this.isEditingApprovalMatrix = true;
+    this.approvalMatrixSaveError = '';
+    this.approvalMatrixSaveMessage = '';
+  }
+
+  cancelApprovalMatrixEdit(): void {
+    if (this.approvalMatrixEditBackup) {
+      this.approvalMatrix = { ...this.approvalMatrixEditBackup };
+    }
+    this.approvalMatrixEditBackup = null;
+    this.isEditingApprovalMatrix = false;
+    this.approvalMatrixSaveError = '';
+    this.approvalMatrixSaveMessage = '';
+  }
+
+  saveApprovalMatrix(): void {
+    const documentTypeId = this.approvalMatrixSelectedDocumentTypeId;
+    if (!this.canEditApprovalMatrix || documentTypeId === null || this.isSavingApprovalMatrix) {
+      return;
+    }
+
+    this.isSavingApprovalMatrix = true;
+    this.approvalMatrixSaveError = '';
+    this.approvalMatrixSaveMessage = '';
+
+    const request: SaveDocumentApprovalMatrixRequest = {
+      documentTypeId,
+      approvedBy: this.approvalMatrixText(this.approvalMatrix.approvedBy),
+      checkedBy: this.approvalMatrixText(this.approvalMatrix.checkedBy),
+      issuedBy: this.approvalMatrixText(this.approvalMatrix.issuedBy),
+      approvedDate: this.approvalMatrixDateRequest(this.approvalMatrix.approvedDate),
+      checkedDate: this.approvalMatrixDateRequest(this.approvalMatrix.checkedDate),
+      issuedDate: this.approvalMatrixDateRequest(this.approvalMatrix.issuedDate)
+    };
+
+    this.approvalMatrixService.saveMatrix(request).subscribe({
+      next: () => {
+        this.isSavingApprovalMatrix = false;
+        this.isEditingApprovalMatrix = false;
+        this.approvalMatrixEditBackup = null;
+        this.approvalMatrixSaveMessage = 'Document Approval Matrix saved successfully.';
+        this.loadApprovalMatrix();
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        this.isSavingApprovalMatrix = false;
+        this.approvalMatrixSaveError = error?.error?.message ??
+          'Unable to save Approval Matrix. Please try again.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  refreshApprovalMatrix(): void {
+    if (this.approvalMatrixSelectedDocumentTypeId !== null) {
+      this.loadApprovalMatrix();
+    } else {
+      this.loadApprovalMatrixDocumentTypes();
+    }
+  }
+
+  private approvalMatrixText(value: string | null): string | null {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : null;
+  }
+
+  private approvalMatrixDateRequest(value: string | null): string | null {
+    return value ? `${value}T00:00:00` : null;
+  }
+
+  private approvalMatrixDateInput(value: string | null): string | null {
+    return value ? value.substring(0, 10) : null;
   }
 
   // --------------------------------------------------

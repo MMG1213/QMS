@@ -25,6 +25,10 @@ builder.Services.AddScoped<MasterListExcelPreviewService>();
 builder.Services.AddScoped<MasterListService>();
 builder.Services.AddScoped<IMasterDataService, MasterDataService>();
 builder.Services.AddScoped<MasterListExcelExportService>();
+builder.Services.AddScoped<IAdminSignupRequestService, AdminSignupRequestService>();
+
+builder.Services.AddScoped<IMasterDataService, MasterDataService>();
+
 // Controllers
 builder.Services.AddControllers();
 
@@ -51,18 +55,18 @@ byte[] keyBytes;
 
 try
 {
-  keyBytes = Convert.FromBase64String(jwtKey);
+    keyBytes = Convert.FromBase64String(jwtKey);
 }
 catch (FormatException ex)
 {
-  throw new InvalidOperationException(
-      "Jwt:Key must be a Base64-encoded secret.", ex);
+    throw new InvalidOperationException(
+        "Jwt:Key must be a Base64-encoded secret.", ex);
 }
 
 if (keyBytes.Length < 32)
 {
-  throw new InvalidOperationException(
-      "Jwt:Key must contain at least 32 random bytes.");
+    throw new InvalidOperationException(
+        "Jwt:Key must contain at least 32 random bytes.");
 }
 
 var signingKey = new SymmetricSecurityKey(keyBytes);
@@ -70,58 +74,111 @@ var signingKey = new SymmetricSecurityKey(keyBytes);
 builder.Services
     .AddAuthentication(options =>
     {
-      options.DefaultAuthenticateScheme =
-          JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultAuthenticateScheme =
+            JwtBearerDefaults.AuthenticationScheme;
 
-      options.DefaultChallengeScheme =
-          JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme =
+            JwtBearerDefaults.AuthenticationScheme;
     })
     .AddJwtBearer(options =>
     {
-      options.TokenValidationParameters = new TokenValidationParameters
-      {
-        ValidateIssuer = true,
-        ValidIssuer = jwtIssuer,
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
 
-        ValidateAudience = true,
-        ValidAudience = jwtAudience,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
 
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = signingKey,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = signingKey,
 
-        ValidateLifetime = true,
-        ClockSkew = TimeSpan.FromMinutes(1),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1),
 
-        NameClaimType = ClaimTypes.Name,
-        RoleClaimType = ClaimTypes.Role
-      };
+            NameClaimType = ClaimTypes.Name,
+            RoleClaimType = ClaimTypes.Role
+        };
+
+        // Validate account status and token version on every authenticated request.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var userIdClaim = context.Principal?
+                    .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                var tokenVersionClaim = context.Principal?
+                    .FindFirst("tokenVersion")?.Value;
+
+                if (!int.TryParse(userIdClaim, out var userId) ||
+                    !int.TryParse(tokenVersionClaim, out var tokenVersion))
+                {
+                    context.Fail("Invalid authentication token.");
+                    return;
+                }
+
+                var db = context.HttpContext.RequestServices
+                    .GetRequiredService<QmsDbContext>();
+
+                var accountIsValid = await db.AppUsers
+                    .AsNoTracking()
+                    .AnyAsync(user =>
+                        user.Id == userId &&
+                        user.IsActive &&
+                        user.TokenVersion == tokenVersion &&
+                        (
+                            user.Role == QmsRole.QmsAdmin ||
+                            (
+                                user.DepartmentId.HasValue &&
+                                db.QMSDepartments.Any(department =>
+                                    department.DepartmentId == user.DepartmentId.Value &&
+                                    department.IsActive)
+                            )
+                        ),
+                        context.HttpContext.RequestAborted);
+
+                if (!accountIsValid)
+                {
+                    context.Fail(
+                        "Account is inactive, department is restricted, or token has been revoked.");
+                }
+            }
+        };
     });
 
+// Authorization
 builder.Services.AddAuthorization();
 
 // Angular CORS
 builder.Services.AddCors(options =>
 {
-  options.AddPolicy("QmsAngularPolicy", policy =>
-  {
-    policy
-        .WithOrigins("http://localhost:4200")
-        .AllowAnyHeader()
-        .AllowAnyMethod();
-  });
+    options.AddPolicy("QmsAngularPolicy", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
 });
 
 // Swagger services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddScoped<IDocumentTypeAdminService, DocumentTypeAdminService>();
+
+builder.Services.AddScoped<
+    IDocumentApprovalMatrixService,
+    DocumentApprovalMatrixService>();
+
 var app = builder.Build();
 
 // Swagger is enabled in Development
 if (app.Environment.IsDevelopment())
 {
-  app.UseSwagger();
-  app.UseSwaggerUI();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
@@ -132,6 +189,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
 foreach (var endpoint in app.Services
     .GetRequiredService<EndpointDataSource>()
     .Endpoints)

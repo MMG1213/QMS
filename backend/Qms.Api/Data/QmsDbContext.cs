@@ -22,15 +22,18 @@ public class QmsDbContext : DbContext
     public DbSet<DepartmentApprovalMapping> DepartmentApprovalMappings
         => Set<DepartmentApprovalMapping>();
 
+    public DbSet<DocumentApprovalMatrix> DocumentApprovalMatrices
+        => Set<DocumentApprovalMatrix>();
+
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<AccountRequest> AccountRequests => Set<AccountRequest>();
 
-   public  DbSet<Document> Documents => Set<Document>();
+    public  DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentRevision> DocumentRevisions => Set<DocumentRevision>();
 
-   public  DbSet<DocumentType> DocumentTypes => Set<DocumentType>();
-   public  DbSet<QMSDepartment> QMSDepartments => Set<QMSDepartment>();
-   public DbSet<PasswordResetToken> PasswordResetTokens
+    public  DbSet<DocumentType> DocumentTypes => Set<DocumentType>();
+    public  DbSet<QMSDepartment> QMSDepartments => Set<QMSDepartment>();
+    public DbSet<PasswordResetToken> PasswordResetTokens
     => Set<PasswordResetToken>();
 
     public DbSet<MachinesList> MachinesLists => Set<MachinesList>();
@@ -99,7 +102,11 @@ public class QmsDbContext : DbContext
             entity.HasIndex(u => u.Email)
                 .IsUnique();
 
-            entity.HasOne(u => u.Department)
+            entity.Property(u => u.TokenVersion)
+                .HasDefaultValue(0)
+                .IsRequired();
+
+            entity.HasOne(u => u.QMSDepartment)
                 .WithMany()
                 .HasForeignKey(u => u.DepartmentId)
                 .IsRequired(false)
@@ -125,27 +132,60 @@ public class QmsDbContext : DbContext
             entity.HasIndex(m => m.DepartmentId)
                 .IsUnique();
         });
-
+        
         modelBuilder.Entity<QMSDepartment>(entity =>
         {
+            entity.ToTable("QMSDepartments");
+
             entity.HasKey(d => d.DepartmentId);
 
-            entity.Property(d => d.DepartmentCode).HasMaxLength(20).IsRequired();
+            entity.Property(d => d.DepartmentCode)
+                .HasMaxLength(20)
+                .IsRequired();
 
-            entity.HasIndex(d => d.DepartmentCode).IsUnique();
+            entity.HasIndex(d => d.DepartmentCode)
+                .IsUnique();
 
-            entity.Property(d => d.DepartmentName).HasMaxLength(100).IsRequired();
-            entity.HasIndex(d => d.DepartmentName).IsUnique();
+            entity.Property(d => d.DepartmentName)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.HasIndex(d => d.DepartmentName)
+                .IsUnique();
+
+            entity.Property(d => d.IsActive)
+                .HasDefaultValue(true)
+                .IsRequired();
+
+            entity.Property(d => d.CreatedAtUtc)
+                .HasColumnType("datetime2")
+                .HasDefaultValueSql("SYSUTCDATETIME()")
+                .IsRequired();
+
+            entity.Property(d => d.UpdatedAtUtc)
+                .HasColumnType("datetime2")
+                .IsRequired(false);
         });
-
+        
         modelBuilder.Entity<DocumentType>(entity =>
         {
             entity.HasKey(t => t.DocumentTypeId);
-            entity.Property(t => t.TypeCode).HasMaxLength(20).IsRequired();
-            entity.Property(t => t.TypeName).HasMaxLength(100).IsRequired();
-            entity.HasIndex(t => t.TypeCode).IsUnique();
-        });
 
+            entity.Property(t => t.TypeCode)
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entity.Property(t => t.TypeName)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(t => t.IsActive)
+                .HasDefaultValue(true)
+                .IsRequired();
+
+            entity.HasIndex(t => t.TypeCode)
+                .IsUnique();
+        });
 
         modelBuilder.Entity<Document>(entity =>
         {
@@ -226,7 +266,7 @@ public class QmsDbContext : DbContext
                 .HasMaxLength(20)
                 .IsRequired();
 
-            entity.HasOne(r => r.Department)
+            entity.HasOne(r => r.QMSDepartment)
                 .WithMany()
                 .HasForeignKey(r => r.DepartmentId)
                 .OnDelete(DeleteBehavior.Restrict);
@@ -420,6 +460,21 @@ public class QmsDbContext : DbContext
        .WithMany(e => e.Revisions)
        .HasForeignKey(r => r.ML01EntryId)
        .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DocumentApprovalMatrix>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // One matrix per Document Type
+            entity.HasIndex(e => e.DocumentTypeId)
+                .IsUnique();
+
+            // Foreign key relationship
+            entity.HasOne(e => e.DocumentType)
+                .WithMany()
+                .HasForeignKey(e => e.DocumentTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

@@ -1,12 +1,7 @@
-
 <main class="admin-page">
   <header class="page-header">
     <div class="page-heading">
       <p class="eyebrow">FUJITEC · QUALITY MANAGEMENT SYSTEM</p>
-      <h1>Signup Requests</h1>
-      <p class="subtitle">
-        Review employee details and requested roles before granting QMS access.
-      </p>
     </div>
 
     <button
@@ -14,388 +9,734 @@
       class="secondary-button"
       (click)="goBack()"
     >
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M19 12H5" />
-        <path d="m12 19-7-7 7-7" />
-      </svg>
       Back to Dashboard
     </button>
   </header>
 
-  <section class="request-panel">
-    <div class="panel-toolbar">
-      <div class="panel-heading">
-        <h2>Employee Requests</h2>
-        <p>Review each request before granting access.</p>
+  <!-- ADMIN PERMISSION TABS -->
+  <nav class="admin-tabs" aria-label="Permission management">
+    <button
+      type="button"
+      [class.active]="activeAdminTab === 'requests'"
+      (click)="selectAdminTab('requests')"
+    >
+      Manage Signup Requests
+    </button>
+
+    <button
+      type="button"
+      [class.active]="activeAdminTab === 'access'"
+      (click)="selectAdminTab('access')"
+    >
+      Manage Access
+    </button>
+
+    <button
+      type="button"
+      [class.active]="activeAdminTab === 'departments'"
+      (click)="selectAdminTab('departments')"
+    >
+      Manage Departments
+    </button>
+
+    <button
+      type="button"
+      [class.active]="activeAdminTab === 'documentTypes'"
+      (click)="selectAdminTab('documentTypes')"
+    >
+      Manage Document Types
+    </button>
+  </nav>
+
+  <!-- ================================================= -->
+  <!-- SIGNUP REQUESTS -->
+  <!-- ================================================= -->
+
+  @if (activeAdminTab === 'requests') {
+    <section class="management-panel">
+      <div class="panel-toolbar">
+        <div class="panel-heading">
+          <h2>Employee Signup Requests</h2>
+          <p>Review requests before granting QMS access.</p>
+        </div>
+
+        <div class="filters">
+          <label for="statusFilter">Request status</label>
+
+          <select
+            id="statusFilter"
+            [value]="selectedStatus"
+            (change)="changeStatus($any($event.target).value)"
+            [disabled]="isLoading || reviewingId !== null"
+          >
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="loadRequests()"
+            [disabled]="isLoading || reviewingId !== null"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
-      <div class="filters">
-        <label for="statusFilter">Request status</label>
+      @if (errorMessage) {
+        <div class="feedback error" role="alert">
+          {{ errorMessage }}
+        </div>
+      }
 
-        <select
-          id="statusFilter"
-          [value]="selectedStatus"
-          (change)="changeStatus($any($event.target).value)"
-          [disabled]="isLoading || reviewingId !== null"
-        >
-          <option value="Pending">Pending</option>
-          <option value="Approved">Approved</option>
-          <option value="Rejected">Rejected</option>
-        </select>
+      @if (successMessage) {
+        <div class="feedback success" role="status">
+          {{ successMessage }}
+        </div>
+      }
+
+      @if (isLoading) {
+        <div class="state-panel">
+          <span class="loading-spinner"></span>
+          <h3>Loading signup requests</h3>
+          <p>Please wait.</p>
+        </div>
+      } @else if (requests.length === 0) {
+        <div class="state-panel">
+          <h3>No {{ selectedStatus.toLowerCase() }} requests</h3>
+          <p>There are no signup requests with this status.</p>
+        </div>
+      } @else {
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee ID</th>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Role</th>
+                <th>Requested On</th>
+                <th>Status</th>
+
+                @if (selectedStatus === 'Pending') {
+                  <th>Actions</th>
+                }
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (request of requests; track request.id) {
+                <tr>
+                  <td>{{ request.employeeId }}</td>
+
+                  <td>
+                    <div class="employee-details">
+                      <strong>{{ request.fullName }}</strong>
+                      <small>{{ request.email }}</small>
+                    </div>
+                  </td>
+
+                  <td>{{ request.departmentName || '—' }}</td>
+
+                  <td>
+                    <span class="role-pill">
+                      {{ request.role }}
+                    </span>
+                  </td>
+
+                  <td>
+                    {{ request.requestedAtUtc | date:'dd MMM yyyy' }}
+                  </td>
+
+                  <td>
+                    <span
+                      class="status-pill"
+                      [class.active-status]="request.status === 'Approved'"
+                      [class.inactive-status]="request.status === 'Rejected'"
+                      [class.pending-status]="request.status === 'Pending'"
+                    >
+                      {{ request.status }}
+                    </span>
+                  </td>
+
+                  @if (selectedStatus === 'Pending') {
+                    <td>
+                      <div class="row-actions">
+                        <button
+                          type="button"
+                          class="success-button"
+                          [disabled]="reviewingId !== null"
+                          (click)="reviewRequest(request, 'Approve')"
+                        >
+                          {{
+                            reviewingId === request.id
+                              ? 'Processing...'
+                              : 'Approve'
+                          }}
+                        </button>
+
+                        <button
+                          type="button"
+                          class="danger-button"
+                          [disabled]="reviewingId !== null"
+                          (click)="reviewRequest(request, 'Reject')"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <!-- CREATE ACTIVE ACCOUNT -->
+    <section class="management-panel">
+      <div class="panel-heading">
+        <h2>Create Active Account</h2>
+        <p>Create an employee account without a signup request.</p>
+      </div>
+
+      @if (createAccountError) {
+        <div class="feedback error" role="alert">
+          {{ createAccountError }}
+        </div>
+      }
+
+      @if (createAccountSuccess) {
+        <div class="feedback success" role="status">
+          {{ createAccountSuccess }}
+        </div>
+      }
+
+      <form
+        [formGroup]="createAccountForm"
+        (ngSubmit)="createAccount()"
+        class="form-grid"
+      >
+        <div class="form-field">
+          <label for="employeeId">Employee ID</label>
+          <input
+            id="employeeId"
+            type="text"
+            formControlName="employeeId"
+            placeholder="Employee ID"
+            maxlength="50"
+          />
+        </div>
+
+        <div class="form-field">
+          <label for="fullName">Full Name</label>
+          <input
+            id="fullName"
+            type="text"
+            formControlName="fullName"
+            placeholder="Full name"
+            maxlength="150"
+          />
+        </div>
+
+        <div class="form-field">
+          <label for="email">Work Email</label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            placeholder="employee@company.com"
+            maxlength="256"
+          />
+        </div>
+
+        <div class="form-field">
+          <label for="accountDepartment">Department</label>
+          <select
+            id="accountDepartment"
+            formControlName="departmentId"
+          >
+            <option [ngValue]="0">Select department</option>
+
+            @for (department of adminDepartments; track department.id) {
+              <option [ngValue]="department.id">
+                {{ department.name }}
+              </option>
+            }
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="accountRole">Role</label>
+          <select
+            id="accountRole"
+            formControlName="role"
+          >
+            @for (role of accountRoles; track role) {
+              <option [value]="role">{{ role }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="initialPassword">Initial Password</label>
+          <input
+            id="initialPassword"
+            type="password"
+            formControlName="password"
+            autocomplete="new-password"
+            placeholder="Initial password"
+            maxlength="128"
+          />
+
+          <small>
+            Minimum 8 characters with uppercase, number and special character.
+          </small>
+        </div>
+
+        <div class="form-actions">
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="
+              isCreatingAccount ||
+              createAccountForm.invalid ||
+              adminDepartments.length === 0
+            "
+          >
+            {{
+              isCreatingAccount
+                ? 'Creating...'
+                : 'Create Active Account'
+            }}
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+
+  <!-- ================================================= -->
+  <!-- MANAGE ACCESS -->
+  <!-- ================================================= -->
+
+  @if (activeAdminTab === 'access') {
+    <section class="management-panel">
+      <div class="panel-toolbar">
+        <div class="panel-heading">
+          <h2>Manage User Access</h2>
+          <p>Activate or deactivate employee accounts.</p>
+        </div>
 
         <button
           type="button"
-          class="refresh-button"
-          (click)="loadRequests()"
-          [disabled]="isLoading || reviewingId !== null"
+          class="secondary-button"
+          (click)="loadAdminUsers()"
+          [disabled]="isLoadingUsers || updatingUserId !== null"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M20 7v5h-5" />
-            <path d="M4 17v-5h5" />
-            <path d="M5.6 9A7 7 0 0 1 18 6l2 6" />
-            <path d="M18.4 15A7 7 0 0 1 6 18l-2-6" />
-          </svg>
           Refresh
         </button>
       </div>
-    </div>
 
-    @if (errorMessage) {
-      <div class="feedback error" role="alert">
-        <strong>Something went wrong</strong>
-        <p>{{ errorMessage }}</p>
-      </div>
-    }
-
-    @if (successMessage) {
-      <div class="feedback success" role="status">
-        <strong>Success</strong>
-        <p>{{ successMessage }}</p>
-      </div>
-    }
-
-    @if (isLoading) {
-      <div class="state-panel" role="status">
-        <span class="loading-spinner" aria-hidden="true"></span>
-        <h3>Loading requests</h3>
-        <p>Please wait while we retrieve employee requests.</p>
-      </div>
-    } @else if (errorMessage && requests.length === 0) {
-      <div class="state-panel error-state">
-        <h3>Unable to load requests</h3>
-        <p>{{ errorMessage }}</p>
-        <button
-          type="button"
-          class="primary-button"
-          (click)="loadRequests()"
-        >
-          Try again
-        </button>
-      </div>
-    } @else if (requests.length === 0) {
-      <div class="state-panel">
-        <div class="empty-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="M8 3h8l4 4v14H4V3z" />
-            <path d="M8 3v5h8V3" />
-            <path d="M8 13h8M8 17h5" />
-          </svg>
+      @if (usersError) {
+        <div class="feedback error" role="alert">
+          {{ usersError }}
         </div>
+      }
 
-        <h3>No {{ selectedStatus.toLowerCase() }} requests</h3>
-        <p>
-          There are currently no employee signup requests with this status.
-        </p>
-      </div>
-    } @else {
-      <div class="results-summary">
-        <span>
-          Showing <strong>{{ requests.length }}</strong>
-          {{ requests.length === 1 ? 'request' : 'requests' }}
-        </span>
+      @if (usersSuccess) {
+        <div class="feedback success" role="status">
+          {{ usersSuccess }}
+        </div>
+      }
 
-        <span class="results-status">
-          {{ selectedStatus }} requests
-        </span>
-      </div>
-
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Employee ID</th>
-              <th>Employee details</th>
-              <th>Department</th>
-              <th>Requested role</th>
-              <th>Requested on</th>
-              <th>Status</th>
-
-              @if (selectedStatus === 'Pending') {
-                <th class="actions-column">Actions</th>
-              }
-            </tr>
-          </thead>
-
-          <tbody>
-            @for (request of requests; track request.id) {
+      @if (isLoadingUsers) {
+        <div class="state-panel">
+          <span class="loading-spinner"></span>
+          <h3>Loading user accounts</h3>
+        </div>
+      } @else if (adminUsers.length === 0) {
+        <div class="state-panel">
+          <h3>No user accounts found</h3>
+        </div>
+      } @else {
+        <div class="table-wrapper">
+          <table>
+            <thead>
               <tr>
-                <td>
-                  <span class="employee-id">
-                    {{ request.employeeId }}
-                  </span>
-                </td>
+                <th>Employee ID</th>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Role</th>
+                <th>Account Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
 
-                <td>
-                  <div class="employee-details">
-                    <span class="employee-name">
-                      {{ request.fullName }}
-                    </span>
-                    <span class="employee-email">
-                      {{ request.email }}
-                    </span>
-                  </div>
-                </td>
+            <tbody>
+              @for (user of adminUsers; track user.id) {
+                <tr>
+                  <td>{{ user.employeeId }}</td>
 
-                <td>
-                  <span class="department-name">
-                    {{ request.departmentName || '—' }}
-                  </span>
-                </td>
-
-                <td>
-                  <span class="role-pill">
-                    {{ request.role }}
-                  </span>
-                </td>
-
-                <td>
-                  <span class="request-date">
-                    {{ request.requestedAtUtc | date:'dd MMM yyyy' }}
-                  </span>
-                  <span class="request-time">
-                    {{ request.requestedAtUtc | date:'hh:mm a' }}
-                  </span>
-                </td>
-
-                <td>
-                  <span
-                    class="status-pill"
-                    [class.pending]="request.status === 'Pending'"
-                    [class.approved]="request.status === 'Approved'"
-                    [class.rejected]="request.status === 'Rejected'"
-                    [class.completed]="request.status === 'Completed'"
-                  >
-                    <span class="status-dot"></span>
-                    {{ request.status }}
-                  </span>
-                </td>
-
-                @if (selectedStatus === 'Pending') {
                   <td>
-                    <div class="row-actions">
-                      <button
-                        type="button"
-                        class="approve-button"
-                        [disabled]="reviewingId !== null"
-                        (click)="reviewRequest(request, 'Approve')"
-                      >
-                        {{
-                          reviewingId === request.id
-                            ? 'Processing...'
-                            : 'Approve'
-                        }}
-                      </button>
-
-                      <button
-                        type="button"
-                        class="reject-button"
-                        [disabled]="reviewingId !== null"
-                        (click)="reviewRequest(request, 'Reject')"
-                      >
-                        Reject
-                      </button>
+                    <div class="employee-details">
+                      <strong>{{ user.fullName }}</strong>
+                      <small>{{ user.email }}</small>
                     </div>
                   </td>
-                }
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-  </section>
 
-  <section class="create-account-panel">
-    <div class="create-account-heading">
-      <div>
-        <p class="eyebrow">ACCOUNT MANAGEMENT</p>
-        <h2>Create New Account</h2>
-        <p>
-          Create an active employee account without a signup approval request.
-        </p>
-      </div>
-    </div>
+                  <td>{{ user.departmentName || '—' }}</td>
 
-    @if (createAccountError) {
-      <div class="feedback error" role="alert">
-        <strong>Unable to create account</strong>
-        <p>{{ createAccountError }}</p>
-      </div>
-    }
+                  <td>
+                    <span class="role-pill">{{ user.role }}</span>
+                  </td>
 
-    @if (createAccountSuccess) {
-      <div class="feedback success" role="status">
-        <strong>Account created</strong>
-        <p>{{ createAccountSuccess }}</p>
-      </div>
-    }
+                  <td>
+                    <span
+                      class="status-pill"
+                      [class.active-status]="user.isActive"
+                      [class.inactive-status]="!user.isActive"
+                    >
+                      {{ user.isActive ? 'Active' : 'Restricted' }}
+                    </span>
+                  </td>
 
-    <form
-      [formGroup]="createAccountForm"
-      (ngSubmit)="createAccount()"
-      class="create-account-form"
-    >
-      <div class="account-field">
-        <label for="newEmployeeId">Employee ID</label>
-        <input
-          id="newEmployeeId"
-          type="text"
-          formControlName="employeeId"
-          autocomplete="off"
-          placeholder="Enter employee ID"
-          maxlength="50"
-        />
+                  <td>
+                    <button
+                      type="button"
+                      [class.danger-button]="user.isActive"
+                      [class.success-button]="!user.isActive"
+                      [disabled]="updatingUserId !== null"
+                      (click)="toggleUserStatus(user)"
+                    >
+                      {{
+                        updatingUserId === user.id
+                          ? 'Updating...'
+                          : user.isActive
+                            ? 'Deactivate'
+                            : 'Activate'
+                      }}
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
 
-        @if (
-          createAccountForm.controls.employeeId.touched &&
-          createAccountForm.controls.employeeId.invalid
-        ) {
-          <small class="field-error">
-            Employee ID is required and must not exceed 50 characters.
-          </small>
-        }
-      </div>
+      <p class="panel-note">
+        Deactivating an account revokes its existing authentication token.
+        Reactivated users must sign in again.
+      </p>
+    </section>
+  }
 
-      <div class="account-field">
-        <label for="newFullName">Full name</label>
-        <input
-          id="newFullName"
-          type="text"
-          formControlName="fullName"
-          autocomplete="name"
-          placeholder="Enter full name"
-          maxlength="150"
-        />
+  <!-- ================================================= -->
+  <!-- MANAGE DEPARTMENTS -->
+  <!-- ================================================= -->
 
-        @if (
-          createAccountForm.controls.fullName.touched &&
-          createAccountForm.controls.fullName.invalid
-        ) {
-          <small class="field-error">
-            Full name is required and must not exceed 150 characters.
-          </small>
-        }
+  @if (activeAdminTab === 'departments') {
+    <section class="management-panel">
+      <div class="panel-toolbar">
+        <div class="panel-heading">
+          <h2>Manage Departments</h2>
+          <p>Create departments and restrict or reactivate existing ones.</p>
+        </div>
+
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="loadAllDepartments()"
+          [disabled]="isLoadingAllDepartments"
+        >
+          Refresh
+        </button>
       </div>
 
-      <div class="account-field">
-        <label for="newEmail">Work email</label>
-        <input
-          id="newEmail"
-          type="email"
-          formControlName="email"
-          autocomplete="off"
-          placeholder="employee@company.com"
-          maxlength="256"
-        />
+      @if (departmentsError) {
+        <div class="feedback error" role="alert">
+          {{ departmentsError }}
+        </div>
+      }
 
-        @if (
-          createAccountForm.controls.email.touched &&
-          createAccountForm.controls.email.invalid
-        ) {
-          <small class="field-error">
-            Enter a valid work email address.
-          </small>
-        }
-      </div>
+      @if (departmentsSuccess) {
+        <div class="feedback success" role="status">
+          {{ departmentsSuccess }}
+        </div>
+      }
 
-      <div class="account-field">
-        <label for="newDepartment">Department</label>
-        <select id="newDepartment" formControlName="departmentId">
-          <option [ngValue]="0">Select department</option>
-          @for (department of adminDepartments; track department.id) {
-            <option [ngValue]="department.id">
-              {{ department.name }}
-            </option>
-          }
-        </select>
+      <form
+        [formGroup]="createDepartmentForm"
+        (ngSubmit)="createDepartment()"
+        class="create-inline-form"
+      >
+        <div class="form-field">
+          <label for="newDepartmentName">Department Name</label>
+          <input
+            id="newDepartmentName"
+            type="text"
+            formControlName="departmentName"
+            placeholder="e.g. Quality Assurance"
+            maxlength="100"
+          />
+        </div>
 
-        @if (
-          createAccountForm.controls.departmentId.touched &&
-          createAccountForm.controls.departmentId.invalid
-        ) {
-          <small class="field-error">
-            Please select a department.
-          </small>
-        }
-      </div>
+        <div class="form-field">
+          <label for="newDepartmentCode">Department Code</label>
+          <input
+            id="newDepartmentCode"
+            type="text"
+            formControlName="departmentCode"
+            placeholder="e.g. QA"
+            maxlength="10"
+          />
+        </div>
 
-      <div class="account-field">
-        <label for="newRole">Role</label>
-        <select id="newRole" formControlName="role">
-          @for (role of accountRoles; track role) {
-            <option [value]="role">{{ role }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="account-field">
-        <label for="newPassword">Initial password</label>
-        <input
-          id="newPassword"
-          type="password"
-          formControlName="password"
-          autocomplete="new-password"
-          placeholder="Create initial password"
-          maxlength="128"
-        />
-        <small>
-          Minimum 8 characters, including uppercase, number and special
-          character. Spaces are not allowed.
-        </small>
-
-        @if (
-          createAccountForm.controls.password.touched &&
-          createAccountForm.controls.password.invalid
-        ) {
-          <small class="field-error">
-            Password must be 8–128 characters and contain an uppercase
-            letter, a number and a special character.
-          </small>
-        }
-      </div>
-
-      <div class="create-account-actions">
         <button
           type="submit"
-          class="create-account-button"
+          class="primary-button"
           [disabled]="
-            isCreatingAccount ||
-            createAccountForm.invalid ||
-            adminDepartments.length === 0
+            isCreatingDepartment ||
+            createDepartmentForm.invalid
           "
         >
           {{
-            isCreatingAccount
-              ? 'Creating account...'
-              : 'Create Active Account'
+            isCreatingDepartment
+              ? 'Creating...'
+              : 'Add Department'
           }}
         </button>
+      </form>
+
+      @if (isLoadingAllDepartments) {
+        <div class="state-panel">
+          <span class="loading-spinner"></span>
+          <h3>Loading departments</h3>
+        </div>
+      } @else if (departments.length === 0) {
+        <div class="state-panel">
+          <h3>No departments found</h3>
+        </div>
+      } @else {
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Department Code</th>
+                <th>Department Name</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (
+                department of departments;
+                track department.departmentId
+              ) {
+                <tr>
+                  <td>{{ department.departmentCode }}</td>
+                  <td>{{ department.departmentName }}</td>
+
+                  <td>
+                    <span
+                      class="status-pill"
+                      [class.active-status]="department.isActive"
+                      [class.inactive-status]="!department.isActive"
+                    >
+                      {{
+                        department.isActive
+                          ? 'Active'
+                          : 'Restricted'
+                      }}
+                    </span>
+                  </td>
+
+                  <td>
+                    <button
+                      type="button"
+                      [class.danger-button]="department.isActive"
+                      [class.success-button]="!department.isActive"
+                      [disabled]="updatingDepartmentId !== null"
+                      (click)="toggleDepartmentStatus(department)"
+                    >
+                      {{
+                        updatingDepartmentId === department.departmentId
+                          ? 'Updating...'
+                          : department.isActive
+                            ? 'Restrict'
+                            : 'Reactivate'
+                      }}
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <p class="panel-note">
+        Departments are restricted rather than permanently deleted so existing
+        employee accounts and approval mappings remain intact.
+      </p>
+    </section>
+  }
+
+  <!-- ================================================= -->
+  <!-- MANAGE DOCUMENT TYPES -->
+  <!-- ================================================= -->
+
+  @if (activeAdminTab === 'documentTypes') {
+    <section class="management-panel">
+      <div class="panel-toolbar">
+        <div class="panel-heading">
+          <h2>Manage Document Types</h2>
+          <p>Add document types and restrict or reactivate existing ones.</p>
+        </div>
+
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="loadDocumentTypes()"
+          [disabled]="isLoadingDocumentTypes"
+        >
+          Refresh
+        </button>
       </div>
-    </form>
-  </section>
+
+      @if (documentTypesError) {
+        <div class="feedback error" role="alert">
+          {{ documentTypesError }}
+        </div>
+      }
+
+      @if (documentTypesSuccess) {
+        <div class="feedback success" role="status">
+          {{ documentTypesSuccess }}
+        </div>
+      }
+
+      <form
+        [formGroup]="createDocumentTypeForm"
+        (ngSubmit)="createDocumentType()"
+        class="create-inline-form"
+      >
+        <!-- Document Type Name - First -->
+        <div class="form-field">
+          <label for="newDocumentTypeName">Document Type Name</label>
+          <input
+            id="newDocumentTypeName"
+            type="text"
+            formControlName="typeName"
+            placeholder="e.g. Work Procedure"
+            maxlength="100"
+          />
+        </div>
+
+        <!-- Document Type Code - Second -->
+        <div class="form-field">
+          <label for="newDocumentTypeCode">Document Type Code</label>
+          <input
+            id="newDocumentTypeCode"
+            type="text"
+            formControlName="typeCode"
+            placeholder="e.g. WP"
+            maxlength="20"
+          />
+        </div>
+
+        <!-- Add Button -->
+        <button
+          type="submit"
+          class="primary-button"
+          [disabled]="
+            isCreatingDocumentType ||
+            createDocumentTypeForm.invalid
+          "
+        >
+          {{
+            isCreatingDocumentType
+              ? 'Creating...'
+              : 'Add Document Type'
+          }}
+        </button>
+      </form>
+
+      @if (isLoadingDocumentTypes) {
+        <div class="state-panel">
+          <span class="loading-spinner"></span>
+          <h3>Loading document types</h3>
+        </div>
+      } @else if (documentTypes.length === 0) {
+        <div class="state-panel">
+          <h3>No document types found</h3>
+        </div>
+      } @else {
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Type Code</th>
+                <th>Document Type Name</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (documentType of documentTypes; track documentType.documentTypeId) {
+                <tr>
+                  <td>{{ documentType.typeCode }}</td>
+                  <td>{{ documentType.typeName }}</td>
+
+                  <td>
+                    <span
+                      class="status-pill"
+                      [class.active-status]="documentType.isActive"
+                      [class.inactive-status]="!documentType.isActive"
+                    >
+                      {{ documentType.isActive ? 'Active' : 'Restricted' }}
+                    </span>
+                  </td>
+
+                  <td>
+                    <button
+                      type="button"
+                      [class.danger-button]="documentType.isActive"
+                      [class.success-button]="!documentType.isActive"
+                      [disabled]="updatingDocumentTypeId !== null"
+                      (click)="toggleDocumentTypeStatus(documentType)"
+                    >
+                      {{
+                        updatingDocumentTypeId === documentType.documentTypeId
+                          ? 'Updating...'
+                          : documentType.isActive
+                            ? 'Restrict'
+                            : 'Reactivate'
+                      }}
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <p class="panel-note">
+        Restricted document types will no longer appear in the normal Master
+        List document type selector. Existing documents using them remain in
+        the database.
+      </p>
+    </section>
+  }
 
   <footer class="page-footer">
     <span>FUJITEC Quality Management System</span>
-    <span>Authorized personnel only</span>
+    <span>QMS Admin access only</span>
   </footer>
 </main>
