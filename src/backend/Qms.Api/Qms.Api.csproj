@@ -2,8 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <!-- Run via signed dotnet.exe; an unsigned Qms.Api.exe host is blocked by Windows Smart App Control. -->
-    <UseAppHost>false</UseAppHost>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>da432907-0be8-465e-99ee-a10911a1c16f</UserSecretsId>
