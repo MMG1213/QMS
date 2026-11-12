@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/backend/">
+    <Project Path="src/backend/Qms.Api/Qms.Api.csproj" />
+  </Folder>
+</Solution>
