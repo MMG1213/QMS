@@ -13,8 +13,6 @@ export interface AdminDepartment {
   departmentCode: string;
   departmentName: string;
   isActive: boolean;
-  createdAtUtc: string;
-  updatedAtUtc: string | null;
 }
 
 export interface CreateDepartmentRequest {

@@ -1,12 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { MasterList } from './master-list';
+import { MasterListService } from './master-list';
 
-describe('MasterList', () => {
-  let service: MasterList;
+describe('MasterListService', () => {
+  let service: MasterListService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(MasterList);
+    service = TestBed.inject(MasterListService);
   });
 
   it('should be created', () => {

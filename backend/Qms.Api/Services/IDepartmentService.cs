@@ -5,6 +5,8 @@ namespace Qms.Api.Services;
 
 public interface IDepartmentService
 {
+    Task<List<DepartmentAdminDto>> GetActiveDepartmentsAsync();
+
     Task<List<DepartmentAdminDto>> GetAllDepartmentsAsync();
 
     Task<DepartmentAdminDto?> GetDepartmentByIdAsync(int id);

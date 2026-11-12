@@ -1,8 +1,7 @@
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Qms.Api.Data;
+using Qms.Api.Services;
 
 namespace Qms.Api.Controllers;
 
@@ -10,28 +9,25 @@ namespace Qms.Api.Controllers;
 [Route("api/departments")]
 public class PublicDepartmentsController : ControllerBase
 {
-    private readonly QmsDbContext _db;
+    private readonly IDepartmentService _departmentService;
 
-    public PublicDepartmentsController(QmsDbContext db)
+    public PublicDepartmentsController(
+        IDepartmentService departmentService)
     {
-        _db = db;
+        _departmentService = departmentService;
     }
 
     [AllowAnonymous]
     [HttpGet("active")]
     public async Task<IActionResult> GetActiveDepartments()
     {
-        var departments = await _db.QMSDepartments
-            .AsNoTracking()
-            .Where(d => d.IsActive)
-            .OrderBy(d => d.DepartmentName)
-            .Select(d => new
-            {
-                id = d.DepartmentId,
-                deptName = d.DepartmentName
-            })
-            .ToListAsync();
+        var departments = await _departmentService.GetActiveDepartmentsAsync();
+        var response = departments.Select(d => new
+        {
+            id = d.DepartmentId,
+            deptName = d.DepartmentName
+        });
 
-        return Ok(departments);
+        return Ok(response);
     }
 }
