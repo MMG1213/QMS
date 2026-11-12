@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Qms.Api.Data;
 using Qms.Api.Models;
-using Qms.Api.Dtos;
+using Qms.Api.DTOs;
 
 namespace Qms.Api.Services;
 

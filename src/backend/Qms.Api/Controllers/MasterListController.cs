@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Qms.Api.Models;
 using Qms.Api.Services;
-using Qms.Api.Dtos;
+using Qms.Api.DTOs;
 
 namespace Qms.Api.Controllers;
 

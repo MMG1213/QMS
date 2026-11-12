@@ -171,8 +171,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-app.UseHttpsRedirection();
+else
+{
+    // Local dev runs on plain HTTP (http launch profile) behind the Angular proxy,
+    // so there is no HTTPS port to redirect to there.
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("QmsAngularPolicy");
 

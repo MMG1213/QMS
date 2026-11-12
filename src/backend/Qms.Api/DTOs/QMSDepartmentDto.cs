@@ -1,5 +1,5 @@
 
-namespace Qms.Api.Dtos;
+namespace Qms.Api.DTOs;
 
 public class QMSDepartmentDto
 {

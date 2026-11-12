@@ -1,6 +1,6 @@
 using Qms.Api.Models;
 using Qms.Api.Data;
-using Qms.Api.Dtos;
+using Qms.Api.DTOs;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Metadata;
 using System.Transactions;

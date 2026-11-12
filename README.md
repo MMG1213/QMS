@@ -1,59 +1,51 @@
 # QMS
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.2.
+Fujitec Quality Management System: an Angular frontend and an ASP.NET Core Web API backend.
 
-## Development server
+## Repository layout
 
-To start a local development server, run:
-
-```bash
-ng serve
+```
+QMS/
+├── QMS.slnx                  # .NET solution (open in Visual Studio / Rider)
+├── src/
+│   ├── backend/
+│   │   └── Qms.Api/          # ASP.NET Core Web API (.NET 10, EF Core, SQL Server)
+│   │       ├── Controllers/
+│   │       ├── Data/         # QmsDbContext
+│   │       ├── DTOs/
+│   │       ├── Migrations/
+│   │       ├── Models/
+│   │       └── Services/
+│   └── frontend/             # Angular 22 app
+│       ├── angular.json
+│       ├── package.json
+│       ├── proxy.conf.json   # /api -> http://localhost:5193
+│       ├── public/
+│       └── src/app/          # components, pages, services, guards, interceptors
+└── README.md
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Running locally
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+**Backend** (http://localhost:5193). The connection string is in
+`src/backend/Qms.Api/appsettings.json`.
 
 ```bash
-ng generate --help
+cd src/backend/Qms.Api
+dotnet run --launch-profile http
 ```
 
-## Building
-
-To build the project run:
+**Frontend** (http://localhost:4200). Calls to `/api` are proxied to the backend.
 
 ```bash
-ng build
+cd src/frontend
+npm install
+npm start
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+## Build and test
 
 ```bash
-ng test
+dotnet build QMS.slnx                       # backend
+cd src/frontend && npm run build && npm test   # frontend
 ```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

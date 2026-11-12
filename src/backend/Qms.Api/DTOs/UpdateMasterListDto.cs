@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Qms.Api.Dtos;
+namespace Qms.Api.DTOs;
 
 public class UpdateMasterListDto
 {
