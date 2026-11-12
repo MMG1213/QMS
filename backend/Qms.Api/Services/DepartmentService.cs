@@ -15,6 +15,22 @@ public class DepartmentService : IDepartmentService
         _db = db;
     }
 
+    public async Task<List<DepartmentAdminDto>> GetActiveDepartmentsAsync()
+    {
+        return await _db.QMSDepartments
+            .AsNoTracking()
+            .Where(d => d.IsActive)
+            .OrderBy(d => d.DepartmentName)
+            .Select(d => new DepartmentAdminDto
+            {
+                DepartmentId = d.DepartmentId,
+                DepartmentCode = d.DepartmentCode,
+                DepartmentName = d.DepartmentName,
+                IsActive = d.IsActive
+            })
+            .ToListAsync();
+    }
+
     public async Task<List<DepartmentAdminDto>> GetAllDepartmentsAsync()
     {
         return await _db.QMSDepartments
@@ -117,7 +133,7 @@ public class DepartmentService : IDepartmentService
             "Department created successfully.",
             201);
     }
-    
+
     public async Task<DepartmentOperationResult> SetDepartmentStatusAsync(
         int id,
         bool isActive)

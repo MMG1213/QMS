@@ -7,7 +7,7 @@ public class DepartmentApprovalMapping
 
     public int DepartmentId { get; set; }
 
-    public Department? Department { get; set; }
+    public QMSDepartment? QMSDepartment { get; set; }
 
     public string PrimaryApproverEmployeeId { get; set; } = string.Empty;
 

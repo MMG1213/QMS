@@ -158,38 +158,6 @@ namespace Qms.Api.Migrations
                     b.ToTable("AppUsers");
                 });
 
-            modelBuilder.Entity("Qms.Api.Models.Department", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("DeptId")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("DeptName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DeptId")
-                        .IsUnique();
-
-                    b.HasIndex("DeptName")
-                        .IsUnique();
-
-                    b.ToTable("Departments");
-                });
-
             modelBuilder.Entity("Qms.Api.Models.DepartmentApprovalMapping", b =>
                 {
                     b.Property<int>("Id")
@@ -729,13 +697,13 @@ namespace Qms.Api.Migrations
 
             modelBuilder.Entity("Qms.Api.Models.DepartmentApprovalMapping", b =>
                 {
-                    b.HasOne("Qms.Api.Models.Department", "Department")
+                    b.HasOne("Qms.Api.Models.QMSDepartment", "QMSDepartment")
                         .WithMany()
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Department");
+                    b.Navigation("QMSDepartment");
                 });
 
             modelBuilder.Entity("Qms.Api.Models.Document", b =>

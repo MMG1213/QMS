@@ -52,8 +52,8 @@ public class ML01Service
 
         var entry = new ML01Entry
         {
-            Description = request.Description,
-            DocumentNo = request.DocumentNo,
+            Description = request.Description ?? string.Empty,
+            DocumentNo = request.DocumentNo ?? string.Empty,
             DocumentTypeId = documentTypeId,
 
             Revisions = request.Revisions.Select(r => new ML01Revision
@@ -88,8 +88,8 @@ public class ML01Service
             return null;
         }
 
-        entry.Description = request.Description;
-        entry.DocumentNo = request.DocumentNo;
+        entry.Description = request.Description ?? string.Empty;
+        entry.DocumentNo = request.DocumentNo ?? string.Empty;
 
         // Remove existing revisions
         _context.ML01Revisions.RemoveRange(entry.Revisions);

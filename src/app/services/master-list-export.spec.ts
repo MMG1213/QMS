@@ -1,12 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { MasterListExport } from './master-list-export';
+import { MasterListExportService } from './master-list-export';
 
 describe('MasterListExport', () => {
-  let service: MasterListExport;
+  let service: MasterListExportService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(MasterListExport);
+    service = TestBed.inject(MasterListExportService);
   });
 
   it('should be created', () => {

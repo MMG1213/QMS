@@ -1,8 +1,4 @@
 
-using System.Dynamic;
-//using System.Reflection.Metadata;
-using System.Security.Cryptography.X509Certificates;
-using DocumentFormat.OpenXml.Office2010.Excel;
 using Microsoft.EntityFrameworkCore;
 using Qms.Api.Models;
 
@@ -16,8 +12,6 @@ public class QmsDbContext : DbContext
         : base(options)
     {
     }
-
-    public DbSet<Department> Departments => Set<Department>();
 
     public DbSet<DepartmentApprovalMapping> DepartmentApprovalMappings
         => Set<DepartmentApprovalMapping>();
@@ -49,25 +43,6 @@ public class QmsDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        modelBuilder.Entity<Department>(entity =>
-        {
-            entity.HasKey(d => d.Id);
-
-            entity.Property(d => d.DeptName)
-                .HasMaxLength(100)
-                .IsRequired();
-
-            entity.Property(d => d.DeptId)
-                .HasMaxLength(10)
-                .IsRequired();
-
-            entity.HasIndex(d => d.DeptName)
-                .IsUnique();
-
-            entity.HasIndex(d => d.DeptId)
-                .IsUnique();
-        });
 
         modelBuilder.Entity<AppUser>(entity =>
         {
@@ -112,7 +87,7 @@ public class QmsDbContext : DbContext
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
         });
-
+        
         modelBuilder.Entity<DepartmentApprovalMapping>(entity =>
         {
             entity.HasKey(m => m.Id);
@@ -124,7 +99,7 @@ public class QmsDbContext : DbContext
             entity.Property(m => m.RedirectedApproverEmployeeId)
                 .HasMaxLength(50);
 
-            entity.HasOne(m => m.Department)
+            entity.HasOne(m => m.QMSDepartment)
                 .WithMany()
                 .HasForeignKey(m => m.DepartmentId)
                 .OnDelete(DeleteBehavior.Restrict);

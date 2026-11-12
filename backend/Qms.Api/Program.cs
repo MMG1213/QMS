@@ -15,19 +15,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddScoped<MasterListExcelPreviewService>();
 builder.Services.AddScoped<MasterListService>();
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
-
 builder.Services.AddScoped<ISigninService, SigninService>();
 builder.Services.AddScoped<ISignupService, SignupService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IMasterListImportService, MasterListImportService>();
 builder.Services.AddScoped<ML01Service>();
-builder.Services.AddScoped<MasterListExcelPreviewService>();
-builder.Services.AddScoped<MasterListService>();
 builder.Services.AddScoped<IMasterDataService, MasterDataService>();
 builder.Services.AddScoped<MasterListExcelExportService>();
 builder.Services.AddScoped<IAdminSignupRequestService, AdminSignupRequestService>();
-
-builder.Services.AddScoped<IMasterDataService, MasterDataService>();
+builder.Services.AddScoped<IDocumentTypeAdminService, DocumentTypeAdminService>();
+builder.Services.AddScoped<IDocumentApprovalMatrixService, DocumentApprovalMatrixService>();
 
 // Controllers
 builder.Services.AddControllers();
@@ -165,12 +162,6 @@ builder.Services.AddCors(options =>
 // Swagger services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-builder.Services.AddScoped<IDocumentTypeAdminService, DocumentTypeAdminService>();
-
-builder.Services.AddScoped<
-    IDocumentApprovalMatrixService,
-    DocumentApprovalMatrixService>();
 
 var app = builder.Build();
 
