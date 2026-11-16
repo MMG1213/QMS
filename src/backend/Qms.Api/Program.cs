@@ -8,6 +8,8 @@ using Qms.Api.Data;
 using Qms.Api.Models;
 using Qms.Api.Services;
 using Microsoft.AspNetCore.Routing;
+using Qms.Api.Services.Interfaces;
+using Qms.Api.Services.Implementations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -158,6 +160,8 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod();
     });
 });
+
+builder.Services.AddScoped<IDepartmentApprovalMappingService, DepartmentApprovalMappingService>();
 
 // Swagger services
 builder.Services.AddEndpointsApiExplorer();

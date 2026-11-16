@@ -158,6 +158,64 @@ namespace Qms.Api.Migrations
                     b.ToTable("AppUsers");
                 });
 
+            modelBuilder.Entity("Qms.Api.Models.DepartmentApprovalLevel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApprovalType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ApproverEmployeeId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<int>("DepartmentApprovalMappingId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("LevelNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RedirectedApproverEmployeeId")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApproverEmployeeId");
+
+                    b.HasIndex("RedirectedApproverEmployeeId");
+
+                    b.HasIndex("DepartmentApprovalMappingId", "LevelNumber")
+                        .IsUnique();
+
+                    b.ToTable("DepartmentApprovalLevels", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DepartmentApprovalLevels_ApprovalType", "[ApprovalType] IN ('Department', 'QMSFinal')");
+
+                            t.HasCheckConstraint("CK_DepartmentApprovalLevels_LevelNumber", "[LevelNumber] >= 1");
+                        });
+                });
+
             modelBuilder.Entity("Qms.Api.Models.DepartmentApprovalMapping", b =>
                 {
                     b.Property<int>("Id")
@@ -166,27 +224,78 @@ namespace Qms.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("DepartmentId")
-                        .HasColumnType("int");
+                    b.Property<int>("ConfigVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
 
-                    b.Property<string>("PrimaryApproverEmployeeId")
+                    b.Property<string>("CreatedByEmployeeId")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("RedirectedApproverEmployeeId")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<int>("DepartmentId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedByEmployeeId");
+
                     b.HasIndex("DepartmentId")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.HasIndex("DepartmentId", "ConfigVersion")
                         .IsUnique();
 
-                    b.ToTable("DepartmentApprovalMappings");
+                    b.ToTable("DepartmentApprovalMappings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DepartmentApprovalMappings_ConfigVersion", "[ConfigVersion] >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("Qms.Api.Models.DepartmentDCRCreator", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("CreatorEmployeeId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("DepartmentApprovalMappingId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatorEmployeeId");
+
+                    b.HasIndex("DepartmentApprovalMappingId", "CreatorEmployeeId")
+                        .IsUnique();
+
+                    b.ToTable("DepartmentDCRCreators", (string)null);
                 });
 
             modelBuilder.Entity("Qms.Api.Models.Document", b =>
@@ -695,15 +804,72 @@ namespace Qms.Api.Migrations
                     b.Navigation("QMSDepartment");
                 });
 
+            modelBuilder.Entity("Qms.Api.Models.DepartmentApprovalLevel", b =>
+                {
+                    b.HasOne("Qms.Api.Models.AppUser", "ApproverEmployee")
+                        .WithMany()
+                        .HasForeignKey("ApproverEmployeeId")
+                        .HasPrincipalKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Qms.Api.Models.DepartmentApprovalMapping", "DepartmentApprovalMapping")
+                        .WithMany("ApprovalLevels")
+                        .HasForeignKey("DepartmentApprovalMappingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Qms.Api.Models.AppUser", "RedirectedApproverEmployee")
+                        .WithMany()
+                        .HasForeignKey("RedirectedApproverEmployeeId")
+                        .HasPrincipalKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ApproverEmployee");
+
+                    b.Navigation("DepartmentApprovalMapping");
+
+                    b.Navigation("RedirectedApproverEmployee");
+                });
+
             modelBuilder.Entity("Qms.Api.Models.DepartmentApprovalMapping", b =>
                 {
+                    b.HasOne("Qms.Api.Models.AppUser", "CreatedByEmployee")
+                        .WithMany()
+                        .HasForeignKey("CreatedByEmployeeId")
+                        .HasPrincipalKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Qms.Api.Models.QMSDepartment", "QMSDepartment")
                         .WithMany()
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("CreatedByEmployee");
+
                     b.Navigation("QMSDepartment");
+                });
+
+            modelBuilder.Entity("Qms.Api.Models.DepartmentDCRCreator", b =>
+                {
+                    b.HasOne("Qms.Api.Models.AppUser", "CreatorEmployee")
+                        .WithMany()
+                        .HasForeignKey("CreatorEmployeeId")
+                        .HasPrincipalKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Qms.Api.Models.DepartmentApprovalMapping", "DepartmentApprovalMapping")
+                        .WithMany("DCRCreators")
+                        .HasForeignKey("DepartmentApprovalMappingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatorEmployee");
+
+                    b.Navigation("DepartmentApprovalMapping");
                 });
 
             modelBuilder.Entity("Qms.Api.Models.Document", b =>
@@ -822,6 +988,13 @@ namespace Qms.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("DocumentType");
+                });
+
+            modelBuilder.Entity("Qms.Api.Models.DepartmentApprovalMapping", b =>
+                {
+                    b.Navigation("ApprovalLevels");
+
+                    b.Navigation("DCRCreators");
                 });
 
             modelBuilder.Entity("Qms.Api.Models.Document", b =>

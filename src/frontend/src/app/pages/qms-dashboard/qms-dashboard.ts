@@ -178,6 +178,26 @@ export class QmsDashboardComponent implements OnInit {
   selectedDepartmentId: number | null = null;
   searchText = '';
 
+  // Status selected from the Total / Active / Obsolete summary cards.
+  selectedStatusFilter: 'All' | 'Active' | 'Obsolete' = 'All';
+
+  get filteredDocuments(): MasterListDocument[] {
+    if (this.selectedStatusFilter === 'All') {
+      return this.documents;
+    }
+
+    const selectedStatus = this.selectedStatusFilter.toLowerCase();
+
+    return this.documents.filter(document =>
+      String(document.status ?? '').trim().toLowerCase() === selectedStatus
+    );
+  }
+
+  setStatusFilter(status: 'All' | 'Active' | 'Obsolete'): void {
+    this.selectedStatusFilter = status;
+    this.cdr.markForCheck();
+  }
+
   isLoadingFilters = false;
   isLoadingDocuments = false;
   isLoadingMasterData = false;
@@ -1159,6 +1179,9 @@ export class QmsDashboardComponent implements OnInit {
     this.selectedDocumentTypeId =
       value === '' ? null : Number(value);
 
+    // Reset the summary-card status selection when changing document type.
+    this.selectedStatusFilter = 'All';
+
     // Clear ML02–ML06 edit state.
     this.editingDocumentId = null;
     this.editDraft = null;
@@ -1248,6 +1271,7 @@ export class QmsDashboardComponent implements OnInit {
     this.selectedDocumentTypeId = null;
     this.selectedDepartmentId = null;
     this.searchText = '';
+    this.selectedStatusFilter = 'All';
 
     this.editingDocumentId = null;
     this.editDraft = null;
@@ -1955,6 +1979,27 @@ export class QmsDashboardComponent implements OnInit {
 
   private approvalMatrixDateInput(value: string | null): string | null {
     return value ? value.substring(0, 10) : null;
+  }
+
+  // --------------------------------------------------
+  // MASTER LIST SUMMARY COUNTS
+  // Counts are based on the currently loaded document set and active filters.
+  // --------------------------------------------------
+
+  get totalDocumentCount(): number {
+    return this.documents.length;
+  }
+
+  get activeDocumentCount(): number {
+    return this.documents.filter(document =>
+      String(document.status ?? '').trim().toLowerCase() === 'active'
+    ).length;
+  }
+
+  get obsoleteDocumentCount(): number {
+    return this.documents.filter(document =>
+      String(document.status ?? '').trim().toLowerCase() === 'obsolete'
+    ).length;
   }
 
   // --------------------------------------------------

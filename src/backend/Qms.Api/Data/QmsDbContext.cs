@@ -16,6 +16,12 @@ public class QmsDbContext : DbContext
     public DbSet<DepartmentApprovalMapping> DepartmentApprovalMappings
         => Set<DepartmentApprovalMapping>();
 
+    public DbSet<DepartmentDCRCreator> DepartmentDCRCreators
+        => Set<DepartmentDCRCreator>();
+
+    public DbSet<DepartmentApprovalLevel> DepartmentApprovalLevels
+        => Set<DepartmentApprovalLevel>();
+
     public DbSet<DocumentApprovalMatrix> DocumentApprovalMatrices
         => Set<DocumentApprovalMatrix>();
 
@@ -88,24 +94,146 @@ public class QmsDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
         
+        // Department Approval Mapping
         modelBuilder.Entity<DepartmentApprovalMapping>(entity =>
         {
-            entity.HasKey(m => m.Id);
+            entity.ToTable("DepartmentApprovalMappings");
 
-            entity.Property(m => m.PrimaryApproverEmployeeId)
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.ConfigVersion)
+                .IsRequired()
+                .HasDefaultValue(1);
+
+            entity.Property(x => x.IsActive)
+                .IsRequired()
+                .HasDefaultValue(true);
+
+            entity.Property(x => x.CreatedByEmployeeId)
                 .HasMaxLength(50)
                 .IsRequired();
 
-            entity.Property(m => m.RedirectedApproverEmployeeId)
-                .HasMaxLength(50);
+            entity.Property(x => x.CreatedAtUtc)
+                .HasDefaultValueSql("SYSUTCDATETIME()");
 
-            entity.HasOne(m => m.QMSDepartment)
+            entity.HasOne(x => x.QMSDepartment)
                 .WithMany()
-                .HasForeignKey(m => m.DepartmentId)
+                .HasForeignKey(x => x.DepartmentId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasIndex(m => m.DepartmentId)
+            entity.HasOne(x => x.CreatedByEmployee)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByEmployeeId)
+                .HasPrincipalKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => new { x.DepartmentId, x.ConfigVersion })
                 .IsUnique();
+
+            entity.HasIndex(x => x.DepartmentId)
+                .IsUnique()
+                .HasFilter("[IsActive] = 1");
+
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "CK_DepartmentApprovalMappings_ConfigVersion",
+                    "[ConfigVersion] >= 1");
+            });
+        });
+
+        // Department DCR Creators
+        modelBuilder.Entity<DepartmentDCRCreator>(entity =>
+        {
+            entity.ToTable("DepartmentDCRCreators");
+
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.CreatorEmployeeId)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(x => x.CreatedAtUtc)
+                .HasDefaultValueSql("SYSUTCDATETIME()");
+
+            entity.HasOne(x => x.DepartmentApprovalMapping)
+                .WithMany(x => x.DCRCreators)
+                .HasForeignKey(x => x.DepartmentApprovalMappingId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.CreatorEmployee)
+                .WithMany()
+                .HasForeignKey(x => x.CreatorEmployeeId)
+                .HasPrincipalKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => new
+            {
+                x.DepartmentApprovalMappingId,
+                x.CreatorEmployeeId
+            }).IsUnique();
+        });
+
+        // Department Approval Levels
+        modelBuilder.Entity<DepartmentApprovalLevel>(entity =>
+        {
+            entity.ToTable("DepartmentApprovalLevels");
+
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.LevelNumber)
+                .IsRequired();
+
+            entity.Property(x => x.ApprovalType)
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entity.Property(x => x.ApproverEmployeeId)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(x => x.RedirectedApproverEmployeeId)
+                .HasMaxLength(50);
+
+            entity.Property(x => x.IsActive)
+                .HasDefaultValue(true);
+
+            entity.Property(x => x.CreatedAtUtc)
+                .HasDefaultValueSql("SYSUTCDATETIME()");
+
+            entity.HasOne(x => x.DepartmentApprovalMapping)
+                .WithMany(x => x.ApprovalLevels)
+                .HasForeignKey(x => x.DepartmentApprovalMappingId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.ApproverEmployee)
+                .WithMany()
+                .HasForeignKey(x => x.ApproverEmployeeId)
+                .HasPrincipalKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.RedirectedApproverEmployee)
+                .WithMany()
+                .HasForeignKey(x => x.RedirectedApproverEmployeeId)
+                .HasPrincipalKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => new
+            {
+                x.DepartmentApprovalMappingId,
+                x.LevelNumber
+            }).IsUnique();
+
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "CK_DepartmentApprovalLevels_LevelNumber",
+                    "[LevelNumber] >= 1");
+
+                t.HasCheckConstraint(
+                    "CK_DepartmentApprovalLevels_ApprovalType",
+                    "[ApprovalType] IN ('Department', 'QMSFinal')");
+            });
         });
         
         modelBuilder.Entity<QMSDepartment>(entity =>
