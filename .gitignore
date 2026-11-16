@@ -2,18 +2,18 @@
 # See GitHub documentation for ignoring files
 
 # Angular compiled output
-/dist/
+dist/
 /tmp/
-/out-tsc/
+out-tsc/
 /bazel-out/
 
 # Node
-/node_modules/
+node_modules/
 npm-debug.log
 yarn-error.log
 
 # Angular cache
-/.angular/cache/
+.angular/cache/
 .angular/
 
 # IDEs and editors
