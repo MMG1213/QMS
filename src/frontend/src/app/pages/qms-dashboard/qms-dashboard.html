@@ -1,4 +1,3 @@
-
 <header class="topbar">
   <a class="brand" href="#" aria-label="Fujitec QMS Home">
     <img
@@ -30,6 +29,11 @@
       (click)="toggleProfileMenu()">
 
       <span class="avatar">{{ userInitial }}</span>
+
+      <span class="profile-meta">
+        <span class="profile-meta-name">{{ userName }}</span>
+        <span class="profile-meta-role">{{ userRole }}</span>
+      </span>
 
       <svg
         class="chevron"
@@ -91,7 +95,18 @@
 
     <section class="master-list-page">
 
-      <div class="dashboard-overview-row">
+      <!-- PAGE HEADER -->
+      <div class="page-header">
+        <div>
+          <p class="page-eyebrow">Quality Management System</p>
+          <h1>Master List</h1>
+          <p class="page-subtitle">
+            Document Control register, approvals and revision history
+          </p>
+        </div>
+      </div>
+
+      <div class="dashboard-overview-row" [class.no-summary]="!!selectedSpecialType || isML01Selected">
 
         @if (!selectedSpecialType && !isML01Selected) {
           <section class="document-summary" aria-label="Document summary">
@@ -231,15 +246,24 @@
                   </tr>
                 } @else {
                   <tr>
-                    <td>{{ approvalMatrix.approvedBy || '' }}</td>
-                    <td>{{ approvalMatrix.checkedBy || '' }}</td>
-                    <td>{{ approvalMatrix.issuedBy || '' }}</td>
+                    <td>
+                      @if (approvalMatrix.approvedBy) { {{ approvalMatrix.approvedBy }} }
+                      @else { <span class="approval-empty">Not assigned</span> }
+                    </td>
+                    <td>
+                      @if (approvalMatrix.checkedBy) { {{ approvalMatrix.checkedBy }} }
+                      @else { <span class="approval-empty">Not assigned</span> }
+                    </td>
+                    <td>
+                      @if (approvalMatrix.issuedBy) { {{ approvalMatrix.issuedBy }} }
+                      @else { <span class="approval-empty">Not assigned</span> }
+                    </td>
                   </tr>
 
                   <tr class="approval-date-row">
-                    <td>{{ approvalMatrix.approvedDate ? (approvalMatrix.approvedDate | date:'dd/MM/yyyy') : '' }}</td>
-                    <td>{{ approvalMatrix.checkedDate ? (approvalMatrix.checkedDate | date:'dd/MM/yyyy') : '' }}</td>
-                    <td>{{ approvalMatrix.issuedDate ? (approvalMatrix.issuedDate | date:'dd/MM/yyyy') : '' }}</td>
+                    <td>{{ approvalMatrix.approvedDate ? (approvalMatrix.approvedDate | date:'dd/MM/yyyy') : '—' }}</td>
+                    <td>{{ approvalMatrix.checkedDate ? (approvalMatrix.checkedDate | date:'dd/MM/yyyy') : '—' }}</td>
+                    <td>{{ approvalMatrix.issuedDate ? (approvalMatrix.issuedDate | date:'dd/MM/yyyy') : '—' }}</td>
                   </tr>
                 }
               </tbody>
@@ -249,26 +273,24 @@
               <div class="master-approval-edit-actions">
                 <button
                   type="button"
+                  class="master-approval-cancel-button"
+                  [disabled]="isSavingApprovalMatrix"
+                  (click)="cancelApprovalMatrixEdit()">
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
                   class="master-approval-save-button icon-only-action"
                   [disabled]="isSavingApprovalMatrix"
                   (click)="saveApprovalMatrix()"
                   title="Save approval details"
                   aria-label="Save approval details">
                   <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
-                    <path d="M17 21v-8H7v8M7 3v5h8"></path>
-                  </svg>
-                  <span class="visually-hidden">
-                    {{ isSavingApprovalMatrix ? 'Saving…' : 'Save' }}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  class="master-approval-cancel-button"
-                  [disabled]="isSavingApprovalMatrix"
-                  (click)="cancelApprovalMatrixEdit()">
-                  Cancel
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                  <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                </svg>
+                <span class="visually-hidden">{{ isSavingApprovalMatrix ? 'Saving…' : 'Save' }}</span>
                 </button>
               </div>
             }
@@ -340,12 +362,19 @@
           <div class="filter-field search-field">
             <label for="documentSearch">Search Documents</label>
 
-            <input
-              id="documentSearch"
-              type="search"
-              placeholder="Document number or title"
-              [(ngModel)]="searchText"
-              (keyup.enter)="onSearch()" />
+            <div class="search-input-wrap">
+              <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="m20 20-4-4"></path>
+              </svg>
+
+              <input
+                id="documentSearch"
+                type="search"
+                placeholder="Search by document number or title"
+                [(ngModel)]="searchText"
+                (keyup.enter)="onSearch()" />
+            </div>
           </div>
 
           <button
@@ -364,7 +393,7 @@
 
         <button
           type="button"
-          class="clear-button icon-only-action"
+          class="clear-button"
           (click)="clearFilters()"
           title="Clear filters"
           aria-label="Clear filters">
@@ -372,55 +401,9 @@
             <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"></path>
             <path d="M3 3v5h5"></path>
           </svg>
-          <span class="visually-hidden">Clear</span>
+          <span>Reset</span>
         </button>
       </div>
-
-      <!-- SHARED ACTIONS: ML01 AND SPECIAL MASTER DATA TABLES -->
-      @if (selectedSpecialType || isML01Selected) {
-        <div class="master-list-actions-row">
-
-          <div class="master-list-actions-note">
-            <span class="actions-indicator" aria-hidden="true"></span>
-            <span>Document Register</span>
-          </div>
-
-          <div class="master-list-heading-actions">
-            <button
-              type="button"
-              class="export-button icon-only-action"
-              (click)="exportToExcel()"
-              [disabled]="isExporting || isLoadingFilters"
-              title="Download Excel"
-              aria-label="Download Excel">
-              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <path d="m7 10 5 5 5-5"></path>
-                <path d="M12 15V3"></path>
-              </svg>
-              <span class="visually-hidden">
-                {{ isExporting ? 'Exporting...' : 'Export to Excel' }}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              class="refresh-button icon-only-action"
-              (click)="refreshCurrentTable()"
-              [disabled]="isLoadingDocuments || isLoadingMasterData || isLoadingML01"
-              title="Refresh"
-              aria-label="Refresh">
-              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M20 7v5h-5"></path>
-                <path d="M4 17v-5h5"></path>
-                <path d="M5.6 9A7 7 0 0 1 18 6l2 6"></path>
-                <path d="M18.4 15A7 7 0 0 1 6 18l-2-6"></path>
-              </svg>
-              <span class="visually-hidden">Refresh</span>
-            </button>
-          </div>
-        </div>
-      }
 
       @if (filterError) {
         <div class="error-message">
@@ -453,10 +436,36 @@
             </div>
 
             <div class="special-toolbar-actions">
-              <span class="record-count">
-                {{ masterDataRows.length }}
-                {{ masterDataRows.length === 1 ? 'record' : 'records' }}
-              </span>
+              <button
+                type="button"
+                class="export-button icon-only-action"
+                (click)="exportToExcel()"
+                [disabled]="isExporting || isLoadingFilters"
+                title="Download Excel"
+                aria-label="Download Excel">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <path d="m7 10 5 5 5-5"></path>
+                  <path d="M12 15V3"></path>
+                </svg>
+                <span class="visually-hidden">{{ isExporting ? 'Exporting…' : 'Export' }}</span>
+              </button>
+
+              <button
+                type="button"
+                class="refresh-button icon-only-action"
+                (click)="refreshCurrentTable()"
+                [disabled]="isLoadingDocuments || isLoadingMasterData || isLoadingML01"
+                title="Refresh"
+                aria-label="Refresh">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 7v5h-5"></path>
+                  <path d="M4 17v-5h5"></path>
+                  <path d="M5.6 9A7 7 0 0 1 18 6l2 6"></path>
+                  <path d="M18.4 15A7 7 0 0 1 6 18l-2-6"></path>
+                </svg>
+                <span class="visually-hidden">Refresh</span>
+              </button>
 
               @if (isQmsAdmin) {
                 <button
@@ -476,54 +485,6 @@
             </div>
           </div>
 
-          @if (isAddingMasterData && specialAddDraft; as draft) {
-            <div class="special-form-panel">
-              <h3>Add {{ specialType.title }} Record</h3>
-
-              <div class="special-form-grid">
-                @for (column of specialType.columns; track column.key) {
-                  <div class="special-form-field">
-                    <label [for]="'add-' + column.key">
-                      {{ column.label }}
-                    </label>
-
-                    <input
-                      [id]="'add-' + column.key"
-                      [type]="getSpecialInputType(column.key)"
-                      [ngModel]="draft[column.key] ?? ''"
-                      (ngModelChange)="updateSpecialAddField(column.key, $event)"
-                      [attr.aria-label]="column.label" />
-                  </div>
-                }
-              </div>
-
-              <div class="special-form-actions">
-                <button
-                  type="button"
-                  class="save-button icon-only-action"
-                  (click)="saveSpecialAdd()"
-                  [disabled]="isSavingMasterData"
-                  title="Save"
-                  aria-label="Save">
-                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
-                    <path d="M17 21v-8H7v8M7 3v5h8"></path>
-                  </svg>
-                  <span class="visually-hidden">
-                    {{ isSavingMasterData ? 'Saving...' : 'Save Record' }}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  class="cancel-button"
-                  (click)="cancelSpecialAdd()"
-                  [disabled]="isSavingMasterData">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          }
 
           @if (isLoadingMasterData) {
             <p class="loading-message">Loading master data...</p>
@@ -648,18 +609,91 @@
             <div class="success-message">{{ specialSaveMessage }}</div>
           }
 
-          @if (specialSaveError) {
+          @if (specialSaveError && !isAddingMasterData) {
             <div class="error-message">{{ specialSaveError }}</div>
           }
 
-          <div class="table-footer">
-            <span>
-              Showing {{ masterDataRows.length }} record(s)
-            </span>
-            <span>Database-connected master data</span>
-          </div>
-
         </section>
+
+      @if (isAddingMasterData && specialAddDraft; as draft) {
+        <div class="modal-backdrop">
+          <div
+            class="modal-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="special-add-title"
+            tabindex="-1"
+            (keydown.escape)="cancelSpecialAdd()">
+
+            <div class="modal-header">
+              <div>
+                <h3 id="special-add-title">Add Record</h3>
+                <p>{{ specialType.title }}</p>
+              </div>
+
+              <button
+                type="button"
+                class="modal-close"
+                (click)="cancelSpecialAdd()"
+                [disabled]="isSavingMasterData"
+                aria-label="Close">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18 6 6 18"></path>
+                  <path d="m6 6 12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div class="modal-body">
+              @if (specialSaveError) {
+                <div class="error-message">{{ specialSaveError }}</div>
+              }
+
+              <div class="modal-form-grid">
+                @for (column of specialType.columns; track column.key; let isFirst = $first) {
+                  <div class="special-form-field">
+                    <label [for]="'add-' + column.key">
+                      {{ column.label }}
+                    </label>
+
+                    <input
+                      [id]="'add-' + column.key"
+                      [type]="getSpecialInputType(column.key)"
+                      [ngModel]="draft[column.key] ?? ''"
+                      (ngModelChange)="updateSpecialAddField(column.key, $event)"
+                      [autofocus]="isFirst"
+                      [attr.aria-label]="column.label" />
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="cancel-button"
+                (click)="cancelSpecialAdd()"
+                [disabled]="isSavingMasterData">
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                class="save-button icon-only-action"
+                (click)="saveSpecialAdd()"
+                [disabled]="isSavingMasterData"
+                title="Save record"
+                aria-label="Save record">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                  <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                </svg>
+                <span class="visually-hidden">{{ isSavingMasterData ? 'Saving...' : 'Save Record' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
       }
 
       <!-- ML01 - MASTER LIST OF MASTER LISTS -->
@@ -674,10 +708,36 @@
             </div>
 
             <div class="special-toolbar-actions">
-              <span class="record-count">
-                {{ ml01Entries.length }}
-                {{ ml01Entries.length === 1 ? 'record' : 'records' }}
-              </span>
+              <button
+                type="button"
+                class="export-button icon-only-action"
+                (click)="exportToExcel()"
+                [disabled]="isExporting || isLoadingFilters"
+                title="Download Excel"
+                aria-label="Download Excel">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <path d="m7 10 5 5 5-5"></path>
+                  <path d="M12 15V3"></path>
+                </svg>
+                <span class="visually-hidden">{{ isExporting ? 'Exporting…' : 'Export' }}</span>
+              </button>
+
+              <button
+                type="button"
+                class="refresh-button icon-only-action"
+                (click)="refreshCurrentTable()"
+                [disabled]="isLoadingDocuments || isLoadingMasterData || isLoadingML01"
+                title="Refresh"
+                aria-label="Refresh">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 7v5h-5"></path>
+                  <path d="M4 17v-5h5"></path>
+                  <path d="M5.6 9A7 7 0 0 1 18 6l2 6"></path>
+                  <path d="M18.4 15A7 7 0 0 1 6 18l-2-6"></path>
+                </svg>
+                <span class="visually-hidden">Refresh</span>
+              </button>
 
               @if (isQmsAdmin) {
                 <button
@@ -701,80 +761,10 @@
             <div class="success-message">{{ ml01SaveMessage }}</div>
           }
 
-          @if (ml01SaveError) {
+          @if (ml01SaveError && !isAddingML01) {
             <div class="error-message">{{ ml01SaveError }}</div>
           }
 
-          @if (isAddingML01 && ml01AddDraft; as draft) {
-            <div class="special-form-panel">
-              <h3>Add ML01 Record</h3>
-
-              <div class="special-form-grid">
-                <div class="special-form-field">
-                  <label>Description</label>
-                  <input
-                    type="text"
-                    [(ngModel)]="draft.description"
-                    placeholder="Enter description" />
-                </div>
-
-                <div class="special-form-field">
-                  <label>Document No.</label>
-                  <input
-                    type="text"
-                    [(ngModel)]="draft.documentNo"
-                    placeholder="Enter document number" />
-                </div>
-              </div>
-
-              <h3>Revision Details</h3>
-
-              @for (revision of draft.revisions; track $index) {
-                <div class="special-form-grid">
-                  <div class="special-form-field">
-                    <label>Revision {{ revision.revisionNo }} Pages</label>
-                    <input
-                      type="number"
-                      min="1"
-                      [(ngModel)]="revision.pageCount" />
-                  </div>
-
-                  <div class="special-form-field">
-                    <label>Revision {{ revision.revisionNo }} Date</label>
-                    <input
-                      type="date"
-                      [(ngModel)]="revision.revisionDate" />
-                  </div>
-                </div>
-              }
-
-              <div class="special-form-actions">
-                <button
-                  type="button"
-                  class="save-button icon-only-action"
-                  (click)="saveML01Add()"
-                  [disabled]="isSavingML01"
-                  title="Save"
-                  aria-label="Save">
-                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
-                    <path d="M17 21v-8H7v8M7 3v5h8"></path>
-                  </svg>
-                  <span class="visually-hidden">
-                    {{ isSavingML01 ? 'Saving...' : 'Save Record' }}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  class="cancel-button"
-                  (click)="cancelML01Add()"
-                  [disabled]="isSavingML01">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          }
 
           @if (isLoadingML01) {
             <p class="loading-message">Loading ML01 records...</p>
@@ -790,7 +780,7 @@
                 <thead>
                   <tr>
                     <th rowspan="2" class="serial-column">Sl. No.</th>
-                    <th rowspan="2">Description</th>
+                    <th rowspan="2" class="title-column">Description</th>
                     <th rowspan="2">Document No.</th>
                     <th
                       [attr.colspan]="ml01RevisionColumns.length * 2"
@@ -819,7 +809,7 @@
                       <tr class="editing-row">
                         <td class="serial-cell">{{ i + 1 }}</td>
 
-                        <td>
+                        <td class="title-cell">
                           <input
                             class="edit-input"
                             type="text"
@@ -897,8 +887,8 @@
                     } @else {
                       <tr>
                         <td class="serial-cell">{{ i + 1 }}</td>
-                        <td>{{ entry.description }}</td>
-                        <td>{{ entry.documentNo }}</td>
+                        <td class="title-cell"><span class="document-title" [attr.title]="entry.description">{{ entry.description }}</span></td>
+                        <td class="document-number-cell">{{ entry.documentNo }}</td>
 
                         @for (revisionNo of ml01RevisionColumns; track revisionNo) {
                           @if (getML01Revision(entry, revisionNo); as revision) {
@@ -954,6 +944,110 @@
           </div>
 
         </section>
+
+      @if (isAddingML01 && ml01AddDraft; as draft) {
+        <div class="modal-backdrop">
+          <div
+            class="modal-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ml01-add-title"
+            tabindex="-1"
+            (keydown.escape)="cancelML01Add()">
+
+            <div class="modal-header">
+              <div>
+                <h3 id="ml01-add-title">Add Record</h3>
+                <p>Master List of Master Lists</p>
+              </div>
+
+              <button
+                type="button"
+                class="modal-close"
+                (click)="cancelML01Add()"
+                [disabled]="isSavingML01"
+                aria-label="Close">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18 6 6 18"></path>
+                  <path d="m6 6 12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div class="modal-body">
+              @if (ml01SaveError) {
+                <div class="error-message">{{ ml01SaveError }}</div>
+              }
+
+              <div class="modal-form-grid">
+                <div class="special-form-field">
+                  <label for="ml01-add-description">Description</label>
+                  <input
+                    id="ml01-add-description"
+                    type="text"
+                    autofocus
+                    [(ngModel)]="draft.description"
+                    placeholder="Enter description" />
+                </div>
+
+                <div class="special-form-field">
+                  <label for="ml01-add-documentNo">Document No.</label>
+                  <input
+                    id="ml01-add-documentNo"
+                    type="text"
+                    [(ngModel)]="draft.documentNo"
+                    placeholder="Enter document number" />
+                </div>
+              </div>
+
+              <p class="modal-section-title">Revision Details</p>
+
+              @for (revision of draft.revisions; track $index) {
+                <div class="modal-revision-row">
+                  <div class="special-form-field">
+                    <label>Revision {{ revision.revisionNo }} Pages</label>
+                    <input
+                      type="number"
+                      min="1"
+                      [(ngModel)]="revision.pageCount" />
+                  </div>
+
+                  <div class="special-form-field">
+                    <label>Revision {{ revision.revisionNo }} Date</label>
+                    <input
+                      type="date"
+                      [(ngModel)]="revision.revisionDate" />
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="cancel-button"
+                (click)="cancelML01Add()"
+                [disabled]="isSavingML01">
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                class="save-button icon-only-action"
+                (click)="saveML01Add()"
+                [disabled]="isSavingML01"
+                title="Save record"
+                aria-label="Save record">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                  <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                </svg>
+                <span class="visually-hidden">{{ isSavingML01 ? 'Saving...' : 'Save Record' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
       }
 
       <!-- ML02–ML06 CONTROLLED DOCUMENTS TABLE -->
@@ -965,7 +1059,7 @@
           <div class="table-toolbar">
 
             <div>
-              <h2>Controlled Documents</h2>
+              <h2>Document Control</h2>
               <p>Document details and revision records</p>
             </div>
 
@@ -983,9 +1077,7 @@
                   <path d="m7 10 5 5 5-5"></path>
                   <path d="M12 15V3"></path>
                 </svg>
-                <span class="visually-hidden">
-                  {{ isExporting ? 'Exporting...' : 'Export to Excel' }}
-                </span>
+                <span class="visually-hidden">{{ isExporting ? 'Exporting…' : 'Export' }}</span>
               </button>
 
               <button
@@ -1057,7 +1149,7 @@
                       <tr class="editing-row">
                         <td class="serial-cell">{{ i + 1 }}</td>
 
-                        <td>
+                        <td class="title-cell">
                           <input
                             class="edit-input"
                             type="text"
@@ -1188,7 +1280,7 @@
                         <td class="serial-cell">{{ i + 1 }}</td>
 
                         <td class="title-cell">
-                          <span class="document-title">{{ document.title }}</span>
+                          <span class="document-title" [attr.title]="document.title">{{ document.title }}</span>
                         </td>
 
                         <td class="document-number-cell">
@@ -1196,7 +1288,9 @@
                         </td>
 
                         <td>
-                          {{ document.typeCode ? (document.typeCode + ' - ') : '' }}{{ document.typeName || '—' }}
+                          <span class="type-tag">
+                            {{ document.typeCode ? (document.typeCode + ' - ') : '' }}{{ document.typeName || '—' }}
+                          </span>
                         </td>
 
                         <td class="department-cell">
@@ -1262,10 +1356,10 @@
                     <td
                       class="table-message empty-state"
                       [attr.colspan]="9 + revisionColumns.length * 2">
-                      <strong>No documents found</strong>
+                      <strong>No documents match your filters</strong>
                       <span>
-                        Matching documents will appear here when records
-                        are available in the database.
+                        Try changing the document type, department or search
+                        text, or reset the filters.
                       </span>
                     </td>
                   </tr>
@@ -1286,8 +1380,6 @@
               {{ saveError }}
             </div>
           }
-
-          <!-- No record-count footer or database-status text -->
 
         </section>
       }
