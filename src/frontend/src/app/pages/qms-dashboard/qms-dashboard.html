@@ -1,4 +1,3 @@
-
 <header class="topbar">
   <a class="brand" href="#" aria-label="Fujitec QMS Home">
     <img
@@ -31,6 +30,11 @@
 
       <span class="avatar">{{ userInitial }}</span>
 
+      <span class="profile-meta">
+        <span class="profile-meta-name">{{ userName }}</span>
+        <span class="profile-meta-role">{{ userRole }}</span>
+      </span>
+
       <svg
         class="chevron"
         [class.rotated]="profileMenuOpen"
@@ -42,7 +46,6 @@
 
     @if (profileMenuOpen) {
       <div class="profile-menu" (click)="$event.stopPropagation()">
-
         <div class="profile-info">
           <span class="profile-name">{{ userName }}</span>
           <span class="profile-role">{{ userRole }}</span>
@@ -50,10 +53,7 @@
 
         <div class="menu-divider"></div>
 
-        <button
-          type="button"
-          class="menu-item"
-          (click)="openProfile()">
+        <button type="button" class="menu-item" (click)="openProfile()">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="8" r="4" />
             <path d="M4 21a8 8 0 0 1 16 0" />
@@ -76,10 +76,7 @@
           </button>
         }
 
-        <button
-          type="button"
-          class="menu-item logout"
-          (click)="logout()">
+        <button type="button" class="menu-item logout" (click)="logout()">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M10 17l5-5-5-5" />
             <path d="M15 12H3" />
@@ -87,7 +84,6 @@
           </svg>
           <span>Logout</span>
         </button>
-
       </div>
     }
   </div>
@@ -99,109 +95,217 @@
 
     <section class="master-list-page">
 
-      <!-- PAGE HEADING -->
-
-      <div class="master-list-heading">
+      <!-- PAGE HEADER -->
+      <div class="page-header">
         <div>
-          <p class="eyebrow">FUJITEC INTEGRATED MANAGEMENT SYSTEM</p>
+          <p class="page-eyebrow">Quality Management System</p>
           <h1>Master List</h1>
-          <p class="description">
-            View controlled documents and their approved revision history.
+          <p class="page-subtitle">
+            Document Control register, approvals and revision history
           </p>
-        </div>
-
-        <div class="master-list-heading-actions">
-
-          <button
-            type="button"
-            class="export-button"
-            (click)="exportToExcel()"
-            [disabled]="isExporting || isLoadingFilters">
-
-            <span aria-hidden="true">↓</span>
-            {{ isExporting ? 'Exporting...' : 'Export to Excel' }}
-
-          </button>
-
-          <button
-            type="button"
-            class="refresh-button"
-            (click)="refreshCurrentTable()"
-            [disabled]="isLoadingDocuments || isLoadingMasterData || isLoadingML01">
-
-            ↻ Refresh
-
-          </button>
-
         </div>
       </div>
 
-      <!-- COMPACT DOCUMENT APPROVAL BOX -->
-      <section class="master-approval-box" aria-label="Document approval details">
-        <div class="master-approval-box-header">
-          <span class="master-approval-document-type">
-            {{ selectedDocumentTypeId !== null
-                ? getDocumentTypeName(selectedDocumentTypeId)
-                : (approvalMatrixSelectedDocumentTypeId !== null
-                    ? getDocumentTypeName(approvalMatrixSelectedDocumentTypeId)
-                    : 'Document Approval Details') }}
-          </span>
-          @if (canEditApprovalMatrix && !isEditingApprovalMatrix) {
-            <button type="button" class="master-approval-edit-button"
-              [disabled]="isLoadingApprovalMatrix || approvalMatrixSelectedDocumentTypeId === null"
-              (click)="startApprovalMatrixEdit()">✎ Edit</button>
-          }
-        </div>
+      <div class="dashboard-overview-row" [class.no-summary]="!!selectedSpecialType || isML01Selected">
 
-        @if (isLoadingApprovalMatrix) {
-          <div class="master-approval-loading">Loading approval details…</div>
-        } @else if (approvalMatrixLoadError) {
-          <div class="master-approval-error">{{ approvalMatrixLoadError }}</div>
-        } @else {
-          <table class="master-approval-table">
-            <thead>
-              <tr><th>Approved By</th><th>Checked By</th><th>Issued By</th></tr>
-            </thead>
-            <tbody>
-              @if (isEditingApprovalMatrix && canEditApprovalMatrix) {
-                <tr class="master-approval-edit-row">
-                  <td><input type="text" aria-label="Approved By" [(ngModel)]="approvalMatrix.approvedBy" placeholder="Approved By" /></td>
-                  <td><input type="text" aria-label="Checked By" [(ngModel)]="approvalMatrix.checkedBy" placeholder="Checked By" /></td>
-                  <td><input type="text" aria-label="Issued By" [(ngModel)]="approvalMatrix.issuedBy" placeholder="Issued By" /></td>
-                </tr>
-                <tr class="approval-date-row master-approval-edit-row">
-                  <td><input type="date" aria-label="Approved Date" [(ngModel)]="approvalMatrix.approvedDate" /></td>
-                  <td><input type="date" aria-label="Checked Date" [(ngModel)]="approvalMatrix.checkedDate" /></td>
-                  <td><input type="date" aria-label="Issued Date" [(ngModel)]="approvalMatrix.issuedDate" /></td>
-                </tr>
-              } @else {
-                <tr>
-                  <td>{{ approvalMatrix.approvedBy || '' }}</td>
-                  <td>{{ approvalMatrix.checkedBy || '' }}</td>
-                  <td>{{ approvalMatrix.issuedBy || '' }}</td>
-                </tr>
-                <tr class="approval-date-row">
-                  <td>{{ approvalMatrix.approvedDate ? (approvalMatrix.approvedDate | date:'dd/MM/yyyy') : '' }}</td>
-                  <td>{{ approvalMatrix.checkedDate ? (approvalMatrix.checkedDate | date:'dd/MM/yyyy') : '' }}</td>
-                  <td>{{ approvalMatrix.issuedDate ? (approvalMatrix.issuedDate | date:'dd/MM/yyyy') : '' }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-          @if (isEditingApprovalMatrix && canEditApprovalMatrix) {
-            <div class="master-approval-edit-actions">
-              <button type="button" class="master-approval-save-button"
-                [disabled]="isSavingApprovalMatrix" (click)="saveApprovalMatrix()">
-                {{ isSavingApprovalMatrix ? 'Saving…' : 'Save' }}
-              </button>
-              <button type="button" class="master-approval-cancel-button"
-                [disabled]="isSavingApprovalMatrix" (click)="cancelApprovalMatrixEdit()">Cancel</button>
-            </div>
-          }
-          @if (approvalMatrixSaveMessage) { <div class="master-approval-success">{{ approvalMatrixSaveMessage }}</div> }
-          @if (approvalMatrixSaveError) { <div class="master-approval-error">{{ approvalMatrixSaveError }}</div> }
+        @if (!selectedSpecialType && !isML01Selected) {
+          <section class="document-summary" aria-label="Document summary">
+
+            <button
+              type="button"
+              class="summary-card summary-total"
+              [class.selected]="selectedStatusFilter === 'All'"
+              [attr.aria-pressed]="selectedStatusFilter === 'All'"
+              (click)="setStatusFilter('All')">
+
+              <span class="summary-icon" aria-hidden="true">▤</span>
+              <div class="summary-copy">
+                <strong>{{ totalDocumentCount }}</strong>
+                <span>Total Documents</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="summary-card summary-active"
+              [class.selected]="selectedStatusFilter === 'Active'"
+              [attr.aria-pressed]="selectedStatusFilter === 'Active'"
+              (click)="setStatusFilter('Active')">
+
+              <span class="summary-icon" aria-hidden="true">✓</span>
+              <div class="summary-copy">
+                <strong>{{ activeDocumentCount }}</strong>
+                <span>Active Documents</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="summary-card summary-obsolete"
+              [class.selected]="selectedStatusFilter === 'Obsolete'"
+              [attr.aria-pressed]="selectedStatusFilter === 'Obsolete'"
+              (click)="setStatusFilter('Obsolete')">
+
+              <span class="summary-icon" aria-hidden="true">◷</span>
+              <div class="summary-copy">
+                <strong>{{ obsoleteDocumentCount }}</strong>
+                <span>Obsolete Documents</span>
+              </div>
+            </button>
+
+          </section>
         }
-      </section>
+
+        <section class="master-approval-box" aria-label="Document approval details">
+
+          <div class="master-approval-box-header">
+            <span class="master-approval-document-type">
+              {{ selectedDocumentTypeId !== null
+                  ? getDocumentTypeName(selectedDocumentTypeId)
+                  : (approvalMatrixSelectedDocumentTypeId !== null
+                      ? getDocumentTypeName(approvalMatrixSelectedDocumentTypeId)
+                      : 'Document Approval Details') }}
+            </span>
+
+            @if (canEditApprovalMatrix && !isEditingApprovalMatrix) {
+              <button
+                type="button"
+                class="master-approval-edit-button"
+                [disabled]="isLoadingApprovalMatrix || approvalMatrixSelectedDocumentTypeId === null"
+                (click)="startApprovalMatrixEdit()"
+                title="Edit approval details"
+                aria-label="Edit approval details">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m16 4 4 4"></path>
+                  <path d="M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20Z"></path>
+                </svg>
+                <span class="visually-hidden">Edit approval details</span>
+              </button>
+            }
+          </div>
+
+          @if (isLoadingApprovalMatrix) {
+            <div class="master-approval-loading">Loading approval details…</div>
+          } @else if (approvalMatrixLoadError) {
+            <div class="master-approval-error">{{ approvalMatrixLoadError }}</div>
+          } @else {
+            <table class="master-approval-table">
+              <thead>
+                <tr>
+                  <th>Approved By</th>
+                  <th>Checked By</th>
+                  <th>Issued By</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                @if (isEditingApprovalMatrix && canEditApprovalMatrix) {
+                  <tr class="master-approval-edit-row">
+                    <td>
+                      <input
+                        type="text"
+                        aria-label="Approved By"
+                        [(ngModel)]="approvalMatrix.approvedBy"
+                        placeholder="Approved By" />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        aria-label="Checked By"
+                        [(ngModel)]="approvalMatrix.checkedBy"
+                        placeholder="Checked By" />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        aria-label="Issued By"
+                        [(ngModel)]="approvalMatrix.issuedBy"
+                        placeholder="Issued By" />
+                    </td>
+                  </tr>
+
+                  <tr class="approval-date-row master-approval-edit-row">
+                    <td>
+                      <input
+                        type="date"
+                        aria-label="Approved Date"
+                        [(ngModel)]="approvalMatrix.approvedDate" />
+                    </td>
+                    <td>
+                      <input
+                        type="date"
+                        aria-label="Checked Date"
+                        [(ngModel)]="approvalMatrix.checkedDate" />
+                    </td>
+                    <td>
+                      <input
+                        type="date"
+                        aria-label="Issued Date"
+                        [(ngModel)]="approvalMatrix.issuedDate" />
+                    </td>
+                  </tr>
+                } @else {
+                  <tr>
+                    <td>
+                      @if (approvalMatrix.approvedBy) { {{ approvalMatrix.approvedBy }} }
+                      @else { <span class="approval-empty">Not assigned</span> }
+                    </td>
+                    <td>
+                      @if (approvalMatrix.checkedBy) { {{ approvalMatrix.checkedBy }} }
+                      @else { <span class="approval-empty">Not assigned</span> }
+                    </td>
+                    <td>
+                      @if (approvalMatrix.issuedBy) { {{ approvalMatrix.issuedBy }} }
+                      @else { <span class="approval-empty">Not assigned</span> }
+                    </td>
+                  </tr>
+
+                  <tr class="approval-date-row">
+                    <td>{{ approvalMatrix.approvedDate ? (approvalMatrix.approvedDate | date:'dd/MM/yyyy') : '—' }}</td>
+                    <td>{{ approvalMatrix.checkedDate ? (approvalMatrix.checkedDate | date:'dd/MM/yyyy') : '—' }}</td>
+                    <td>{{ approvalMatrix.issuedDate ? (approvalMatrix.issuedDate | date:'dd/MM/yyyy') : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            @if (isEditingApprovalMatrix && canEditApprovalMatrix) {
+              <div class="master-approval-edit-actions">
+                <button
+                  type="button"
+                  class="master-approval-cancel-button"
+                  [disabled]="isSavingApprovalMatrix"
+                  (click)="cancelApprovalMatrixEdit()">
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  class="master-approval-save-button icon-only-action"
+                  [disabled]="isSavingApprovalMatrix"
+                  (click)="saveApprovalMatrix()"
+                  title="Save approval details"
+                  aria-label="Save approval details">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                  <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                </svg>
+                <span class="visually-hidden">{{ isSavingApprovalMatrix ? 'Saving…' : 'Save' }}</span>
+                </button>
+              </div>
+            }
+
+            @if (approvalMatrixSaveMessage) {
+              <div class="master-approval-success">{{ approvalMatrixSaveMessage }}</div>
+            }
+
+            @if (approvalMatrixSaveError) {
+              <div class="master-approval-error">{{ approvalMatrixSaveError }}</div>
+            }
+          }
+        </section>
+      </div>
+
       @if (exportSuccessMessage) {
         <div class="success-message" role="status">
           {{ exportSuccessMessage }}
@@ -215,7 +319,6 @@
       }
 
       <!-- FILTERS -->
-
       <div class="filter-panel">
 
         <div class="filter-field">
@@ -233,11 +336,8 @@
                 {{ type.typeCode }} - {{ type.typeName }}
               </option>
             }
-
           </select>
         </div>
-
-        <!-- DEPARTMENT FILTER AND SEARCH -->
 
         @if (!selectedSpecialType && !isML01Selected) {
 
@@ -251,49 +351,59 @@
 
               <option value="">All Departments</option>
 
-              @for (
-                department of departments;
-                track department.departmentId
-              ) {
+              @for (department of departments; track department.departmentId) {
                 <option [value]="department.departmentId">
                   {{ department.departmentCode }} - {{ department.departmentName }}
                 </option>
               }
-
             </select>
           </div>
 
           <div class="filter-field search-field">
             <label for="documentSearch">Search Documents</label>
 
-            <input
-              id="documentSearch"
-              type="search"
-              placeholder="Document number or title"
-              [(ngModel)]="searchText"
-              (keyup.enter)="onSearch()"
-            />
+            <div class="search-input-wrap">
+              <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="m20 20-4-4"></path>
+              </svg>
+
+              <input
+                id="documentSearch"
+                type="search"
+                placeholder="Search by document number or title"
+                [(ngModel)]="searchText"
+                (keyup.enter)="onSearch()" />
+            </div>
           </div>
 
           <button
             type="button"
-            class="search-button"
-            (click)="onSearch()">
-            Search
+            class="search-button icon-only-action"
+            (click)="onSearch()"
+            title="Search"
+            aria-label="Search">
+            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-4-4"></path>
+            </svg>
+            <span class="visually-hidden">Search</span>
           </button>
-
         }
 
         <button
           type="button"
           class="clear-button"
-          (click)="clearFilters()">
-          Clear
+          (click)="clearFilters()"
+          title="Clear filters"
+          aria-label="Clear filters">
+          <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
+          <span>Reset</span>
         </button>
-
       </div>
-
-      <!-- FILTER ERRORS -->
 
       @if (filterError) {
         <div class="error-message">
@@ -304,10 +414,7 @@
       @if (documentError && !selectedSpecialType && !isML01Selected) {
         <div class="error-message">
           {{ documentError }}
-
-          <button type="button" (click)="loadDocuments()">
-            Retry
-          </button>
+          <button type="button" (click)="loadDocuments()">Retry</button>
         </div>
       }
 
@@ -323,188 +430,119 @@
         <section class="table-card">
 
           <div class="table-toolbar">
-
             <div>
               <h2>{{ specialType.title }}</h2>
               <p>Master data retrieved from the database</p>
             </div>
 
             <div class="special-toolbar-actions">
+              <button
+                type="button"
+                class="export-button icon-only-action"
+                (click)="exportToExcel()"
+                [disabled]="isExporting || isLoadingFilters"
+                title="Download Excel"
+                aria-label="Download Excel">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <path d="m7 10 5 5 5-5"></path>
+                  <path d="M12 15V3"></path>
+                </svg>
+                <span class="visually-hidden">{{ isExporting ? 'Exporting…' : 'Export' }}</span>
+              </button>
 
-              <span class="record-count">
-                {{ masterDataRows.length }}
-                {{ masterDataRows.length === 1 ? 'record' : 'records' }}
-              </span>
+              <button
+                type="button"
+                class="refresh-button icon-only-action"
+                (click)="refreshCurrentTable()"
+                [disabled]="isLoadingDocuments || isLoadingMasterData || isLoadingML01"
+                title="Refresh"
+                aria-label="Refresh">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 7v5h-5"></path>
+                  <path d="M4 17v-5h5"></path>
+                  <path d="M5.6 9A7 7 0 0 1 18 6l2 6"></path>
+                  <path d="M18.4 15A7 7 0 0 1 6 18l-2-6"></path>
+                </svg>
+                <span class="visually-hidden">Refresh</span>
+              </button>
 
               @if (isQmsAdmin) {
                 <button
                   type="button"
-                  class="add-button"
+                  class="add-button icon-only-action"
                   (click)="startSpecialAdd()"
-                  [disabled]="
-                    isAddingMasterData ||
-                    editingMasterDataId !== null ||
-                    isSavingMasterData ||
-                    isDeletingMasterData
-                  ">
-                  + Add Record
+                  [disabled]="isAddingMasterData || editingMasterDataId !== null || isSavingMasterData || isDeletingMasterData"
+                  title="Add record"
+                  aria-label="Add record">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 5v14"></path>
+                    <path d="M5 12h14"></path>
+                  </svg>
+                  <span class="visually-hidden">Add Record</span>
                 </button>
               }
-
             </div>
-
           </div>
 
-          <!-- ADD RECORD FORM -->
-
-          @if (isAddingMasterData && specialAddDraft; as draft) {
-
-            <div class="special-form-panel">
-
-              <h3>Add {{ specialType.title }} Record</h3>
-
-              <div class="special-form-grid">
-
-                @for (
-                  column of specialType.columns;
-                  track column.key
-                ) {
-
-                  <div class="special-form-field">
-
-                    <label [for]="'add-' + column.key">
-                      {{ column.label }}
-                    </label>
-
-                    <input
-                      [id]="'add-' + column.key"
-                      [type]="getSpecialInputType(column.key)"
-                      [ngModel]="draft[column.key] ?? ''"
-                      (ngModelChange)="updateSpecialAddField(column.key, $event)"
-                      [attr.aria-label]="column.label"
-                    />
-
-                  </div>
-
-                }
-
-              </div>
-
-              <div class="special-form-actions">
-
-                <button
-                  type="button"
-                  class="save-button"
-                  (click)="saveSpecialAdd()"
-                  [disabled]="isSavingMasterData">
-                  {{
-                    isSavingMasterData ? 'Saving...' : 'Save Record'
-                  }}
-                </button>
-
-                <button
-                  type="button"
-                  class="cancel-button"
-                  (click)="cancelSpecialAdd()"
-                  [disabled]="isSavingMasterData">
-                  Cancel
-                </button>
-
-              </div>
-
-            </div>
-
-          }
-
-          <!-- LOADING AND DATA -->
 
           @if (isLoadingMasterData) {
-
-            <p class="loading-message">
-              Loading master data...
-            </p>
-
+            <p class="loading-message">Loading master data...</p>
           } @else if (masterDataError) {
-
             <div class="error-message">
               {{ masterDataError }}
-
-              <button type="button" (click)="loadMasterData()">
-                Retry
-              </button>
+              <button type="button" (click)="loadMasterData()">Retry</button>
             </div>
-
           } @else {
 
-            <div class="table-scroll">
-
+            <div class="table-scroll master-list-scroll">
               <table class="master-table">
-
                 <thead>
                   <tr>
-
                     <th class="serial-column">Sl. No.</th>
 
-                    @for (
-                      column of specialType.columns;
-                      track column.key
-                    ) {
+                    @for (column of specialType.columns; track column.key) {
                       <th>{{ column.label }}</th>
                     }
 
                     <th class="actions-column">Actions</th>
-
                   </tr>
                 </thead>
 
                 <tbody>
-
                   @if (masterDataRows.length > 0) {
+                    @for (row of masterDataRows; track row.id; let i = $index) {
 
-                    @for (
-                      row of masterDataRows;
-                      track row.id;
-                      let i = $index
-                    ) {
-
-                      @if (
-                        editingMasterDataId === row.id && specialEditDraft;
-                        as draft
-                      ) {
-
+                      @if (editingMasterDataId === row.id && specialEditDraft; as draft) {
                         <tr class="editing-row">
+                          <td class="serial-cell">{{ i + 1 }}</td>
 
-                          <td class="serial-cell">
-                            {{ i + 1 }}
-                          </td>
-
-                          @for (
-                            column of specialType.columns;
-                            track column.key
-                          ) {
-
+                          @for (column of specialType.columns; track column.key) {
                             <td>
                               <input
                                 class="edit-input"
                                 [type]="getSpecialInputType(column.key)"
                                 [ngModel]="draft[column.key] ?? ''"
                                 (ngModelChange)="updateSpecialDraftField(column.key, $event)"
-                                [attr.aria-label]="column.label"
-                              />
+                                [attr.aria-label]="column.label" />
                             </td>
-
                           }
 
                           <td class="actions-cell">
-
                             <button
                               type="button"
-                              class="save-button"
+                              class="save-button icon-only-action"
                               (click)="saveSpecialEdit()"
-                              [disabled]="isSavingMasterData">
-                              {{
-                                isSavingMasterData ? 'Saving...' : 'Save'
-                              }}
+                              [disabled]="isSavingMasterData"
+                              title="Save"
+                              aria-label="Save">
+                              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                                <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                              </svg>
+                              <span class="visually-hidden">
+                                {{ isSavingMasterData ? 'Saving...' : 'Save' }}
+                              </span>
                             </button>
 
                             <button
@@ -514,423 +552,313 @@
                               [disabled]="isSavingMasterData">
                               Cancel
                             </button>
-
                           </td>
-
                         </tr>
-
                       } @else {
-
                         <tr>
+                          <td class="serial-cell">{{ i + 1 }}</td>
 
-                          <td class="serial-cell">
-                            {{ i + 1 }}
-                          </td>
-
-                          @for (
-                            column of specialType.columns;
-                            track column.key
-                          ) {
-
-                            <td>
-                              {{ row[column.key] ?? '—' }}
-                            </td>
-
+                          @for (column of specialType.columns; track column.key) {
+                            <td>{{ row[column.key] ?? '—' }}</td>
                           }
 
                           <td class="actions-cell">
-
                             @if (isQmsAdmin) {
-
                               <button
                                 type="button"
-                                class="edit-button"
+                                class="edit-button icon-only-action"
                                 (click)="startSpecialEdit(row)"
-                                [disabled]="
-                                  editingMasterDataId !== null ||
-                                  editingDocumentId !== null ||
-                                  isSavingDocument ||
-                                  isSavingMasterData ||
-                                  isDeletingMasterData ||
-                                  isAddingMasterData
-                                ">
-                                Edit
+                                [disabled]="editingMasterDataId !== null || editingDocumentId !== null || isSavingDocument || isSavingMasterData || isDeletingMasterData || isAddingMasterData"
+                                title="Edit record"
+                                aria-label="Edit record">
+                                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                  <path d="m16 4 4 4"></path>
+                                  <path d="M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20Z"></path>
+                                </svg>
+                                <span class="visually-hidden">Edit record</span>
                               </button>
 
                               <button
                                 type="button"
                                 class="delete-button"
                                 (click)="deleteSpecialRecord(row)"
-                                [disabled]="
-                                  isDeletingMasterData ||
-                                  isSavingMasterData ||
-                                  editingMasterDataId !== null ||
-                                  isAddingMasterData
-                                ">
-                                {{
-                                  deletingMasterDataId === row.id
-                                    ? 'Deleting...'
-                                    : 'Delete'
-                                }}
+                                [disabled]="isDeletingMasterData || isSavingMasterData || editingMasterDataId !== null || isAddingMasterData">
+                                {{ deletingMasterDataId === row.id ? 'Deleting...' : 'Delete' }}
                               </button>
-
                             }
-
                           </td>
-
                         </tr>
-
                       }
-
                     }
-
                   } @else {
-
                     <tr>
                       <td
                         class="table-message empty-state"
                         [attr.colspan]="specialType.columns.length + 2">
-
                         <strong>No records found</strong>
-
-                        <span>
-                          No records are available for this document type.
-                        </span>
-
+                        <span>No records are available for this document type.</span>
                       </td>
                     </tr>
-
                   }
-
                 </tbody>
-
               </table>
-
             </div>
-
           }
 
           @if (specialSaveMessage) {
-            <div class="success-message">
-              {{ specialSaveMessage }}
-            </div>
+            <div class="success-message">{{ specialSaveMessage }}</div>
           }
 
-          @if (specialSaveError) {
-            <div class="error-message">
-              {{ specialSaveError }}
-            </div>
+          @if (specialSaveError && !isAddingMasterData) {
+            <div class="error-message">{{ specialSaveError }}</div>
           }
-
-          <div class="table-footer">
-
-            <span>
-              Showing {{ masterDataRows.length }} record(s)
-            </span>
-
-            <span>
-              Database-connected master data
-            </span>
-
-          </div>
 
         </section>
 
+      @if (isAddingMasterData && specialAddDraft; as draft) {
+        <div class="modal-backdrop">
+          <div
+            class="modal-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="special-add-title"
+            tabindex="-1"
+            (keydown.escape)="cancelSpecialAdd()">
+
+            <div class="modal-header">
+              <div>
+                <h3 id="special-add-title">Add Record</h3>
+                <p>{{ specialType.title }}</p>
+              </div>
+
+              <button
+                type="button"
+                class="modal-close"
+                (click)="cancelSpecialAdd()"
+                [disabled]="isSavingMasterData"
+                aria-label="Close">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18 6 6 18"></path>
+                  <path d="m6 6 12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div class="modal-body">
+              @if (specialSaveError) {
+                <div class="error-message">{{ specialSaveError }}</div>
+              }
+
+              <div class="modal-form-grid">
+                @for (column of specialType.columns; track column.key; let isFirst = $first) {
+                  <div class="special-form-field">
+                    <label [for]="'add-' + column.key">
+                      {{ column.label }}
+                    </label>
+
+                    <input
+                      [id]="'add-' + column.key"
+                      [type]="getSpecialInputType(column.key)"
+                      [ngModel]="draft[column.key] ?? ''"
+                      (ngModelChange)="updateSpecialAddField(column.key, $event)"
+                      [autofocus]="isFirst"
+                      [attr.aria-label]="column.label" />
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="cancel-button"
+                (click)="cancelSpecialAdd()"
+                [disabled]="isSavingMasterData">
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                class="save-button icon-only-action"
+                (click)="saveSpecialAdd()"
+                [disabled]="isSavingMasterData"
+                title="Save record"
+                aria-label="Save record">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                  <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                </svg>
+                <span class="visually-hidden">{{ isSavingMasterData ? 'Saving...' : 'Save Record' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
       }
 
-      <!-- ======================================= -->
-      <!-- ML01 - MASTER LIST OF MASTER LISTS      -->
-      <!-- ======================================= -->
-
+      <!-- ML01 - MASTER LIST OF MASTER LISTS -->
       @if (isML01Selected) {
 
         <section class="table-card">
 
           <div class="table-toolbar">
-
             <div>
               <h2>Master List of Master Lists</h2>
               <p>Document register and revision history</p>
             </div>
 
             <div class="special-toolbar-actions">
+              <button
+                type="button"
+                class="export-button icon-only-action"
+                (click)="exportToExcel()"
+                [disabled]="isExporting || isLoadingFilters"
+                title="Download Excel"
+                aria-label="Download Excel">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <path d="m7 10 5 5 5-5"></path>
+                  <path d="M12 15V3"></path>
+                </svg>
+                <span class="visually-hidden">{{ isExporting ? 'Exporting…' : 'Export' }}</span>
+              </button>
 
-              <span class="record-count">
-                {{ ml01Entries.length }}
-                {{ ml01Entries.length === 1 ? 'record' : 'records' }}
-              </span>
+              <button
+                type="button"
+                class="refresh-button icon-only-action"
+                (click)="refreshCurrentTable()"
+                [disabled]="isLoadingDocuments || isLoadingMasterData || isLoadingML01"
+                title="Refresh"
+                aria-label="Refresh">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 7v5h-5"></path>
+                  <path d="M4 17v-5h5"></path>
+                  <path d="M5.6 9A7 7 0 0 1 18 6l2 6"></path>
+                  <path d="M18.4 15A7 7 0 0 1 6 18l-2-6"></path>
+                </svg>
+                <span class="visually-hidden">Refresh</span>
+              </button>
 
               @if (isQmsAdmin) {
                 <button
                   type="button"
-                  class="add-button"
+                  class="add-button icon-only-action"
                   (click)="startML01Add()"
-                  [disabled]="
-                    isSavingML01 ||
-                    editingML01Id !== null ||
-                    isAddingML01
-                  ">
-                  + Add Record
+                  [disabled]="isSavingML01 || editingML01Id !== null || isAddingML01"
+                  title="Add record"
+                  aria-label="Add record">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 5v14"></path>
+                    <path d="M5 12h14"></path>
+                  </svg>
+                  <span class="visually-hidden">Add Record</span>
                 </button>
               }
-
             </div>
-
           </div>
 
           @if (ml01SaveMessage) {
-            <div class="success-message">
-              {{ ml01SaveMessage }}
-            </div>
+            <div class="success-message">{{ ml01SaveMessage }}</div>
           }
 
-          @if (ml01SaveError) {
-            <div class="error-message">
-              {{ ml01SaveError }}
-            </div>
+          @if (ml01SaveError && !isAddingML01) {
+            <div class="error-message">{{ ml01SaveError }}</div>
           }
 
-          <!-- ADD ML01 RECORD -->
-
-          @if (isAddingML01 && ml01AddDraft; as draft) {
-
-            <div class="special-form-panel">
-
-              <h3>Add ML01 Record</h3>
-
-              <div class="special-form-grid">
-
-                <div class="special-form-field">
-                  <label>Description</label>
-                  <input
-                    type="text"
-                    [(ngModel)]="draft.description"
-                    placeholder="Enter description"
-                  />
-                </div>
-
-                <div class="special-form-field">
-                  <label>Document No.</label>
-                  <input
-                    type="text"
-                    [(ngModel)]="draft.documentNo"
-                    placeholder="Enter document number"
-                  />
-                </div>
-
-              </div>
-
-              <h3>Revision Details</h3>
-
-              @for (revision of draft.revisions; track $index) {
-
-                <div class="special-form-grid">
-
-                  <div class="special-form-field">
-                    <label>
-                      Revision {{ revision.revisionNo }} Pages
-                    </label>
-
-                    <input
-                      type="number"
-                      min="1"
-                      [(ngModel)]="revision.pageCount"
-                    />
-                  </div>
-
-                  <div class="special-form-field">
-                    <label>
-                      Revision {{ revision.revisionNo }} Date
-                    </label>
-
-                    <input
-                      type="date"
-                      [(ngModel)]="revision.revisionDate"
-                    />
-                  </div>
-
-                </div>
-
-              }
-
-              <div class="special-form-actions">
-
-                <button
-                  type="button"
-                  class="save-button"
-                  (click)="saveML01Add()"
-                  [disabled]="isSavingML01">
-                  {{ isSavingML01 ? 'Saving...' : 'Save Record' }}
-                </button>
-
-                <button
-                  type="button"
-                  class="cancel-button"
-                  (click)="cancelML01Add()"
-                  [disabled]="isSavingML01">
-                  Cancel
-                </button>
-
-              </div>
-
-            </div>
-
-          }
-
-          <!-- ML01 LOADING AND TABLE -->
 
           @if (isLoadingML01) {
-
-            <p class="loading-message">
-              Loading ML01 records...
-            </p>
-
+            <p class="loading-message">Loading ML01 records...</p>
           } @else if (ml01Error) {
-
             <div class="error-message">
               {{ ml01Error }}
-
-              <button type="button" (click)="loadDocuments()">
-                Retry
-              </button>
+              <button type="button" (click)="loadDocuments()">Retry</button>
             </div>
-
           } @else {
 
-            <div class="table-scroll">
-
+            <div class="table-scroll master-list-scroll">
               <table class="master-table">
-
                 <thead>
-
                   <tr>
-
-                    <th rowspan="2" class="serial-column">
-                      Sl. No.
-                    </th>
-
-                    <th rowspan="2">
-                      Description
-                    </th>
-
-                    <th rowspan="2">
-                      Document No.
-                    </th>
-
+                    <th rowspan="2" class="serial-column">Sl. No.</th>
+                    <th rowspan="2" class="title-column">Description</th>
+                    <th rowspan="2">Document No.</th>
                     <th
                       [attr.colspan]="ml01RevisionColumns.length * 2"
                       class="revision-column">
                       Revision Status
                     </th>
-
-                    <th rowspan="2" class="actions-column">
-                      Actions
-                    </th>
-
+                    <th rowspan="2" class="actions-column">Actions</th>
                   </tr>
 
                   <tr>
-
-                    @for (
-                      revisionNo of ml01RevisionColumns;
-                      track revisionNo
-                    ) {
-
+                    @for (revisionNo of ml01RevisionColumns; track revisionNo) {
                       <th class="revision-subcolumn">
                         Pages {{ revisionNo.toString().padStart(2, '0') }}
                       </th>
-
                       <th class="revision-subcolumn">
                         Date {{ revisionNo.toString().padStart(2, '0') }}
                       </th>
-
                     }
-
                   </tr>
-
                 </thead>
 
                 <tbody>
+                  @for (entry of ml01Entries; track entry.id; let i = $index) {
 
-                  @for (
-                    entry of ml01Entries;
-                    track entry.id;
-                    let i = $index
-                  ) {
-
-                    <!-- EDITING ROW -->
-
-                    @if (
-                      editingML01Id === entry.id && ml01EditDraft;
-                      as draft
-                    ) {
-
+                    @if (editingML01Id === entry.id && ml01EditDraft; as draft) {
                       <tr class="editing-row">
+                        <td class="serial-cell">{{ i + 1 }}</td>
 
-                        <td class="serial-cell">
-                          {{ i + 1 }}
+                        <td class="title-cell">
+                          <input
+                            class="edit-input"
+                            type="text"
+                            [(ngModel)]="draft.description" />
                         </td>
 
                         <td>
                           <input
                             class="edit-input"
                             type="text"
-                            [(ngModel)]="draft.description"
-                          />
+                            [(ngModel)]="draft.documentNo" />
                         </td>
 
-                        <td>
-                          <input
-                            class="edit-input"
-                            type="text"
-                            [(ngModel)]="draft.documentNo"
-                          />
-                        </td>
-
-                        @for (
-                          revisionNo of ml01RevisionColumns;
-                          track revisionNo
-                        ) {
-
-                          @if (
-                            getML01Revision(draft, revisionNo);
-                            as revision
-                          ) {
-
+                        @for (revisionNo of ml01RevisionColumns; track revisionNo) {
+                          @if (getML01Revision(draft, revisionNo); as revision) {
                             <td>
                               <input
                                 class="revision-input"
                                 type="number"
                                 min="1"
-                                [(ngModel)]="revision.pageCount"
-                              />
+                                [(ngModel)]="revision.pageCount" />
                             </td>
-
                             <td>
                               <input
                                 class="revision-input"
                                 type="date"
-                                [(ngModel)]="revision.revisionDate"
-                              />
+                                [(ngModel)]="revision.revisionDate" />
                             </td>
-
                           } @else {
-
                             <td class="empty-revision">—</td>
                             <td class="empty-revision">—</td>
-
                           }
-
                         }
 
                         <td class="actions-cell">
-
                           <button
                             type="button"
-                            class="save-button"
+                            class="save-button icon-only-action"
                             (click)="saveML01Edit()"
-                            [disabled]="isSavingML01">
-                            {{ isSavingML01 ? 'Saving...' : 'Save' }}
+                            [disabled]="isSavingML01"
+                            title="Save"
+                            aria-label="Save">
+                            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                              <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                            </svg>
+                            <span class="visually-hidden">
+                              {{ isSavingML01 ? 'Saving...' : 'Save' }}
+                            </span>
                           </button>
 
                           <button
@@ -943,222 +871,268 @@
 
                           <button
                             type="button"
-                            class="add-button"
+                            class="add-button icon-only-action"
                             (click)="addML01Revision()"
-                            [disabled]="isSavingML01">
-                            + Revision
+                            [disabled]="isSavingML01"
+                            title="Add revision"
+                            aria-label="Add revision">
+                            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M12 5v14"></path>
+                              <path d="M5 12h14"></path>
+                            </svg>
+                            <span class="visually-hidden">Revision</span>
                           </button>
-
                         </td>
-
                       </tr>
-
                     } @else {
-
-                      <!-- NORMAL ROW -->
-
                       <tr>
+                        <td class="serial-cell">{{ i + 1 }}</td>
+                        <td class="title-cell"><span class="document-title" [attr.title]="entry.description">{{ entry.description }}</span></td>
+                        <td class="document-number-cell">{{ entry.documentNo }}</td>
 
-                        <td class="serial-cell">
-                          {{ i + 1 }}
-                        </td>
-
-                        <td>
-                          {{ entry.description }}
-                        </td>
-
-                        <td>
-                          {{ entry.documentNo }}
-                        </td>
-
-                        @for (
-                          revisionNo of ml01RevisionColumns;
-                          track revisionNo
-                        ) {
-
-                          @if (
-                            getML01Revision(entry, revisionNo);
-                            as revision
-                          ) {
-
+                        @for (revisionNo of ml01RevisionColumns; track revisionNo) {
+                          @if (getML01Revision(entry, revisionNo); as revision) {
                             <td class="revision-cell page-count">
                               {{ revision.pageCount }}
                             </td>
-
                             <td class="revision-cell revision-date">
                               {{ formatDate(revision.revisionDate) }}
                             </td>
-
                           } @else {
-
                             <td class="revision-cell empty-revision">—</td>
                             <td class="revision-cell empty-revision">—</td>
-
                           }
-
                         }
 
                         <td class="actions-cell">
-
                           @if (isQmsAdmin) {
-
                             <button
                               type="button"
-                              class="edit-button"
+                              class="edit-button icon-only-action"
                               (click)="startML01Edit(entry)"
-                              [disabled]="
-                                editingML01Id !== null ||
-                                isAddingML01 ||
-                                isSavingML01
-                              ">
-                              Edit
+                              [disabled]="editingML01Id !== null || isAddingML01 || isSavingML01"
+                              title="Edit document"
+                              aria-label="Edit document">
+                              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="m16 4 4 4"></path>
+                                <path d="M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20Z"></path>
+                              </svg>
+                              <span class="visually-hidden">Edit document</span>
                             </button>
-
                           }
-
                         </td>
-
                       </tr>
-
                     }
-
                   } @empty {
-
                     <tr>
                       <td
                         class="table-message empty-state"
                         [attr.colspan]="4 + ml01RevisionColumns.length * 2">
-
                         <strong>No ML01 records found</strong>
-
-                        <span>
-                          No records are available for this document type.
-                        </span>
-
+                        <span>No records are available for this document type.</span>
                       </td>
                     </tr>
-
                   }
-
                 </tbody>
-
               </table>
-
             </div>
-
           }
 
           <div class="table-footer">
-
-            <span>
-              Showing {{ ml01Entries.length }} record(s)
-            </span>
-
-            <span>
-              ML01 revision history
-            </span>
-
+            <span>Showing {{ ml01Entries.length }} record(s)</span>
+            <span>ML01 revision history</span>
           </div>
 
         </section>
 
+      @if (isAddingML01 && ml01AddDraft; as draft) {
+        <div class="modal-backdrop">
+          <div
+            class="modal-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ml01-add-title"
+            tabindex="-1"
+            (keydown.escape)="cancelML01Add()">
+
+            <div class="modal-header">
+              <div>
+                <h3 id="ml01-add-title">Add Record</h3>
+                <p>Master List of Master Lists</p>
+              </div>
+
+              <button
+                type="button"
+                class="modal-close"
+                (click)="cancelML01Add()"
+                [disabled]="isSavingML01"
+                aria-label="Close">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18 6 6 18"></path>
+                  <path d="m6 6 12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div class="modal-body">
+              @if (ml01SaveError) {
+                <div class="error-message">{{ ml01SaveError }}</div>
+              }
+
+              <div class="modal-form-grid">
+                <div class="special-form-field">
+                  <label for="ml01-add-description">Description</label>
+                  <input
+                    id="ml01-add-description"
+                    type="text"
+                    autofocus
+                    [(ngModel)]="draft.description"
+                    placeholder="Enter description" />
+                </div>
+
+                <div class="special-form-field">
+                  <label for="ml01-add-documentNo">Document No.</label>
+                  <input
+                    id="ml01-add-documentNo"
+                    type="text"
+                    [(ngModel)]="draft.documentNo"
+                    placeholder="Enter document number" />
+                </div>
+              </div>
+
+              <p class="modal-section-title">Revision Details</p>
+
+              @for (revision of draft.revisions; track $index) {
+                <div class="modal-revision-row">
+                  <div class="special-form-field">
+                    <label>Revision {{ revision.revisionNo }} Pages</label>
+                    <input
+                      type="number"
+                      min="1"
+                      [(ngModel)]="revision.pageCount" />
+                  </div>
+
+                  <div class="special-form-field">
+                    <label>Revision {{ revision.revisionNo }} Date</label>
+                    <input
+                      type="date"
+                      [(ngModel)]="revision.revisionDate" />
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="cancel-button"
+                (click)="cancelML01Add()"
+                [disabled]="isSavingML01">
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                class="save-button icon-only-action"
+                (click)="saveML01Add()"
+                [disabled]="isSavingML01"
+                title="Save record"
+                aria-label="Save record">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                  <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                </svg>
+                <span class="visually-hidden">{{ isSavingML01 ? 'Saving...' : 'Save Record' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
       }
 
-      <!-- ======================================= -->
-      <!-- ML02–ML06 CONTROLLED DOCUMENTS TABLE    -->
-      <!-- ======================================= -->
-
+      <!-- ML02–ML06 CONTROLLED DOCUMENTS TABLE -->
       @if (!selectedSpecialType && !isML01Selected) {
 
         <section class="table-card">
 
+          <!-- CONTROLLED DOCUMENTS HEADING + ACTIONS -->
           <div class="table-toolbar">
 
             <div>
-              <h2>Controlled Documents</h2>
+              <h2>Document Control</h2>
               <p>Document details and revision records</p>
             </div>
 
-            <span class="record-count">
-              {{ documents.length }}
-              {{ documents.length === 1 ? 'document' : 'documents' }}
-            </span>
+            <div class="master-list-heading-actions">
 
+              <button
+                type="button"
+                class="export-button icon-only-action"
+                (click)="exportToExcel()"
+                [disabled]="isExporting || isLoadingFilters"
+                title="Download Excel"
+                aria-label="Download Excel">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <path d="m7 10 5 5 5-5"></path>
+                  <path d="M12 15V3"></path>
+                </svg>
+                <span class="visually-hidden">{{ isExporting ? 'Exporting…' : 'Export' }}</span>
+              </button>
+
+              <button
+                type="button"
+                class="refresh-button icon-only-action"
+                (click)="refreshCurrentTable()"
+                [disabled]="isLoadingDocuments || isLoadingMasterData || isLoadingML01"
+                title="Refresh"
+                aria-label="Refresh">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 7v5h-5"></path>
+                  <path d="M4 17v-5h5"></path>
+                  <path d="M5.6 9A7 7 0 0 1 18 6l2 6"></path>
+                  <path d="M18.4 15A7 7 0 0 1 6 18l-2-6"></path>
+                </svg>
+                <span class="visually-hidden">Refresh</span>
+              </button>
+
+            </div>
           </div>
 
-          <div class="table-scroll">
-
+          <div class="table-scroll master-list-scroll">
             <table class="master-table">
 
               <thead>
-
                 <tr>
+                  <th rowspan="2" class="serial-column">Sl. No.</th>
+                  <th rowspan="2" class="title-column">Title / Description</th>
+                  <th rowspan="2" class="document-number-column">Document No.</th>
+                  <th rowspan="2" class="document-type-column">Document Type</th>
+                  <th rowspan="2" class="department-column">Department Name</th>
+                  <th rowspan="2" class="retention-column">Retention Period</th>
+                  <th rowspan="2" class="status-column">Status</th>
+                  <th rowspan="2" class="obsolete-date-column">Obsolete Date</th>
 
-                  <th rowspan="2" class="serial-column">
-                    Sl. No.
-                  </th>
-
-                  <th rowspan="2" class="title-column">
-                    Title / Description
-                  </th>
-
-                  <th rowspan="2" class="document-number-column">
-                    Document No.
-                  </th>
-
-                  <th rowspan="2" class="document-type-column">
-                    Document Type
-                  </th>
-
-                  <th rowspan="2" class="department-column">
-                    Department Name
-                  </th>
-
-                  <th rowspan="2" class="retention-column">
-                    Retention Period
-                  </th>
-
-                  <th rowspan="2" class="status-column">
-                    Status
-                  </th>
-
-                  <th rowspan="2" class="obsolete-date-column">
-                    Obsolete Date
-                  </th>
-
-                  @for (
-                    revisionNumber of revisionColumns;
-                    track revisionNumber
-                  ) {
+                  @for (revisionNumber of revisionColumns; track revisionNumber) {
                     <th colspan="2" class="revision-column">
                       {{ formatRevision(revisionNumber) }}
                     </th>
                   }
 
-                  <th rowspan="2" class="actions-column">
-                    Actions
-                  </th>
-
+                  <th rowspan="2" class="actions-column">Actions</th>
                 </tr>
 
                 <tr>
-
-                  @for (
-                    revisionNumber of revisionColumns;
-                    track revisionNumber
-                  ) {
+                  @for (revisionNumber of revisionColumns; track revisionNumber) {
                     <th class="revision-subcolumn">Pages</th>
                     <th class="revision-subcolumn">Date</th>
                   }
-
                 </tr>
-
               </thead>
 
               <tbody>
 
                 @if (isLoadingDocuments) {
-
                   <tr>
                     <td
                       class="table-message"
@@ -1166,33 +1140,21 @@
                       Loading documents...
                     </td>
                   </tr>
+                } @else if (filteredDocuments.length > 0) {
 
-                } @else if (documents.length > 0) {
+                  @for (document of filteredDocuments; track document.documentId; let i = $index) {
 
-                  @for (
-                    document of documents;
-                    track document.documentId;
-                    let i = $index
-                  ) {
-
-                    @if (
-                      editingDocumentId === document.documentId && editDraft;
-                      as draft
-                    ) {
+                    @if (editingDocumentId === document.documentId && editDraft; as draft) {
 
                       <tr class="editing-row">
+                        <td class="serial-cell">{{ i + 1 }}</td>
 
-                        <td class="serial-cell">
-                          {{ i + 1 }}
-                        </td>
-
-                        <td>
+                        <td class="title-cell">
                           <input
                             class="edit-input"
                             type="text"
                             [(ngModel)]="draft.title"
-                            aria-label="Document title"
-                          />
+                            aria-label="Document title" />
                         </td>
 
                         <td>
@@ -1200,8 +1162,7 @@
                             class="edit-input"
                             type="text"
                             [(ngModel)]="draft.documentNo"
-                            aria-label="Document number"
-                          />
+                            aria-label="Document number" />
                         </td>
 
                         <td>
@@ -1209,16 +1170,11 @@
                             class="edit-input"
                             [(ngModel)]="draft.documentTypeId"
                             aria-label="Document type">
-
-                            @for (
-                              type of documentTypes;
-                              track type.documentTypeId
-                            ) {
+                            @for (type of documentTypes; track type.documentTypeId) {
                               <option [ngValue]="type.documentTypeId">
                                 {{ type.typeCode }} - {{ type.typeName }}
                               </option>
                             }
-
                           </select>
                         </td>
 
@@ -1227,16 +1183,11 @@
                             class="edit-input"
                             [(ngModel)]="draft.departmentId"
                             aria-label="Department">
-
-                            @for (
-                              department of departments;
-                              track department.departmentId
-                            ) {
+                            @for (department of departments; track department.departmentId) {
                               <option [ngValue]="department.departmentId">
                                 {{ department.departmentCode }} - {{ department.departmentName }}
                               </option>
                             }
-
                           </select>
                         </td>
 
@@ -1245,8 +1196,7 @@
                             class="edit-input"
                             type="text"
                             [(ngModel)]="draft.retentionPeriod"
-                            aria-label="Retention period"
-                          />
+                            aria-label="Retention period" />
                         </td>
 
                         <td>
@@ -1255,42 +1205,25 @@
                             [ngModel]="draft.status"
                             (ngModelChange)="onEditStatusChange($event)"
                             aria-label="Document status">
-
                             <option value="Active">Active</option>
                             <option value="Obsolete">Obsolete</option>
-
                           </select>
                         </td>
 
                         <td>
-
                           @if (draft.status === 'Obsolete') {
-
                             <input
                               class="edit-input"
                               type="date"
                               [(ngModel)]="draft.obseleteDate"
-                              aria-label="Obsolete date"
-                            />
-
+                              aria-label="Obsolete date" />
                           } @else {
-
                             <span>—</span>
-
                           }
-
                         </td>
 
-                        @for (
-                          revisionNumber of revisionColumns;
-                          track revisionNumber
-                        ) {
-
-                          @if (
-                            getRevision(draft, revisionNumber);
-                            as revision
-                          ) {
-
+                        @for (revisionNumber of revisionColumns; track revisionNumber) {
+                          @if (getRevision(draft, revisionNumber); as revision) {
                             <td>
                               <input
                                 class="revision-input"
@@ -1298,8 +1231,7 @@
                                 min="1"
                                 step="1"
                                 [(ngModel)]="revision.pageCount"
-                                [attr.aria-label]="formatRevision(revisionNumber) + ' pages'"
-                              />
+                                [attr.aria-label]="formatRevision(revisionNumber) + ' pages'" />
                             </td>
 
                             <td>
@@ -1307,29 +1239,29 @@
                                 class="revision-input"
                                 type="date"
                                 [(ngModel)]="revision.revisionDate"
-                                [attr.aria-label]="formatRevision(revisionNumber) + ' date'"
-                              />
+                                [attr.aria-label]="formatRevision(revisionNumber) + ' date'" />
                             </td>
-
                           } @else {
-
                             <td class="empty-revision">—</td>
                             <td class="empty-revision">—</td>
-
                           }
-
                         }
 
                         <td class="actions-cell">
-
                           <button
                             type="button"
-                            class="save-button"
+                            class="save-button icon-only-action"
                             (click)="saveEdit()"
-                            [disabled]="isSavingDocument">
-                            {{
-                              isSavingDocument ? 'Saving...' : 'Save'
-                            }}
+                            [disabled]="isSavingDocument"
+                            title="Save"
+                            aria-label="Save">
+                            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                              <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                            </svg>
+                            <span class="visually-hidden">
+                              {{ isSavingDocument ? 'Saving...' : 'Save' }}
+                            </span>
                           </button>
 
                           <button
@@ -1339,23 +1271,16 @@
                             [disabled]="isSavingDocument">
                             Cancel
                           </button>
-
                         </td>
-
                       </tr>
 
                     } @else {
 
                       <tr>
-
-                        <td class="serial-cell">
-                          {{ i + 1 }}
-                        </td>
+                        <td class="serial-cell">{{ i + 1 }}</td>
 
                         <td class="title-cell">
-                          <span class="document-title">
-                            {{ document.title }}
-                          </span>
+                          <span class="document-title" [attr.title]="document.title">{{ document.title }}</span>
                         </td>
 
                         <td class="document-number-cell">
@@ -1363,7 +1288,9 @@
                         </td>
 
                         <td>
-                          {{ document.typeCode ? (document.typeCode + ' - ') : '' }}{{ document.typeName || '—' }}
+                          <span class="type-tag">
+                            {{ document.typeCode ? (document.typeCode + ' - ') : '' }}{{ document.typeName || '—' }}
+                          </span>
                         </td>
 
                         <td class="department-cell">
@@ -1375,7 +1302,6 @@
                         </td>
 
                         <td class="status-cell">
-
                           <span
                             class="status-badge"
                             [ngClass]="{
@@ -1384,89 +1310,63 @@
                             }">
                             {{ document.status ?? '—' }}
                           </span>
-
                         </td>
 
                         <td class="obsolete-date-cell">
                           {{ formatDate(document.obseleteDate) }}
                         </td>
 
-                        @for (
-                          revisionNumber of revisionColumns;
-                          track revisionNumber
-                        ) {
-
-                          @if (
-                            getRevision(document, revisionNumber);
-                            as revision
-                          ) {
-
+                        @for (revisionNumber of revisionColumns; track revisionNumber) {
+                          @if (getRevision(document, revisionNumber); as revision) {
                             <td class="revision-cell page-count">
                               {{ revision.pageCount }}
                             </td>
-
                             <td class="revision-cell revision-date">
                               {{ formatDate(revision.revisionDate) }}
                             </td>
-
                           } @else {
-
                             <td class="revision-cell empty-revision">—</td>
                             <td class="revision-cell empty-revision">—</td>
-
                           }
-
                         }
 
                         <td class="actions-cell">
-
                           @if (isQmsAdmin) {
                             <button
                               type="button"
-                              class="edit-button"
+                              class="edit-button icon-only-action"
                               (click)="startEdit(document)"
-                              [disabled]="
-                                editingDocumentId !== null ||
-                                editingMasterDataId !== null ||
-                                isSavingDocument ||
-                                isSavingMasterData ||
-                                isAddingMasterData
-                              ">
-                              Edit
+                              [disabled]="editingDocumentId !== null || editingMasterDataId !== null || isSavingDocument || isSavingMasterData || isAddingMasterData"
+                              title="Edit document"
+                              aria-label="Edit document">
+                              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="m16 4 4 4"></path>
+                                <path d="M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20Z"></path>
+                              </svg>
+                              <span class="visually-hidden">Edit document</span>
                             </button>
                           }
-
                         </td>
-
                       </tr>
-
                     }
-
                   }
 
                 } @else if (!documentError) {
-
                   <tr>
                     <td
                       class="table-message empty-state"
                       [attr.colspan]="9 + revisionColumns.length * 2">
-
-                      <strong>No documents found</strong>
-
+                      <strong>No documents match your filters</strong>
                       <span>
-                        Matching documents will appear here when records
-                        are available in the database.
+                        Try changing the document type, department or search
+                        text, or reset the filters.
                       </span>
-
                     </td>
                   </tr>
-
                 }
 
               </tbody>
-
             </table>
-
           </div>
 
           @if (saveMessage) {
@@ -1481,20 +1381,7 @@
             </div>
           }
 
-          <div class="table-footer">
-
-            <span>
-              Showing {{ documents.length }} document(s)
-            </span>
-
-            <span>
-              Revision data retrieved from the database
-            </span>
-
-          </div>
-
         </section>
-
       }
 
     </section>
@@ -1502,30 +1389,22 @@
   } @else {
 
     <!-- COMING SOON -->
-
     <section class="coming-soon" aria-live="polite">
 
       <div class="icon-wrapper">
-
         <svg
           class="document-icon"
           viewBox="0 0 88 88"
           fill="none"
           aria-hidden="true">
-
           <rect x="19" y="11" width="44" height="58" rx="5" />
-
           <path d="M29 26h24M29 37h24M29 48h16" />
-
           <circle cx="61" cy="61" r="15" fill="#fffafa" />
-
           <path d="M61 52v10l7 4" />
-
         </svg>
 
         <span class="decoration-dot dot-one"></span>
         <span class="decoration-dot dot-two"></span>
-
       </div>
 
       <div class="accent-line"></div>
@@ -1545,7 +1424,6 @@
       </p>
 
     </section>
-
   }
 
 </main>

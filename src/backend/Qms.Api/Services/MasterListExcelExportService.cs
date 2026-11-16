@@ -70,7 +70,7 @@ public class MasterListExcelExportService
     break;
 
                 default:
-                    await ExportControlledDocumentsAsync(worksheet, type.DocumentTypeId, type.TypeCode, departmentId, cancellationToken);
+                    await ExportControlledDocumentsAsync(worksheet, type.DocumentTypeId, type.TypeName, departmentId, cancellationToken);
                     break;
             }
         }
