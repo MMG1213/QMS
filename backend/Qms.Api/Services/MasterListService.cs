@@ -19,7 +19,7 @@ public class MasterListService
         _context = context;
     }
 
-    
+
     public async Task<List<DocumentTypeDto>> GetDocumentTypesAsync()
     {
         return await _context.DocumentTypes
@@ -76,7 +76,7 @@ public class MasterListService
                     department.DepartmentId == document.DepartmentId)
                 .Select(department => department.DepartmentName)
                 .FirstOrDefault(),
-            TypeName=_context.DocumentTypes.Where(documenttype=>documenttype.DocumentTypeId==document.DocumentTypeId)
+            TypeName = _context.DocumentTypes.Where(documenttype => documenttype.DocumentTypeId == document.DocumentTypeId)
             .Select(documenttype => documenttype.TypeName).FirstOrDefault() ?? string.Empty,
             RetentionPeriod = document.RetentionPeriod,
             Status = document.Status,
@@ -96,7 +96,7 @@ public class MasterListService
 
     public async Task<bool> UpdateDocumentAsync(int documentid, UpdateMasterListDto request)
     {
-        var document = await _context.Documents.Include(d => d.Revisions).FirstOrDefaultAsync(d => d.DocumentId==documentid);
+        var document = await _context.Documents.Include(d => d.Revisions).FirstOrDefaultAsync(d => d.DocumentId == documentid);
 
         if (document == null) return false;
 
@@ -130,7 +130,7 @@ public class MasterListService
         var existingNumbers = document.Revisions.Select(r => r.RevisionNumber).OrderBy(n => n).ToList();
 
         var submittedNumber = request.Revisions.Select(r => r.RevisionNumber).OrderBy(n => n).ToList();
-        
+
         if (submittedNumber.Count != submittedNumber
         .Distinct().Count() || !existingNumbers.SequenceEqual(submittedNumber))
             throw new ArgumentException("Revision numbers cannot be added, deleted, or changed here.");
@@ -164,4 +164,41 @@ public class MasterListService
         await _context.SaveChangesAsync();
         return true;
     }
+    public async Task<int> BulkobsoleteDocumentAsync(BulkObsoleteDocuments request)
+    {
+        if (request.DocumentIds == null || request.DocumentIds.Count == 0)
+        {
+            throw new ArgumentException("Please select Atleast one Document.");
+        }
+        //remove duplicate ids
+        var selectdocuments = request.DocumentIds.Distinct().ToList();
+
+        //validate ids
+        if (selectdocuments.Any(id => id <= 0))
+        {
+            throw new ArgumentException("Invalid document Ids");
+        }
+
+        var documents = await _context.Documents.Where(d => selectdocuments.Contains(d.DocumentId) && d.Status == "Active").ToListAsync();
+
+        if (documents.Count() != selectdocuments.Count())
+        {
+            throw new ArgumentException("Some selected documents does not exist or are already obsolete.");
+        }
+
+        var obsoleteDate = DateOnly.FromDateTime(DateTime.Today);
+
+        foreach (var document in documents)
+        {
+            document.Status = "Osolete";
+            document.ObseleteDate = obsoleteDate;
+        }
+
+        await _context.SaveChangesAsync();
+
+        return documents.Count;
+
+    
+}
+
 }

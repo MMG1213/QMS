@@ -108,4 +108,27 @@ public class MasterListController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    [HttpPut("obsolete")]
+    public async Task<IActionResult> BulkobsoleteDocumets([FromBody] BulkObsoleteDocuments request)
+    {
+        try
+        {
+            var count = await _service.BulkobsoleteDocumentAsync(request);
+
+            return Ok(new
+            {
+                message = $"{count} documets marked as obsolte Sucessfully.",
+                updatedCount = count
+            });
+
+
+        }
+        catch (ArgumentException ex) {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+    }
 }
