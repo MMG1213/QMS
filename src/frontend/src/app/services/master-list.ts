@@ -76,6 +76,9 @@ export interface ML01EntryRequest {
   documentNo: string;
   revisions: ML01RevisionRequest[];
 }
+export interface BulkObsoleteDocumentsRequest {
+  documentIds: number[];
+}
 
 @Injectable({
   providedIn: 'root'
@@ -128,6 +131,14 @@ export class MasterListService {
   ): Observable<{ message: string }> {
     return this.http.put<{ message: string }>(
       `${this.apiUrl}/documents/${documentId}`,
+      request
+    );
+  }
+  obsoleteDocuments(
+    request: BulkObsoleteDocumentsRequest
+  ): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(
+      `${this.apiUrl}/obsolete`,
       request
     );
   }

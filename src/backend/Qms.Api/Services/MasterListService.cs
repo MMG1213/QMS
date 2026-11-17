@@ -190,7 +190,7 @@ public class MasterListService
 
         foreach (var document in documents)
         {
-            document.Status = "Osolete";
+            document.Status = "Obsolete";
             document.ObseleteDate = obsoleteDate;
         }
 
