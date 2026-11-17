@@ -1,0 +1,191 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:host {
+  display: block;
+  min-height: 100vh;
+  color: #252832;
+  background: #f5f6f8;
+  font-family: "Inter", "Segoe UI", Roboto,Arial, sans-serif;
+  font-size: 14px;
+}
+
+:host * { box-sizing: border-box; }
+
+.signup-page {
+  width: 100%;
+  max-width: 1600px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 32px clamp(16px, 3vw, 44px);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 25px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #c8102e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.page-header h1 {
+  margin: 0;
+  color: #242833;
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 750;
+  letter-spacing: -.7px;
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  color: #737887;
+  line-height: 1.6;
+}
+
+.management-panel {
+  padding: clamp(18px, 2.5vw, 30px);
+  margin-bottom: 22px;
+  border: 1px solid #e7e9ee;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgb(28 35 50 / 4%);
+}
+
+.panel-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 22px;
+}
+
+.panel-heading h2 {
+  margin: 0;
+  color: #262a35;
+  font-size: 20px;
+  font-weight: 750;
+}
+
+.panel-heading p {
+  margin: 7px 0 0;
+  color: #777c89;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+button, select, input { font: inherit; }
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 15px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+button:disabled { cursor: not-allowed; opacity: .55; }
+
+button:focus-visible, select:focus-visible, input:focus-visible {
+  outline: 2px solid #c8102e;
+  outline-offset: 3px;
+}
+
+.primary-button { border-color: #c8102e; background: #c8102e; color: #fff; }
+.primary-button:hover:not(:disabled) { border-color: #a90d26; background: #a90d26; }
+
+.secondary-button { border-color: #dfe2e8; background: #fff; color: #454a57; }
+.secondary-button:hover:not(:disabled) { border-color: #c8102e; background: #fff6f6; color: #c8102e; }
+
+.success-button { border-color: #197a49; background: #197a49; color: #fff; }
+.success-button:hover:not(:disabled) { background: #12663b; }
+
+.danger-button { border-color: #e5c4c7; background: #fff; color: #bd2631; }
+.danger-button:hover:not(:disabled) { border-color: #bd2631; background: #fff1f2; }
+
+.filters { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.filters label, .form-field label { color: #555a67; font-size: 12px; font-weight: 700; }
+
+.filters select, .form-field input, .form-field select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #dfe2e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #303440;
+}
+
+.filters select { width: auto; min-width: 145px; }
+
+.table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #eaecf0; border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+thead { background: #f7f8fa; }
+th { padding: 14px 15px; border-bottom: 1px solid #e8eaf0; color: #646977; font-size: 10px; font-weight: 800; letter-spacing: .7px; text-transform: uppercase; white-space: nowrap; }
+td { padding: 15px; border-bottom: 1px solid #eff0f3; color: #444955; vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: #fcfcfd; }
+
+.employee-details { display: flex; min-width: 180px; flex-direction: column; gap: 5px; }
+.employee-details strong { color: #272b35; font-weight: 700; }
+.employee-details small { color: #777c89; font-size: 12px; }
+
+.role-pill, .status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid #e6e8ee;
+  border-radius: 20px;
+  background: #f7f8fa;
+  color: #454a57;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.active-status { border-color: #c8e8d6; background: #edf8f1; color: #197a49; }
+.inactive-status { border-color: #f0cdd0; background: #fff1f2; color: #bd2631; }
+.pending-status { border-color: #f0dfb9; background: #fff8e8; color: #946200; }
+
+.row-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+
+.feedback { padding: 12px 14px; margin: 14px 0; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+.feedback.error { border-color: #f0cdd0; background: #fff4f4; color: #a91f2b; }
+.feedback.success { border-color: #c8e8d6; background: #effaf3; color: #176b40; }
+
+.state-panel { display: flex; min-height: 170px; flex-direction: column; align-items: center; justify-content: center; padding: 24px; color: #737887; text-align: center; }
+.state-panel h3 { margin: 8px 0 4px; color: #303440; font-size: 15px; }
+.state-panel p { margin: 4px 0; font-size: 13px; }
+.compact-state { min-height: 40px; padding: 8px; text-align: left; }
+
+.loading-spinner { width: 25px; height: 25px; border: 3px solid #f0d5da; border-top-color: #c8102e; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; margin-top: 20px; }
+.form-field { display: flex; min-width: 0; flex-direction: column; gap: 8px; }
+.form-field small { color: #777c89; font-size: 11px; line-height: 1.5; }
+.form-field .field-error { color: #bd2631; }
+.form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; padding-top: 4px; }
+
+.page-footer { display: flex; justify-content: space-between; gap: 12px; padding: 12px 2px; color: #858a96; font-size: 11px; }
+
+@media (max-width: 760px) {
+  .page-header, .panel-toolbar { align-items: stretch; flex-direction: column; }
+  .filters { justify-content: flex-start; }
+  .filters select { flex: 1; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-actions { grid-column: auto; }
+  .page-footer { flex-direction: column; }
+}

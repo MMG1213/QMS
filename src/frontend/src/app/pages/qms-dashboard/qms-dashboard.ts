@@ -1760,7 +1760,9 @@ export class QmsDashboardComponent implements OnInit {
   // --------------------------------------------------
 
   openSignupRequests(): void {
-    void this.router.navigate(['/qms/admin/signup-requests']);
+    void this.router.navigate([
+      '/qms/admin/manage-permissions'
+    ]);
   }
 
   // --------------------------------------------------

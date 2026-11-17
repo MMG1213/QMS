@@ -28,7 +28,7 @@
       [class.active]="activeAdminTab === 'access'"
       (click)="selectAdminTab('access')"
     >
-      Manage Access
+      Manage User Access
     </button>
 
     <button
@@ -46,7 +46,15 @@
     >
       Manage Document Types
     </button>
+    <button
+      type="button"
+      [class.active]="activeAdminTab === 'approvalMappings'"
+      (click)="selectAdminTab('approvalMappings')"
+    >
+      DCR Approval Mappings
+    </button>
   </nav>
+
 
   <!-- ================================================= -->
   <!-- SIGNUP REQUESTS -->
@@ -196,129 +204,97 @@
       }
     </section>
 
-    <!-- CREATE ACTIVE ACCOUNT -->
-    <section class="management-panel">
-      <div class="panel-heading">
-        <h2>Create Active Account</h2>
-        <p>Create an employee account without a signup request.</p>
+  <section class="management-panel">
+    <div class="panel-heading">
+      <h2>Create Active Account</h2>
+      <p>Create an employee account without a signup request.</p>
+    </div>
+
+    @if (createAccountError) {
+      <div class="feedback error" role="alert">{{ createAccountError }}</div>
+    }
+    @if (createAccountSuccess) {
+      <div class="feedback success" role="status">{{ createAccountSuccess }}</div>
+    }
+
+    @if (isLoadingDepartments) {
+      <div class="state-panel compact-state">Loading departments...</div>
+    }
+
+    <form [formGroup]="createAccountForm"
+      (ngSubmit)="createAccount()" class="form-grid">
+      <div class="form-field">
+        <label for="employeeId">Employee ID</label>
+        <input id="employeeId" type="text" formControlName="employeeId"
+          placeholder="Employee ID" maxlength="50" />
+        @if (createAccountForm.controls.employeeId.touched &&
+             createAccountForm.controls.employeeId.invalid) {
+          <small class="field-error">Employee ID is required.</small>
+        }
       </div>
 
-      @if (createAccountError) {
-        <div class="feedback error" role="alert">
-          {{ createAccountError }}
-        </div>
-      }
+      <div class="form-field">
+        <label for="fullName">Full Name</label>
+        <input id="fullName" type="text" formControlName="fullName"
+          placeholder="Full name" maxlength="150" />
+        @if (createAccountForm.controls.fullName.touched &&
+             createAccountForm.controls.fullName.invalid) {
+          <small class="field-error">Full name is required.</small>
+        }
+      </div>
 
-      @if (createAccountSuccess) {
-        <div class="feedback success" role="status">
-          {{ createAccountSuccess }}
-        </div>
-      }
+      <div class="form-field">
+        <label for="email">Work Email</label>
+        <input id="email" type="email" formControlName="email"
+          placeholder="employee@company.com" maxlength="256" />
+        @if (createAccountForm.controls.email.touched &&
+             createAccountForm.controls.email.invalid) {
+          <small class="field-error">Enter a valid work email.</small>
+        }
+      </div>
 
-      <form
-        [formGroup]="createAccountForm"
-        (ngSubmit)="createAccount()"
-        class="form-grid"
-      >
-        <div class="form-field">
-          <label for="employeeId">Employee ID</label>
-          <input
-            id="employeeId"
-            type="text"
-            formControlName="employeeId"
-            placeholder="Employee ID"
-            maxlength="50"
-          />
-        </div>
+      <div class="form-field">
+        <label for="accountDepartment">Department</label>
+        <select id="accountDepartment" formControlName="departmentId">
+          <option [ngValue]="0">Select department</option>
+          @for (department of adminDepartments; track department.id) {
+            <option [ngValue]="department.id">{{ department.name }}</option>
+          }
+        </select>
+      </div>
 
-        <div class="form-field">
-          <label for="fullName">Full Name</label>
-          <input
-            id="fullName"
-            type="text"
-            formControlName="fullName"
-            placeholder="Full name"
-            maxlength="150"
-          />
-        </div>
+      <div class="form-field">
+        <label for="accountRole">Role</label>
+        <select id="accountRole" formControlName="role">
+          @for (role of accountRoles; track role) {
+            <option [value]="role">{{ role }}</option>
+          }
+        </select>
+      </div>
 
-        <div class="form-field">
-          <label for="email">Work Email</label>
-          <input
-            id="email"
-            type="email"
-            formControlName="email"
-            placeholder="employee@company.com"
-            maxlength="256"
-          />
-        </div>
+      <div class="form-field">
+        <label for="initialPassword">Initial Password</label>
+        <input id="initialPassword" type="password"
+          formControlName="password" autocomplete="new-password"
+          placeholder="Initial password" maxlength="128" />
+        <small>Minimum 8 characters with uppercase, number and special character.</small>
+        @if (createAccountForm.controls.password.touched &&
+             createAccountForm.controls.password.invalid) {
+          <small class="field-error">Password does not meet the required format.</small>
+        }
+      </div>
 
-        <div class="form-field">
-          <label for="accountDepartment">Department</label>
-          <select
-            id="accountDepartment"
-            formControlName="departmentId"
-          >
-            <option [ngValue]="0">Select department</option>
-
-            @for (department of adminDepartments; track department.id) {
-              <option [ngValue]="department.id">
-                {{ department.name }}
-              </option>
-            }
-          </select>
-        </div>
-
-        <div class="form-field">
-          <label for="accountRole">Role</label>
-          <select
-            id="accountRole"
-            formControlName="role"
-          >
-            @for (role of accountRoles; track role) {
-              <option [value]="role">{{ role }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="form-field">
-          <label for="initialPassword">Initial Password</label>
-          <input
-            id="initialPassword"
-            type="password"
-            formControlName="password"
-            autocomplete="new-password"
-            placeholder="Initial password"
-            maxlength="128"
-          />
-
-          <small>
-            Minimum 8 characters with uppercase, number and special character.
-          </small>
-        </div>
-
-        <div class="form-actions">
-          <button
-            type="submit"
-            class="primary-button"
-            [disabled]="
-              isCreatingAccount ||
-              createAccountForm.invalid ||
-              adminDepartments.length === 0
-            "
-          >
-            {{
-              isCreatingAccount
-                ? 'Creating...'
-                : 'Create Active Account'
-            }}
-          </button>
-        </div>
-      </form>
-    </section>
+      <div class="form-actions">
+        <button type="submit" class="primary-button"
+          [disabled]="isCreatingAccount || isLoadingDepartments ||
+            createAccountForm.invalid || adminDepartments.length === 0">
+          {{ isCreatingAccount ? 'Creating...' : 'Create Active Account' }}
+        </button>
+      </div>
+    </form>
+  </section>
   }
 
-  <!-- ================================================= -->
   <!-- MANAGE ACCESS -->
   <!-- ================================================= -->
 
@@ -732,6 +708,95 @@
         List document type selector. Existing documents using them remain in
         the database.
       </p>
+    </section>
+  }
+
+
+  <!-- DEPARTMENT APPROVAL MAPPINGS -->
+  @if (activeAdminTab === 'approvalMappings') {
+    <section class="management-panel">
+      <div class="panel-heading">
+        <h2>Department Approval Mapping</h2>
+        <p>Create a department workflow in four simple steps.</p>
+      </div>
+      @if (approvalMappingsError) { <div class="feedback error" role="alert">{{ approvalMappingsError }}</div> }
+      @if (approvalMappingsSuccess) { <div class="feedback success" role="status">{{ approvalMappingsSuccess }}</div> }
+      @if (isLoadingMappingEmployees) { <div class="feedback">Loading employee login IDs…</div> }
+      <div class="wizard-progress" aria-label="Approval mapping steps">
+        @for (step of [1,2,3,4]; track step) {
+          <button type="button" class="wizard-step"
+            [class.current]="approvalWizardStep === step"
+            [class.completed]="approvalWizardStep > step"
+            [attr.aria-current]="approvalWizardStep === step ? 'step' : null"
+            [disabled]="isSavingApprovalMapping || isLoadingMappingEmployees"
+            (click)="goToApprovalWizardStep(step)">
+            <span>{{ step }}</span>
+            <small>{{ step === 1 ? 'Department' : step === 2 ? 'DCR Creators' : step === 3 ? 'Approval Levels' : 'Final Approval' }}</small>
+          </button>
+        }
+      </div>
+      <div class="wizard-content">
+        @if (approvalWizardStep === 1) {
+          <h3>Step 1 — Choose Department</h3><p>Select the department for this DCR workflow.</p>
+          <div class="form-field searchable-picker"><label for="mappingDepartment">Department</label><div class="select-search-row"><select id="mappingDepartment" [value]="selectedMappingDepartmentId" (change)="onMappingDepartmentChange($any($event.target).value)" [disabled]="isLoadingMappingEmployees || isSavingApprovalMapping"><option value="0">Select department</option>@for (department of filteredDepartments; track department.id) { <option [value]="department.id">{{ department.name }}</option> }</select><button type="button" class="search-toggle" [class.active]="showDepartmentSearch"
+              (click)="toggleSearch('department')" aria-label="Search departments" title="Search departments"><span aria-hidden="true">⌕</span></button></div>
+            @if (showDepartmentSearch) { <input id="departmentSearch" class="compact-search" type="search"
+              placeholder="Search department name…" [(ngModel)]="departmentSearchText"
+              [ngModelOptions]="{standalone: true}" [disabled]="isLoadingMappingEmployees || isSavingApprovalMapping" autocomplete="off"> }
+          </div>
+        }
+        @if (approvalWizardStep === 2) {
+          <h3>Step 2 — Choose DCR Creators</h3><p>Select active login IDs belonging to the chosen department who can create DCRs. Search by employee name, login ID, or role.</p>
+          <div class="form-field creator-picker searchable-picker"><label for="creatorIds">Add DCR Creator</label><div class="select-search-row"><select id="creatorIds" [value]="creatorDropdownSelection" (change)="onCreatorDropdownChange($any($event.target).value)" [disabled]="isLoadingMappingEmployees"><option value="">Choose employee login ID…</option>@for (employee of filterEmployeeOptions(departmentCreatorEmployees, creatorSearchText); track employee.employeeId) { @if (!selectedCreatorEmployeeIds.includes(employee.employeeId)) { <option [value]="employee.employeeId">{{ employee.employeeId }} — {{ employee.fullName }} — {{ employee.role }}</option> } }</select><button type="button" class="search-toggle" [class.active]="showCreatorSearch"
+              (click)="toggleSearch('creator')" aria-label="Search DCR creators" title="Search DCR creators"><span aria-hidden="true">⌕</span></button></div>
+            @if (showCreatorSearch) { <input id="creatorSearch" class="compact-search" type="search"
+              placeholder="Search by employee name or ID…" [(ngModel)]="creatorSearchText"
+              [ngModelOptions]="{standalone: true}" [disabled]="isLoadingMappingEmployees" autocomplete="off"> }
+            <small>Search matches employee ID, name, or role.</small></div>
+          @if (selectedCreatorEmployees.length) { <div class="selected-employee-list"><div class="selected-list-heading">Selected DCR Creators <span>{{ selectedCreatorEmployees.length }}</span></div>@for (employee of selectedCreatorEmployees; track employee.employeeId) { <div class="selected-employee"><div class="employee-identity"><strong>{{ employee.employeeId }}</strong><span>{{ employee.fullName }}</span><small>{{ employee.role }}</small></div><button type="button" class="remove-selected" (click)="removeCreator(employee.employeeId)" aria-label="Remove creator">Remove</button></div> }</div> }
+        }
+        @if (approvalWizardStep === 3) {
+          <h3>Step 3 — Add Approval Levels</h3><p>Choose approvers from all active QMS login IDs. Each selected ID is excluded from other levels and final approval.</p>
+          <div class="approval-level-header"><strong>Approval levels</strong><button type="button" class="add-approval-level-button" (click)="addApprovalLevel()" [disabled]="isLoadingMappingEmployees || isSavingApprovalMapping">+ Add Level</button></div>
+          @if (approvalMappingApprovalLevels.length === 0) { <div class="feedback">Click “Add Level” to begin configuring the sequence.</div> }
+          @for (level of approvalMappingApprovalLevels; track $index) {
+            <div class="approval-level-card"><div class="approval-level-title"><h4>Level {{ $index + 1 }}</h4><button type="button" class="danger-button" (click)="removeApprovalLevel($index)">Remove</button></div>
+              <div class="form-grid single-approver-grid"><div class="form-field searchable-picker"><label>Approver Login ID</label><div class="select-search-row"><select [(ngModel)]="level.approverEmployeeId" [ngModelOptions]="{standalone: true}"><option value="">Choose approver…</option>@for (employee of filterEmployeeOptions(availableApproversForLevel($index), approvalLevelSearchTexts[$index] || ''); track employee.employeeId) { <option [value]="employee.employeeId">{{ employee.employeeId }} — {{ employee.fullName }} — {{ employee.role }}</option> }</select><button type="button" class="search-toggle" [class.active]="approvalLevelSearchOpen[$index]"
+                  (click)="toggleApprovalLevelSearch($index)" aria-label="Search approvers" title="Search approvers"><span aria-hidden="true">⌕</span></button></div>
+                @if (approvalLevelSearchOpen[$index]) {
+                  <input class="compact-search" type="search" [value]="approvalLevelSearchTexts[$index] || ''"
+                    (input)="setApprovalLevelSearch($index, $any($event.target).value)"
+                    placeholder="Search by employee name or ID…" autocomplete="off">
+                }
+                @if (selectedApproverForLevel($index); as selected) { <div class="selected-employee selected-approver-preview"><div class="employee-identity"><strong>{{ selected.employeeId }}</strong><span>{{ selected.fullName }}</span><small>{{ selected.role }}</small></div></div> }
+              </div></div>
+            </div>
+          }
+        }
+        @if (approvalWizardStep === 4) {
+          <h3>Step 4 — Select Final Approval</h3><p>Choose the final approver from all remaining active QMS login IDs.</p>
+          <div class="form-field searchable-picker"><label for="finalApprover">Final Approver Login ID</label><div class="select-search-row"><select id="finalApprover" [(ngModel)]="finalApprovalEmployeeId" [ngModelOptions]="{standalone: true}"><option value="">Choose final approver…</option>@for (employee of filterEmployeeOptions(availableFinalApprovers(), finalApproverSearchText); track employee.employeeId) { <option [value]="employee.employeeId">{{ employee.employeeId }} — {{ employee.fullName }} — {{ employee.role }}</option> }</select><button type="button" class="search-toggle" [class.active]="showFinalApproverSearch"
+              (click)="toggleSearch('final')" aria-label="Search final approver" title="Search final approver"><span aria-hidden="true">⌕</span></button></div>
+            @if (showFinalApproverSearch) { <input id="finalApproverSearch" class="compact-search" type="search"
+              placeholder="Search by employee name or ID…" [(ngModel)]="finalApproverSearchText"
+              [ngModelOptions]="{standalone: true}" autocomplete="off"> }
+          @if (selectedFinalApprover(); as selected) { <div class="selected-employee selected-approver-preview"><div class="employee-identity"><strong>{{ selected.employeeId }}</strong><span>{{ selected.fullName }}</span><small>{{ selected.role }}</small></div></div> }</div>
+          @if (editingApprovalMappingId !== null) { <label class="mapping-active-toggle"><input type="checkbox" [(ngModel)]="approvalMappingIsActive" [ngModelOptions]="{standalone: true}"/> Mapping Active</label> }
+        }
+      </div>
+      <div class="wizard-actions">
+        @if (approvalWizardStep > 1) { <button type="button" class="secondary-button" (click)="previousApprovalWizardStep()" [disabled]="isSavingApprovalMapping">Back</button> }
+        @if (approvalWizardStep < 4) { <button type="button" class="primary-button" (click)="nextApprovalWizardStep()" [disabled]="isLoadingMappingEmployees || isSavingApprovalMapping">Next</button> }
+        @if (approvalWizardStep === 4) { <button type="button" class="primary-button" (click)="saveApprovalMapping()" [disabled]="isSavingApprovalMapping || isLoadingMappingEmployees">{{ isSavingApprovalMapping ? 'Saving…' : editingApprovalMappingId !== null ? 'Update Mapping' : 'Save Mapping' }}</button><button type="button" class="secondary-button" (click)="resetApprovalMappingForm()" [disabled]="isSavingApprovalMapping">Cancel</button> }
+      </div>
+      <div class="panel-heading mapping-list-heading"><h3>Existing Mappings</h3></div>
+      @if (isLoadingApprovalMappings) { <div class="state-panel"><span class="loading-spinner"></span><h3>Loading mappings</h3></div> }
+      @else if (approvalMappings.length === 0) { <div class="state-panel"><h3>No mappings found</h3><p>Create a mapping using the steps above.</p></div> }
+      @else { <div class="table-wrapper"><table class="mapping-table"><thead><tr><th>Department</th><th>Version</th><th>DCR Creators</th>@for (levelNumber of mappingApprovalLevelNumbers; track levelNumber) { <th>Approval {{ levelNumber }}</th> }<th>Final Approval</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        @for (mapping of approvalMappings; track mapping.id) { <tr><td><strong>{{ mapping.departmentName }}</strong></td><td>{{ mapping.configVersion }}</td><td><div class="mapping-employee-stack">@for (creator of mapping.dcrCreators; track creator.creatorEmployeeId) { <div class="mapping-employee"><strong>{{ creator.creatorEmployeeName }}</strong><small>{{ creator.creatorEmployeeId }}</small></div> }</div></td>
+        @for (levelNumber of mappingApprovalLevelNumbers; track levelNumber) { <td><div class="mapping-employee-stack">@if (approvalLevelForMapping(mapping, levelNumber); as level) { <div class="mapping-employee"><strong>{{ level.approverEmployeeName }}</strong><small>{{ level.approverEmployeeId }} · {{ level.approvalType }}</small></div> } @else { <span class="mapping-empty-cell">—</span> }</div></td> }
+        <td><div class="mapping-employee-stack">@if (finalApprovalForMapping(mapping); as finalLevel) { <div class="mapping-employee final-approval-employee"><strong>{{ finalLevel.approverEmployeeName }}</strong><small>{{ finalLevel.approverEmployeeId }} · QMS Final</small></div> } @else { <span class="mapping-empty-cell">—</span> }</div></td><td><span class="status-pill" [class.active-status]="mapping.isActive" [class.inactive-status]="!mapping.isActive">{{ mapping.isActive ? 'Active' : 'Inactive' }}</span></td><td><div class="row-actions"><button type="button" class="primary-button" (click)="editApprovalMapping(mapping)">Edit</button><button type="button" [class.danger-button]="mapping.isActive" [class.success-button]="!mapping.isActive" (click)="toggleApprovalMappingStatus(mapping)">{{ mapping.isActive ? 'Deactivate' : 'Activate' }}</button></div></td></tr> }
+      </tbody></table></div> }
     </section>
   }
 
