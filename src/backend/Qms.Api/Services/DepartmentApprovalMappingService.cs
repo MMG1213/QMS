@@ -45,10 +45,12 @@ public class DepartmentApprovalMappingService
             throw new InvalidOperationException(
                 "Department not found or inactive.");
 
+        // Return every active login ID so approval-level and final-approval
+        // dropdowns can select employees from any department.
+        // The Angular UI should filter DCR Creators by the selected department,
+        // and ValidateConfigurationAsync enforces that rule on the server.
         return await _context.AppUsers
-            .Where(x => x.IsActive &&
-                (x.DepartmentId == departmentId ||
-                 x.Role == QmsRole.QmsAdmin))
+            .Where(x => x.IsActive)
             .OrderBy(x => x.FullName)
             .Select(x => new ApprovalMappingEmployeeDto
             {
@@ -299,43 +301,30 @@ public class DepartmentApprovalMappingService
 
         foreach (var level in approvalLevels)
         {
-            var approver = approvers.First(
+            var approver = approvers.FirstOrDefault(
                 x => x.EmployeeId == level.ApproverEmployeeId);
 
-            if (level.ApprovalType == "Department" &&
-                approver.DepartmentId != departmentId)
+            if (approver == null)
             {
-                return $"Department approver at level {level.LevelNumber} " +
-                       "must belong to the selected department.";
+                return $"Invalid approver Employee ID at level {level.LevelNumber}.";
             }
 
-            if (level.ApprovalType == "QMSFinal" &&
-                approver.Role != QmsRole.QmsAdmin)
-            {
-                return $"Approver at level {level.LevelNumber} " +
-                       "must have the QMS Admin role.";
-            }
+            // Approval-level approvers can belong to any department.
+            // QMSFinal can also be assigned to any active login ID.
+            // There is intentionally no department or QMS Admin role restriction.
 
             if (!string.IsNullOrWhiteSpace(
                 level.RedirectedApproverEmployeeId))
             {
-                var redirected = approvers.First(
-                    x => x.EmployeeId ==
-                         level.RedirectedApproverEmployeeId);
+                var redirected = approvers.FirstOrDefault(
+                    x => x.EmployeeId == level.RedirectedApproverEmployeeId);
 
-                if (level.ApprovalType == "QMSFinal" &&
-                    redirected.Role != QmsRole.QmsAdmin)
+                if (redirected == null)
                 {
-                    return "Redirected approver for QMSFinal " +
-                           "must be a QMS Admin.";
+                    return $"Invalid redirected approver Employee ID at level {level.LevelNumber}.";
                 }
 
-                if (level.ApprovalType == "Department" &&
-                    redirected.DepartmentId != departmentId)
-                {
-                    return $"Redirected approver at level {level.LevelNumber} " +
-                           "must belong to the selected department.";
-                }
+                // No department or role restriction for redirected approvers.
             }
         }
 
