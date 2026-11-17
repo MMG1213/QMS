@@ -1162,13 +1162,6 @@ button:focus-visible {
 
 .document-title {
   display: block;
-<<<<<<< HEAD:src/app/pages/qms-dashboard/qms-dashboard.css
-  color: var(--text);
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-=======
   color: #202939;
   font-size: 13px;
   font-weight: 600;
@@ -1179,7 +1172,6 @@ button:focus-visible {
 .master-table .document-number-column,
 .document-number-column {
   min-width: 155px;
->>>>>>> origin/main:src/frontend/src/app/pages/qms-dashboard/qms-dashboard.css
 }
 
 .document-number-cell {
@@ -1696,8 +1688,6 @@ button:focus-visible {
 
   .navigation {
     order: 3;
-<<<<<<< HEAD:src/app/pages/qms-dashboard/qms-dashboard.css
-=======
     flex: 1 0 100%;
     min-height: 42px;
   }
@@ -2100,7 +2090,6 @@ button:focus-visible {
 
 @media (max-width: 600px) {
   .master-list-heading-actions {
->>>>>>> origin/main:src/frontend/src/app/pages/qms-dashboard/qms-dashboard.css
     width: 100%;
     min-height: 46px;
     overflow-x: auto;
@@ -2137,3 +2126,133 @@ button:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* =========================================================
+   BULK OBSOLETE
+   ========================================================= */
+
+   .bulk-obsolete-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid #b42318;
+    border-radius: 6px;
+    background: #b42318;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  
+  .bulk-obsolete-button:hover:not(:disabled) {
+    background: #912018;
+  }
+  
+  .bulk-obsolete-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .bulk-obsolete-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 12px 0;
+    padding: 12px 14px;
+    border: 1px solid #e5c7c5;
+    border-radius: 8px;
+    background: #fff8f7;
+  }
+  
+  .bulk-selection-count {
+    margin-right: auto;
+    color: #344054;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  
+  .bulk-obsolete-actions .clear-button,
+  .bulk-obsolete-actions .cancel-button {
+    padding: 8px 14px;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    background: #fff;
+    color: #344054;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  
+  .bulk-obsolete-actions .clear-button:hover:not(:disabled),
+  .bulk-obsolete-actions .cancel-button:hover:not(:disabled) {
+    background: #f2f4f7;
+  }
+  
+  .bulk-obsolete-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .bulk-select-column {
+    width: 42px;
+    min-width: 42px;
+    max-width: 42px;
+    text-align: center;
+  }
+  
+  .bulk-select-column input[type="checkbox"],
+  .bulk-document-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #b42318;
+    cursor: pointer;
+  }
+  
+  .bulk-document-checkbox {
+    width: 42px;
+    min-width: 42px;
+    text-align: center;
+  }
+  
+  .bulk-document-checkbox input:disabled,
+  .bulk-select-column input:disabled {
+    cursor: not-allowed;
+  }
+  
+  .bulk-obsolete-message {
+    margin: 10px 0;
+    padding: 10px 14px;
+    border: 1px solid #abefc6;
+    border-radius: 6px;
+    background: #ecfdf3;
+    color: #067647;
+    font-size: 13px;
+  }
+  
+  .bulk-obsolete-error {
+    margin: 10px 0;
+    padding: 10px 14px;
+    border: 1px solid #fecdca;
+    border-radius: 6px;
+    background: #fef3f2;
+    color: #b42318;
+    font-size: 13px;
+  }
+  
+  @media (max-width: 768px) {
+    .bulk-obsolete-actions {
+      align-items: stretch;
+    }
+  
+    .bulk-selection-count {
+      width: 100%;
+    }
+  
+    .bulk-obsolete-actions button {
+      flex: 1;
+    }
+  }

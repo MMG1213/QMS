@@ -1,4 +1,3 @@
-
 import {
   Component,
   HostListener,
@@ -21,7 +20,8 @@ import {
   UpdateMasterListDocument,
   ML01Entry,
   ML01EntryRequest,
-  ML01Revision
+  ML01Revision,
+  BulkObsoleteDocumentsRequest
 } from '../../services/master-list';
 
 import {
@@ -181,6 +181,16 @@ export class QmsDashboardComponent implements OnInit {
   // Status selected from the Total / Active / Obsolete summary cards.
   selectedStatusFilter: 'All' | 'Active' | 'Obsolete' = 'All';
 
+  // --------------------------------------------------
+  // BULK OBSOLETE (ML02–ML06)
+  // --------------------------------------------------
+
+  selectedDocumentIds = new Set<number>();
+  isBulkObsoleting = false;
+  bulkObsoleteMessage = '';
+  bulkObsoleteError = '';
+  isBulkSelectionMode = false;
+
   get filteredDocuments(): MasterListDocument[] {
     if (this.selectedStatusFilter === 'All') {
       return this.documents;
@@ -193,8 +203,176 @@ export class QmsDashboardComponent implements OnInit {
     );
   }
 
+  get canBulkObsolete(): boolean {
+    const allowedTypes =
+      this.selectedDocumentTypeId === null ||
+      [1, 2, 3, 4, 5].includes(this.selectedDocumentTypeId);
+
+    return this.isQmsAdmin &&
+      allowedTypes &&
+      !this.isML01Selected &&
+      !this.selectedSpecialType;
+  }
+
+  isDocumentActive(document: MasterListDocument): boolean {
+    return String(document.status ?? '').trim().toLowerCase() === 'active';
+  }
+
+  get selectableDocuments(): MasterListDocument[] {
+    return this.filteredDocuments.filter(document =>
+      this.isDocumentActive(document)
+    );
+  }
+
+  get selectedDocumentCount(): number {
+    return this.selectedDocumentIds.size;
+  }
+
+  get areAllDocumentsSelected(): boolean {
+    return this.selectableDocuments.length > 0 &&
+      this.selectableDocuments.every(document =>
+        this.selectedDocumentIds.has(document.documentId)
+      );
+  }
+
+  toggleDocumentSelection(documentId: number, checked: boolean): void {
+    if (!this.canBulkObsolete || !this.isBulkSelectionMode) return;
+
+    const exists = this.selectableDocuments.some(
+      document => document.documentId === documentId
+    );
+
+    if (!exists) return;
+
+    const updated = new Set(this.selectedDocumentIds);
+
+    if (checked) {
+      updated.add(documentId);
+    } else {
+      updated.delete(documentId);
+    }
+
+    this.selectedDocumentIds = updated;
+  }
+
+  toggleSelectAllDocuments(checked: boolean): void {
+    if (!this.canBulkObsolete || !this.isBulkSelectionMode) return;
+
+    const updated = new Set(this.selectedDocumentIds);
+
+    for (const document of this.selectableDocuments) {
+      if (checked) {
+        updated.add(document.documentId);
+      } else {
+        updated.delete(document.documentId);
+      }
+    }
+
+    this.selectedDocumentIds = updated;
+  }
+
+  clearDocumentSelection(): void {
+    this.selectedDocumentIds = new Set<number>();
+    this.bulkObsoleteMessage = '';
+    this.bulkObsoleteError = '';
+  }
+
+  enterBulkSelectionMode(): void {
+    if (
+      !this.canBulkObsolete ||
+      this.isBulkObsoleting ||
+      this.editingDocumentId !== null ||
+      this.isSavingDocument
+    ) {
+      return;
+    }
+
+    this.clearDocumentSelection();
+    this.bulkObsoleteMessage = '';
+    this.bulkObsoleteError = '';
+    this.isBulkSelectionMode = true;
+  }
+
+  cancelBulkSelectionMode(): void {
+    this.clearDocumentSelection();
+    this.isBulkSelectionMode = false;
+    this.bulkObsoleteMessage = '';
+    this.bulkObsoleteError = '';
+  }
+
+  bulkObsoleteDocuments(): void {
+    if (
+      !this.canBulkObsolete ||
+      !this.isBulkSelectionMode ||
+      this.isBulkObsoleting ||
+      this.editingDocumentId !== null ||
+      this.isSavingDocument ||
+      this.selectedDocumentIds.size === 0
+    ) {
+      return;
+    }
+
+    // Only submit currently visible, active documents.
+    const selectableIds = new Set(
+      this.selectableDocuments.map(document => document.documentId)
+    );
+
+    const documentIds = Array.from(this.selectedDocumentIds)
+      .filter(id => selectableIds.has(id));
+
+    if (documentIds.length === 0) {
+      this.clearDocumentSelection();
+      this.bulkObsoleteError =
+        'No eligible active documents are selected.';
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `You are about to obsolete ${documentIds.length} document(s).\n\n` +
+      `Their status will immediately change to Obsolete, and the obsolete date will be set to today.\n\n` +
+      `Do you want to continue?`
+    );
+
+    if (!confirmed) return;
+
+    const request: BulkObsoleteDocumentsRequest = {
+      documentIds
+    };
+
+    this.isBulkObsoleting = true;
+    this.bulkObsoleteError = '';
+    this.bulkObsoleteMessage = '';
+
+    this.masterListService.obsoleteDocuments(request).subscribe({
+      next: response => {
+        this.isBulkObsoleting = false;
+        this.clearDocumentSelection();
+        this.isBulkSelectionMode = false;
+
+        this.bulkObsoleteMessage =
+          response?.message ?? 'Documents obsoleted successfully.';
+
+        this.loadDocuments();
+        this.cdr.markForCheck();
+      },
+
+      error: error => {
+        console.error('Bulk obsolete failed:', error);
+
+        this.isBulkObsoleting = false;
+
+        this.bulkObsoleteError =
+          error?.error?.message ??
+          'Could not obsolete the selected documents. Please try again.';
+
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   setStatusFilter(status: 'All' | 'Active' | 'Obsolete'): void {
     this.selectedStatusFilter = status;
+    this.clearDocumentSelection();
     this.cdr.markForCheck();
   }
 
@@ -519,8 +697,17 @@ export class QmsDashboardComponent implements OnInit {
       next: documents => {
 
         this.documents = documents;
-        this.isLoadingDocuments = false;
 
+        // Remove IDs that are no longer active or visible.
+        const activeIds = new Set(
+          this.selectableDocuments.map(document => document.documentId)
+        );
+
+        this.selectedDocumentIds = new Set(
+          [...this.selectedDocumentIds].filter(id => activeIds.has(id))
+        );
+
+        this.isLoadingDocuments = false;
         this.cdr.markForCheck();
       },
 
@@ -529,6 +716,7 @@ export class QmsDashboardComponent implements OnInit {
         console.error('Failed to load documents:', error);
 
         this.documents = [];
+        this.clearDocumentSelection();
 
         this.documentError =
           'Could not load documents. Check that the backend API is running.';
@@ -1176,6 +1364,9 @@ export class QmsDashboardComponent implements OnInit {
 
   onDocumentTypeChange(value: string | number): void {
 
+    this.isBulkSelectionMode = false;
+    this.clearDocumentSelection();
+
     this.selectedDocumentTypeId =
       value === '' ? null : Number(value);
 
@@ -1238,6 +1429,8 @@ export class QmsDashboardComponent implements OnInit {
       return;
     }
 
+    this.clearDocumentSelection();
+
     this.selectedDepartmentId =
       value === '' ? null : Number(value);
 
@@ -1249,6 +1442,7 @@ export class QmsDashboardComponent implements OnInit {
   // --------------------------------------------------
 
   onSearch(): void {
+    this.clearDocumentSelection();
     this.loadDocuments();
   }
 
@@ -1258,6 +1452,7 @@ export class QmsDashboardComponent implements OnInit {
 
   refreshCurrentTable(): void {
 
+    this.clearDocumentSelection();
     this.loadDocuments();
     this.loadMasterData();
   }
@@ -1267,6 +1462,9 @@ export class QmsDashboardComponent implements OnInit {
   // --------------------------------------------------
 
   clearFilters(): void {
+
+    this.isBulkSelectionMode = false;
+    this.clearDocumentSelection();
 
     this.selectedDocumentTypeId = null;
     this.selectedDepartmentId = null;
@@ -1531,11 +1729,9 @@ export class QmsDashboardComponent implements OnInit {
 
   startEdit(document: MasterListDocument): void {
 
-    if (!this.isQmsAdmin) {
-      return;
-    }
-
     if (
+      !this.isQmsAdmin ||
+      this.isBulkSelectionMode ||
       this.editingDocumentId !== null ||
       this.editingMasterDataId !== null ||
       this.isSavingDocument ||
@@ -1771,6 +1967,11 @@ export class QmsDashboardComponent implements OnInit {
   onEscape(): void {
 
     this.closeProfileMenu();
+
+    if (this.isBulkSelectionMode && !this.isBulkObsoleting) {
+      this.cancelBulkSelectionMode();
+      return;
+    }
 
     if (this.isAddingML01 && !this.isSavingML01) {
       this.cancelML01Add();

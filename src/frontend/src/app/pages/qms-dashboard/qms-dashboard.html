@@ -1096,14 +1096,88 @@
                 <span class="visually-hidden">Refresh</span>
               </button>
 
+              <!-- ENTER BULK SELECTION MODE -->
+              @if (canBulkObsolete && !isBulkSelectionMode) {
+                <button
+                  type="button"
+                  class="bulk-obsolete-button"
+                  (click)="enterBulkSelectionMode()"
+                  [disabled]="isBulkObsoleting || editingDocumentId !== null || isSavingDocument"
+                  title="Select documents to obsolete">
+                  Select All (Obsolete)
+                </button>
+              }
+
             </div>
           </div>
+
+          <!-- BULK SELECTION ACTIONS -->
+          @if (isBulkSelectionMode && canBulkObsolete) {
+            <div class="bulk-obsolete-actions">
+
+              <span class="bulk-selection-count">
+                {{ selectedDocumentCount }} selected
+              </span>
+
+              <button
+                type="button"
+                class="bulk-obsolete-button"
+                (click)="toggleSelectAllDocuments(true)"
+                [disabled]="selectableDocuments.length === 0 || areAllDocumentsSelected || isBulkObsoleting">
+                Select All
+              </button>
+
+              <button
+                type="button"
+                class="clear-button"
+                (click)="clearDocumentSelection()"
+                [disabled]="selectedDocumentCount === 0 || isBulkObsoleting">
+                Clear
+              </button>
+
+              <button
+                type="button"
+                class="cancel-button"
+                (click)="cancelBulkSelectionMode()"
+                [disabled]="isBulkObsoleting">
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                class="bulk-obsolete-button"
+                (click)="bulkObsoleteDocuments()"
+                [disabled]="
+                  selectedDocumentCount === 0 ||
+                  isBulkObsoleting ||
+                  editingDocumentId !== null ||
+                  isSavingDocument
+                "
+                title="Obsolete selected documents">
+                {{ isBulkObsoleting
+                    ? 'Obsoleting...'
+                    : 'Obsolete Selected (' + selectedDocumentCount + ')' }}
+              </button>
+
+            </div>
+          }
 
           <div class="table-scroll master-list-scroll">
             <table class="master-table">
 
               <thead>
                 <tr>
+                  @if (isBulkSelectionMode && canBulkObsolete) {
+                    <th rowspan="2" class="bulk-select-column">
+                      <input
+                        type="checkbox"
+                        [checked]="areAllDocumentsSelected"
+                        [disabled]="selectableDocuments.length === 0 || isBulkObsoleting"
+                        (change)="toggleSelectAllDocuments($any($event.target).checked)"
+                        aria-label="Select all active filtered documents" />
+                    </th>
+                  }
+
                   <th rowspan="2" class="serial-column">Sl. No.</th>
                   <th rowspan="2" class="title-column">Title / Description</th>
                   <th rowspan="2" class="document-number-column">Document No.</th>
@@ -1119,7 +1193,9 @@
                     </th>
                   }
 
-                  <th rowspan="2" class="actions-column">Actions</th>
+                  @if (isQmsAdmin) {
+                    <th rowspan="2" class="actions-column">Actions</th>
+                  }
                 </tr>
 
                 <tr>
@@ -1136,7 +1212,7 @@
                   <tr>
                     <td
                       class="table-message"
-                      [attr.colspan]="9 + revisionColumns.length * 2">
+                      [attr.colspan]="(isQmsAdmin ? 9 : 8) + revisionColumns.length * 2 + (isBulkSelectionMode && canBulkObsolete ? 1 : 0)">
                       Loading documents...
                     </td>
                   </tr>
@@ -1147,6 +1223,22 @@
                     @if (editingDocumentId === document.documentId && editDraft; as draft) {
 
                       <tr class="editing-row">
+                        @if (isBulkSelectionMode && canBulkObsolete) {
+                          <td class="bulk-select-cell">
+                            @if (isDocumentActive(document)) {
+                              <input
+                                type="checkbox"
+                                [checked]="selectedDocumentIds.has(document.documentId)"
+                                [disabled]="isBulkObsoleting"
+                                (change)="toggleDocumentSelection(
+                                  document.documentId,
+                                  $any($event.target).checked
+                                )"
+                                [attr.aria-label]="'Select ' + document.documentNo" />
+                            }
+                          </td>
+                        }
+
                         <td class="serial-cell">{{ i + 1 }}</td>
 
                         <td class="title-cell">
@@ -1247,36 +1339,54 @@
                           }
                         }
 
-                        <td class="actions-cell">
-                          <button
-                            type="button"
-                            class="save-button icon-only-action"
-                            (click)="saveEdit()"
-                            [disabled]="isSavingDocument"
-                            title="Save"
-                            aria-label="Save">
-                            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
-                              <path d="M17 21v-8H7v8M7 3v5h8"></path>
-                            </svg>
-                            <span class="visually-hidden">
-                              {{ isSavingDocument ? 'Saving...' : 'Save' }}
-                            </span>
-                          </button>
+                        @if (isQmsAdmin) {
+                          <td class="actions-cell">
+                            <button
+                              type="button"
+                              class="save-button icon-only-action"
+                              (click)="saveEdit()"
+                              [disabled]="isSavingDocument"
+                              title="Save"
+                              aria-label="Save">
+                              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                                <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                              </svg>
+                              <span class="visually-hidden">
+                                {{ isSavingDocument ? 'Saving...' : 'Save' }}
+                              </span>
+                            </button>
 
-                          <button
-                            type="button"
-                            class="cancel-button"
-                            (click)="cancelEdit()"
-                            [disabled]="isSavingDocument">
-                            Cancel
-                          </button>
-                        </td>
+                            <button
+                              type="button"
+                              class="cancel-button"
+                              (click)="cancelEdit()"
+                              [disabled]="isSavingDocument">
+                              Cancel
+                            </button>
+                          </td>
+                        }
                       </tr>
 
                     } @else {
 
                       <tr>
+                        @if (isBulkSelectionMode && canBulkObsolete) {
+                          <td class="bulk-select-cell">
+                            @if (isDocumentActive(document)) {
+                              <input
+                                type="checkbox"
+                                [checked]="selectedDocumentIds.has(document.documentId)"
+                                [disabled]="isBulkObsoleting"
+                                (change)="toggleDocumentSelection(
+                                  document.documentId,
+                                  $any($event.target).checked
+                                )"
+                                [attr.aria-label]="'Select ' + document.documentNo" />
+                            }
+                          </td>
+                        }
+
                         <td class="serial-cell">{{ i + 1 }}</td>
 
                         <td class="title-cell">
@@ -1330,13 +1440,20 @@
                           }
                         }
 
-                        <td class="actions-cell">
-                          @if (isQmsAdmin) {
+                        @if (isQmsAdmin) {
+                          <td class="actions-cell">
                             <button
                               type="button"
                               class="edit-button icon-only-action"
                               (click)="startEdit(document)"
-                              [disabled]="editingDocumentId !== null || editingMasterDataId !== null || isSavingDocument || isSavingMasterData || isAddingMasterData"
+                              [disabled]="
+                                isBulkSelectionMode ||
+                                editingDocumentId !== null ||
+                                editingMasterDataId !== null ||
+                                isSavingDocument ||
+                                isSavingMasterData ||
+                                isAddingMasterData
+                              "
                               title="Edit document"
                               aria-label="Edit document">
                               <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -1345,8 +1462,8 @@
                               </svg>
                               <span class="visually-hidden">Edit document</span>
                             </button>
-                          }
-                        </td>
+                          </td>
+                        }
                       </tr>
                     }
                   }
@@ -1355,7 +1472,7 @@
                   <tr>
                     <td
                       class="table-message empty-state"
-                      [attr.colspan]="9 + revisionColumns.length * 2">
+                      [attr.colspan]="(isQmsAdmin ? 9 : 8) + revisionColumns.length * 2 + (isBulkSelectionMode && canBulkObsolete ? 1 : 0)">
                       <strong>No documents match your filters</strong>
                       <span>
                         Try changing the document type, department or search
@@ -1378,6 +1495,18 @@
           @if (saveError) {
             <div class="error-message">
               {{ saveError }}
+            </div>
+          }
+
+          @if (bulkObsoleteMessage) {
+            <div class="success-message" role="status">
+              {{ bulkObsoleteMessage }}
+            </div>
+          }
+
+          @if (bulkObsoleteError) {
+            <div class="error-message" role="alert">
+              {{ bulkObsoleteError }}
             </div>
           }
 
