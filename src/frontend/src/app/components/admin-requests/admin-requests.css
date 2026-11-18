@@ -1012,7 +1012,30 @@ tbody tr:hover {
 
 .selected-approver-preview { margin-top:10px; }
 
-.wizard-actions { display:flex; justify-content:flex-end; gap:10px; margin:18px 0 28px; }
+.wizard-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.wizard-actions .primary-button {
+  background: #c8102e;
+  color: #ffffff;
+  border: 1px solid #c8102e;
+}
+
+.wizard-actions .secondary-button {
+  background: #ffffff;
+  color: #26364b;
+  border: 1px solid #d5dce5;
+}
+
+.wizard-actions button {
+  min-width: 120px;
+}
 
 .approval-level-header,.approval-level-title { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:14px 0; }
 

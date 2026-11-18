@@ -210,7 +210,7 @@ export class AdminSignupRequestsComponent implements OnInit {
         .filter(level => level.approvalType !== 'QMSFinal')
         .map(level => level.levelNumber);
       return Math.max(max, ...departmentLevels, 0);
-    }, 2);
+    }, 0);
     return Array.from({ length: maxLevel }, (_, index) => index + 1);
   }
 
@@ -1004,23 +1004,20 @@ export class AdminSignupRequestsComponent implements OnInit {
 
   onMappingDepartmentChange(value: string | number): void {
     this.selectedMappingDepartmentId = Number(value);
+
     this.selectedCreatorEmployeeIds = [];
     this.creatorDropdownSelection = '';
-    this.departmentSearchText = '';
     this.creatorSearchText = '';
-    this.finalApproverSearchText = '';
-    this.approvalLevelSearchTexts = [];
-    this.showDepartmentSearch = false;
-    this.showCreatorSearch = false;
-    this.showFinalApproverSearch = false;
-    this.approvalLevelSearchOpen = [];
+    this.departmentSearchText = '';
+
     this.approvalMappingEmployees = [];
-    this.approvalMappingApprovalLevels = [];
-    this.editingApprovalMappingId = null;
-    this.approvalMappingIsActive = true;
-    this.approvalWizardStep = 1;
-    this.finalApprovalEmployeeId = '';
-    if (this.selectedMappingDepartmentId > 0) this.loadMappingEmployees(this.selectedMappingDepartmentId);
+
+    // Keep the existing approval levels and final approver.
+    // They can be assigned independently of the department.
+
+    if (this.selectedMappingDepartmentId > 0) {
+      this.loadMappingEmployees(this.selectedMappingDepartmentId);
+    }
   }
 
   loadMappingEmployees(_departmentId: number): void {
@@ -1085,34 +1082,77 @@ export class AdminSignupRequestsComponent implements OnInit {
   editApprovalMapping(mapping: DepartmentApprovalMappingDto): void {
     this.approvalMappingsError = '';
     this.approvalMappingsSuccess = '';
+
     this.editingApprovalMappingId = mapping.id;
+
+    // Prefill every field.
     this.selectedMappingDepartmentId = mapping.departmentId;
     this.approvalMappingIsActive = mapping.isActive;
-    this.selectedCreatorEmployeeIds = mapping.dcrCreators.map(c => c.creatorEmployeeId);
+
+    this.selectedCreatorEmployeeIds =
+      mapping.dcrCreators.map(c => c.creatorEmployeeId);
+
     this.creatorDropdownSelection = '';
-    const finalLevel = mapping.approvalLevels.find(level => level.approvalType === 'QMSFinal');
+
+    const finalLevel = mapping.approvalLevels.find(
+      level => level.approvalType === 'QMSFinal'
+    );
+
     this.approvalMappingApprovalLevels = mapping.approvalLevels
       .filter(level => level.approvalType !== 'QMSFinal')
+      .sort((a, b) => a.levelNumber - b.levelNumber)
       .map((level, index) => ({
-        levelNumber: index + 1, approvalType: 'Department',
+        levelNumber: index + 1,
+        approvalType: 'Department',
         approverEmployeeId: level.approverEmployeeId,
-        redirectedApproverEmployeeId: null,
+        redirectedApproverEmployeeId:
+          level.redirectedApproverEmployeeId,
         isActive: level.isActive
       }));
-    this.approvalWizardStep = 3;
-    this.finalApprovalEmployeeId = finalLevel?.approverEmployeeId ?? '';
+
+    this.finalApprovalEmployeeId =
+      finalLevel?.approverEmployeeId ?? '';
+
+    // Always start editing from Step 1.
+    this.approvalWizardStep = 1;
+
+    this.departmentSearchText = '';
+    this.creatorSearchText = '';
+    this.finalApproverSearchText = '';
+    this.approvalLevelSearchTexts = [];
+
+    this.showDepartmentSearch = false;
+    this.showCreatorSearch = false;
+    this.showFinalApproverSearch = false;
+    this.approvalLevelSearchOpen = [];
+
     this.loadMappingEmployees(mapping.departmentId);
   }
 
   resetApprovalMappingForm(): void {
     this.editingApprovalMappingId = null;
+
     this.selectedMappingDepartmentId = 0;
     this.selectedCreatorEmployeeIds = [];
+    this.creatorDropdownSelection = '';
+
     this.approvalMappingEmployees = [];
     this.approvalMappingApprovalLevels = [];
+
     this.approvalMappingIsActive = true;
     this.approvalWizardStep = 1;
     this.finalApprovalEmployeeId = '';
+
+    this.departmentSearchText = '';
+    this.creatorSearchText = '';
+    this.finalApproverSearchText = '';
+    this.approvalLevelSearchTexts = [];
+
+    this.showDepartmentSearch = false;
+    this.showCreatorSearch = false;
+    this.showFinalApproverSearch = false;
+    this.approvalLevelSearchOpen = [];
+
     this.approvalMappingsError = '';
   }
 
@@ -1151,7 +1191,11 @@ export class AdminSignupRequestsComponent implements OnInit {
         error: (error: HttpErrorResponse) => this.approvalMappingsError = this.getErrorMessage(error, 'Unable to create approval mapping.')
       });
     } else {
-      const request: UpdateDepartmentApprovalMappingDto = { isActive: this.approvalMappingIsActive, creatorEmployeeIds: this.selectedCreatorEmployeeIds, approvalLevels: levels };
+      const request: UpdateDepartmentApprovalMappingDto = {
+        isActive: this.approvalMappingIsActive,
+        creatorEmployeeIds: this.selectedCreatorEmployeeIds,
+        approvalLevels: levels
+      };
       this.approvalMappingService.updateMapping(this.editingApprovalMappingId, request).pipe(finalize(finish)).subscribe({
         next: result => { this.approvalMappingsSuccess = `Mapping updated for ${result.departmentName}.`; this.resetApprovalMappingForm(); this.loadApprovalMappings(); },
         error: (error: HttpErrorResponse) => this.approvalMappingsError = this.getErrorMessage(error, 'Unable to update approval mapping.')
@@ -1164,10 +1208,16 @@ export class AdminSignupRequestsComponent implements OnInit {
     const nextActive = !mapping.isActive;
     const request: UpdateDepartmentApprovalMappingDto = {
       isActive: nextActive,
-      creatorEmployeeIds: mapping.dcrCreators.map(c => c.creatorEmployeeId),
+      creatorEmployeeIds: mapping.dcrCreators.map(
+        c => c.creatorEmployeeId
+      ),
       approvalLevels: mapping.approvalLevels.map(l => ({
-        levelNumber: l.levelNumber, approvalType: l.approvalType, approverEmployeeId: l.approverEmployeeId,
-        redirectedApproverEmployeeId: null, isActive: l.isActive
+        levelNumber: l.levelNumber,
+        approvalType: l.approvalType,
+        approverEmployeeId: l.approverEmployeeId,
+        redirectedApproverEmployeeId:
+          l.redirectedApproverEmployeeId,
+        isActive: l.isActive
       }))
     };
     this.isSavingApprovalMapping = true;
