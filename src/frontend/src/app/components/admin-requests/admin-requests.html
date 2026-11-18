@@ -1,7 +1,7 @@
 <main class="admin-page">
   <header class="page-header">
     <div class="page-heading">
-      <p class="eyebrow">FUJITEC · QUALITY MANAGEMENT SYSTEM</p>
+      <p class="eyebrow">MANAGE PERMISSIONS</p>
     </div>
 
     <button
@@ -785,10 +785,63 @@
         }
       </div>
       <div class="wizard-actions">
-        @if (approvalWizardStep > 1) { <button type="button" class="secondary-button" (click)="previousApprovalWizardStep()" [disabled]="isSavingApprovalMapping">Back</button> }
-        @if (approvalWizardStep < 4) { <button type="button" class="primary-button" (click)="nextApprovalWizardStep()" [disabled]="isLoadingMappingEmployees || isSavingApprovalMapping">Next</button> }
-        @if (approvalWizardStep === 4) { <button type="button" class="primary-button" (click)="saveApprovalMapping()" [disabled]="isSavingApprovalMapping || isLoadingMappingEmployees">{{ isSavingApprovalMapping ? 'Saving…' : editingApprovalMappingId !== null ? 'Update Mapping' : 'Save Mapping' }}</button><button type="button" class="secondary-button" (click)="resetApprovalMappingForm()" [disabled]="isSavingApprovalMapping">Cancel</button> }
-      </div>
+
+      @if (approvalWizardStep > 1) {
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="previousApprovalWizardStep()"
+          [disabled]="isSavingApprovalMapping">
+          Back
+        </button>
+      }
+
+      @if (approvalWizardStep < 4) {
+        <button
+          type="button"
+          class="primary-button"
+          (click)="nextApprovalWizardStep()"
+          [disabled]="isLoadingMappingEmployees || isSavingApprovalMapping">
+          Next
+        </button>
+      }
+
+      @if (editingApprovalMappingId !== null) {
+        <button
+          type="button"
+          class="primary-button"
+          (click)="saveApprovalMapping()"
+          [disabled]="isSavingApprovalMapping || isLoadingMappingEmployees">
+          {{ isSavingApprovalMapping ? 'Updating...' : 'Update Mapping' }}
+        </button>
+
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="resetApprovalMappingForm()"
+          [disabled]="isSavingApprovalMapping">
+          Cancel
+        </button>
+      }
+      @else if (approvalWizardStep === 4) {
+        <button
+          type="button"
+          class="primary-button"
+          (click)="saveApprovalMapping()"
+          [disabled]="isSavingApprovalMapping || isLoadingMappingEmployees">
+          {{ isSavingApprovalMapping ? 'Saving...' : 'Save Mapping' }}
+        </button>
+
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="resetApprovalMappingForm()"
+          [disabled]="isSavingApprovalMapping">
+          Cancel
+        </button>
+      }
+
+    </div>
       <div class="panel-heading mapping-list-heading"><h3>Existing Mappings</h3></div>
       @if (isLoadingApprovalMappings) { <div class="state-panel"><span class="loading-spinner"></span><h3>Loading mappings</h3></div> }
       @else if (approvalMappings.length === 0) { <div class="state-panel"><h3>No mappings found</h3><p>Create a mapping using the steps above.</p></div> }
