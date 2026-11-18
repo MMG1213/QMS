@@ -3,10 +3,22 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export interface PagedResult<T> {
+  items: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  allCount: number;
+  totalPages: number;
+  activeCount: number;
+  obsoleteCount: number;
+}
+
 export interface DocumentType {
   typeCode: string;
   documentTypeId: number;
   typeName: string;
+  isActive: boolean;
 }
 
 export interface Department {
@@ -103,9 +115,14 @@ export class MasterListService {
   getDocuments(
     documentTypeId?: number,
     departmentId?: number,
-    search?: string
-  ): Observable<MasterListDocument[]> {
-    let params = new HttpParams();
+    search?: string,
+    pageNumber = 1,
+    pageSize = 10,
+    status?: string
+  ): Observable<PagedResult<MasterListDocument>> {
+    let params = new HttpParams()
+      .set('pageNumber', pageNumber)
+      .set('pageSize', pageSize);
 
     if (documentTypeId !== undefined) {
       params = params.set('documentTypeId', documentTypeId);
@@ -119,7 +136,11 @@ export class MasterListService {
       params = params.set('search', search.trim());
     }
 
-    return this.http.get<MasterListDocument[]>(
+    if (status) {
+      params = params.set('status', status);
+    }
+
+    return this.http.get<PagedResult<MasterListDocument>>(
       `${this.apiUrl}/documents`,
       { params }
     );

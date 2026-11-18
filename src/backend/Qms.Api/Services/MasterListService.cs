@@ -24,17 +24,16 @@ public class MasterListService
     {
         return await _context.DocumentTypes
             .AsNoTracking()
-            .Where(type => type.IsActive)
             .OrderBy(type => type.TypeName)
             .Select(type => new DocumentTypeDto
             {
                 DocumentTypeId = type.DocumentTypeId,
                 TypeCode = type.TypeCode,
                 TypeName = type.TypeName,
+                IsActive = type.IsActive
             })
             .ToListAsync();
     }
-
 
     public async Task<List<QMSDepartmentDto>> GetQMSDepartmentsAsync()
     {
@@ -46,8 +45,15 @@ public class MasterListService
         }).ToListAsync();
     }
 
-    public async Task<List<MasterListDocumentDto>> GetDocumentsAsync(int? documentTypeId, int? departmentId, String? Search)
+    public async Task<PagedResultDto<MasterListDocumentDto>> GetDocumentsAsync(
+        int? documentTypeId,
+        int? departmentId,
+        string? search,
+        string? status,
+        int pageNumber,
+        int pageSize)
     {
+        // Apply the shared filters before calculating counts or retrieving a page.
         var query = _context.Documents.AsNoTracking().AsQueryable();
 
         if (documentTypeId.HasValue)
@@ -60,38 +66,90 @@ public class MasterListService
             query = query.Where(d => d.DepartmentId == departmentId.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(Search))
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(d => d.DocumentNo.Contains(Search) || d.Title.Contains(Search));
+            var searchTerm = search.Trim();
+            query = query.Where(d =>
+                d.DocumentNo.Contains(searchTerm) ||
+                d.Title.Contains(searchTerm));
         }
 
-        return await query.OrderBy(d => d.DocumentNo)
-        .Select(document => new MasterListDocumentDto
-        {
-            DocumentId = document.DocumentId,
-            Title = document.Title,
-            DocumentNo = document.DocumentNo,
-            DepartmentName = _context.QMSDepartments
-                .Where(department =>
-                    department.DepartmentId == document.DepartmentId)
-                .Select(department => department.DepartmentName)
-                .FirstOrDefault(),
-            TypeName = _context.DocumentTypes.Where(documenttype => documenttype.DocumentTypeId == document.DocumentTypeId)
-            .Select(documenttype => documenttype.TypeName).FirstOrDefault() ?? string.Empty,
-            RetentionPeriod = document.RetentionPeriod,
-            Status = document.Status,
-            ObseleteDate = document.ObseleteDate,
+        // Summary counts intentionally ignore the selected status card so that
+        // Total / Active / Obsolete counts remain visible when one card is selected.
+        var totalCount = await query.CountAsync();
+        var activeCount = await query.CountAsync(d => d.Status == "Active");
+        var obsoleteCount = await query.CountAsync(d => d.Status == "Obsolete");
 
-            Revisions = document.Revisions.OrderBy(d => d.RevisionNumber).Select(
-                d => new DocumentRevisionDto
-                {
-                    Id = d.Id,
-                    RevisionNumber = d.RevisionNumber,
-                    PageCount = d.PageCount,
-                    RevisionDate = d.RevisionDate,
-                }
-            ).ToList()
-        }).ToListAsync();
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            var normalizedStatus = status.Trim();
+            if (!normalizedStatus.Equals("Active", StringComparison.OrdinalIgnoreCase) &&
+                !normalizedStatus.Equals("Obsolete", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Status must be Active or Obsolete.");
+            }
+
+            query = query.Where(d => d.Status == normalizedStatus);
+        }
+
+        var filteredCount = await query.CountAsync();
+        var totalPages = filteredCount == 0
+            ? 0
+            : (int)Math.Ceiling(filteredCount / (double)pageSize);
+
+        // Keep the requested page valid if records were removed by another user.
+        if (totalPages > 0 && pageNumber > totalPages)
+        {
+            pageNumber = totalPages;
+        }
+
+        var items = await query
+            .OrderBy(d => d.DocumentNo)
+            .ThenBy(d => d.DocumentId)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(document => new MasterListDocumentDto
+            {
+                DocumentId = document.DocumentId,
+                Title = document.Title,
+                DocumentNo = document.DocumentNo,
+                DepartmentName = _context.QMSDepartments
+                    .Where(department =>
+                        department.DepartmentId == document.DepartmentId)
+                    .Select(department => department.DepartmentName)
+                    .FirstOrDefault(),
+                TypeName = _context.DocumentTypes
+                    .Where(documentType =>
+                        documentType.DocumentTypeId == document.DocumentTypeId)
+                    .Select(documentType => documentType.TypeName)
+                    .FirstOrDefault() ?? string.Empty,
+                RetentionPeriod = document.RetentionPeriod,
+                Status = document.Status,
+                ObseleteDate = document.ObseleteDate,
+                Revisions = document.Revisions
+                    .OrderBy(revision => revision.RevisionNumber)
+                    .Select(revision => new DocumentRevisionDto
+                    {
+                        Id = revision.Id,
+                        RevisionNumber = revision.RevisionNumber,
+                        PageCount = revision.PageCount,
+                        RevisionDate = revision.RevisionDate,
+                    })
+                    .ToList()
+            })
+            .ToListAsync();
+
+        return new PagedResultDto<MasterListDocumentDto>
+        {
+            Items = items,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalCount = filteredCount,
+            AllCount = totalCount,
+            TotalPages = totalPages,
+            ActiveCount = activeCount,
+            ObsoleteCount = obsoleteCount
+        };
     }
 
     public async Task<bool> UpdateDocumentAsync(int documentid, UpdateMasterListDto request)

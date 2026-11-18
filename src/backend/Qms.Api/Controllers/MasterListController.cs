@@ -42,14 +42,37 @@ public class MasterListController : ControllerBase
     public async Task<IActionResult> GetDocuments(
         [FromQuery] int? documentTypeId,
         [FromQuery] int? departmentId,
-        [FromQuery] string? search)
+        [FromQuery] string? search,
+        [FromQuery] string? status,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var documents = await _service.GetDocumentsAsync(
-            documentTypeId,
-            departmentId,
-            search);
+        if (pageNumber < 1)
+        {
+            return BadRequest(new { message = "Page number must be at least 1." });
+        }
 
-        return Ok(documents);
+        if (pageSize < 1 || pageSize > 100)
+        {
+            return BadRequest(new { message = "Page size must be between 1 and 100." });
+        }
+
+        try
+        {
+            var result = await _service.GetDocumentsAsync(
+                documentTypeId,
+                departmentId,
+                search,
+                status,
+                pageNumber,
+                pageSize);
+
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPut("documents/{documentId:int}")]
