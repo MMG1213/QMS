@@ -1,0 +1,36 @@
+
+<div class="dcr-container">
+
+    <header class="dcr-header">
+      <div>
+        <h2>Document Change Request</h2>
+        <p>Manage document additions, revisions and obsolete requests</p>
+      </div>
+    </header>
+  
+    <nav class="dcr-navigation">
+  
+      <a routerLink="raise"
+         routerLinkActive="active"
+         [routerLinkActiveOptions]="{ exact: true }">
+        Raise DCR
+      </a>
+  
+      <a routerLink="my-requests"
+         routerLinkActive="active">
+        My Requests
+      </a>
+  
+      <a routerLink="pending-approvals"
+         routerLinkActive="active">
+        Pending Approvals
+      </a>
+  
+    </nav>
+  
+    <main class="dcr-content">
+      <router-outlet></router-outlet>
+    </main>
+  
+  </div>
+  

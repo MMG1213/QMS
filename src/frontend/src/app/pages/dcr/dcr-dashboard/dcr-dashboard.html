@@ -1,0 +1,123 @@
+
+<div class="dashboard-container">
+
+    <!-- Page Heading -->
+    <section class="page-heading">
+      <div>
+        <div class="eyebrow">FUJITEC QUALITY MANAGEMENT SYSTEM</div>
+        <h1>Document Change Request</h1>
+        <p>Manage document change requests, approvals and revision activities.</p>
+      </div>
+  
+      <button class="heading-action" title="DCR Overview">
+        <span>▤</span>
+      </button>
+    </section>
+  
+    <!-- Summary Cards -->
+    <section class="summary-grid">
+  
+      <div class="summary-card">
+        <div class="summary-icon total-icon">▤</div>
+        <div class="summary-details">
+          <span>Total DCRs</span>
+          <strong>{{ totalDcrs }}</strong>
+          <small>All requests</small>
+        </div>
+      </div>
+  
+      <div class="summary-card">
+        <div class="summary-icon pending-icon">◷</div>
+        <div class="summary-details">
+          <span>Pending</span>
+          <strong>{{ pendingDcrs }}</strong>
+          <small>Awaiting action</small>
+        </div>
+      </div>
+  
+      <div class="summary-card">
+        <div class="summary-icon approved-icon">✓</div>
+        <div class="summary-details">
+          <span>Approved</span>
+          <strong>{{ approvedDcrs }}</strong>
+          <small>Successfully approved</small>
+        </div>
+      </div>
+  
+      <div class="summary-card">
+        <div class="summary-icon rejected-icon">×</div>
+        <div class="summary-details">
+          <span>Rejected</span>
+          <strong>{{ rejectedDcrs }}</strong>
+          <small>Returned for changes</small>
+        </div>
+      </div>
+  
+    </section>
+  
+    <!-- DCR Workspace -->
+    <section class="workspace-section">
+  
+      <div class="section-heading">
+        <h2>DCR Workspace</h2>
+        <p>Select a feature to continue.</p>
+      </div>
+  
+      <div class="workspace-grid">
+  
+        <!-- New DCR -->
+        <a class="workspace-card" routerLink="raise">
+          <div class="workspace-icon">＋</div>
+  
+          <div class="workspace-details">
+            <h3>New DCR</h3>
+            <p>
+              Create a request for document addition, revision or obsolescence.
+            </p>
+            <span>Request creation · My DCRs · Rejected requests</span>
+          </div>
+  
+          <div class="workspace-arrow">→</div>
+        </a>
+  
+        <!-- DCR Approvals -->
+        <a class="workspace-card" routerLink="pending-approvals">
+          <div class="workspace-icon">✓</div>
+  
+          <div class="workspace-details">
+            <h3>DCR Approvals</h3>
+            <p>
+              Review assigned requests, verify proposed changes and record decisions.
+            </p>
+            <span>Pending approvals · Processed requests</span>
+          </div>
+  
+          <div class="workspace-arrow">→</div>
+        </a>
+  
+      </div>
+  
+    </section>
+  
+    <!-- Recent Activity -->
+    <section class="activity-card">
+  
+      <div class="activity-header">
+        <div>
+          <h2>Recent DCR Activity</h2>
+          <p>Latest requests and their current status.</p>
+        </div>
+  
+        <a routerLink="raise" class="create-link">Create DCR +</a>
+      </div>
+  
+      <div class="empty-activity">
+        <div class="empty-icon">▤</div>
+        <h3>No DCR activity to display</h3>
+        <p>Submitted requests will appear here.</p>
+      </div>
+  
+    </section>
+  
+  </div>
+  

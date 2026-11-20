@@ -27,7 +27,12 @@ builder.Services.AddScoped<MasterListExcelExportService>();
 builder.Services.AddScoped<IAdminSignupRequestService, AdminSignupRequestService>();
 builder.Services.AddScoped<IDocumentTypeAdminService, DocumentTypeAdminService>();
 builder.Services.AddScoped<IDocumentApprovalMatrixService, DocumentApprovalMatrixService>();
-
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IDCRService, DCRService>();
+builder.Services.AddScoped<
+    IWorkflowApprovalService,
+    WorkflowApprovalService>();
+builder.Services.AddScoped<IPendingDCRService, PendingDCRService>();
 // Controllers
 builder.Services.AddControllers();
 

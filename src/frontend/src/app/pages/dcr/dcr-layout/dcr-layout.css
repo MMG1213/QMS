@@ -1,0 +1,58 @@
+
+.dcr-container {
+    padding: 24px 30px;
+    min-height: 100%;
+    background: #f7f8fa;
+  }
+  
+  .dcr-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  
+  .dcr-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #202b3c;
+  }
+  
+  .dcr-header p {
+    margin: 6px 0 0;
+    color: #6b7280;
+    font-size: 14px;
+  }
+  
+  .dcr-navigation {
+    display: flex;
+    gap: 28px;
+    padding: 0 4px;
+    border-bottom: 1px solid #e1e5eb;
+    margin-bottom: 24px;
+  }
+  
+  .dcr-navigation a {
+    padding: 12px 4px;
+    color: #667085;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+  }
+  
+  .dcr-navigation a:hover {
+    color: #164b8c;
+  }
+  
+  .dcr-navigation a.active {
+    color: #164b8c;
+    border-bottom-color: #164b8c;
+  }
+  
+  .dcr-content {
+    width: 100%;
+  }
+  
