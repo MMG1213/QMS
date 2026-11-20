@@ -435,6 +435,9 @@ public DbSet<WorkflowAction> WorkflowActions => Set<WorkflowAction>();
 
             entity.HasIndex(t => t.TypeCode)
                 .IsUnique();
+             entity.Property(x => x.DocumentTypeCode)
+        .HasMaxLength(20)
+        .IsRequired(false);
         });
 
         modelBuilder.Entity<Document>(entity =>

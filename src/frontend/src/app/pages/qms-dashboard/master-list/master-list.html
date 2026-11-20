@@ -287,10 +287,10 @@
                   title="Save approval details"
                   aria-label="Save approval details">
                   <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
-                  <path d="M17 21v-8H7v8M7 3v5h8"></path>
-                </svg>
-                <span class="visually-hidden">{{ isSavingApprovalMatrix ? 'Saving…' : 'Save' }}</span>
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                    <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                  </svg>
+                  <span class="visually-hidden">{{ isSavingApprovalMatrix ? 'Saving…' : 'Save' }}</span>
                 </button>
               </div>
             }
@@ -356,6 +356,23 @@
                 <option [value]="department.departmentId">
                   {{ department.departmentCode }} - {{ department.departmentName }}
                 </option>
+              }
+            </select>
+          </div>
+
+          <!-- STANDARD FILTER -->
+          <div class="filter-field">
+            <label for="standard">Standard</label>
+
+            <select
+              id="standard"
+              [(ngModel)]="selectedStandard"
+              (ngModelChange)="onStandardChange($event)">
+
+              <option value="">All Standards</option>
+
+              @for (standard of standardOptions; track standard) {
+                <option [value]="standard">{{ standard }}</option>
               }
             </select>
           </div>
@@ -486,7 +503,6 @@
             </div>
           </div>
 
-
           @if (isLoadingMasterData) {
             <p class="loading-message">Loading master data...</p>
           } @else if (masterDataError) {
@@ -616,85 +632,85 @@
 
         </section>
 
-      @if (isAddingMasterData && specialAddDraft; as draft) {
-        <div class="modal-backdrop">
-          <div
-            class="modal-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="special-add-title"
-            tabindex="-1"
-            (keydown.escape)="cancelSpecialAdd()">
+        @if (isAddingMasterData && specialAddDraft; as draft) {
+          <div class="modal-backdrop">
+            <div
+              class="modal-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="special-add-title"
+              tabindex="-1"
+              (keydown.escape)="cancelSpecialAdd()">
 
-            <div class="modal-header">
-              <div>
-                <h3 id="special-add-title">Add Record</h3>
-                <p>{{ specialType.title }}</p>
+              <div class="modal-header">
+                <div>
+                  <h3 id="special-add-title">Add Record</h3>
+                  <p>{{ specialType.title }}</p>
+                </div>
+
+                <button
+                  type="button"
+                  class="modal-close"
+                  (click)="cancelSpecialAdd()"
+                  [disabled]="isSavingMasterData"
+                  aria-label="Close">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M18 6 6 18"></path>
+                    <path d="m6 6 12 12"></path>
+                  </svg>
+                </button>
               </div>
 
-              <button
-                type="button"
-                class="modal-close"
-                (click)="cancelSpecialAdd()"
-                [disabled]="isSavingMasterData"
-                aria-label="Close">
-                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M18 6 6 18"></path>
-                  <path d="m6 6 12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <div class="modal-body">
-              @if (specialSaveError) {
-                <div class="error-message">{{ specialSaveError }}</div>
-              }
-
-              <div class="modal-form-grid">
-                @for (column of specialType.columns; track column.key; let isFirst = $first) {
-                  <div class="special-form-field">
-                    <label [for]="'add-' + column.key">
-                      {{ column.label }}
-                    </label>
-
-                    <input
-                      [id]="'add-' + column.key"
-                      [type]="getSpecialInputType(column.key)"
-                      [ngModel]="draft[column.key] ?? ''"
-                      (ngModelChange)="updateSpecialAddField(column.key, $event)"
-                      [autofocus]="isFirst"
-                      [attr.aria-label]="column.label" />
-                  </div>
+              <div class="modal-body">
+                @if (specialSaveError) {
+                  <div class="error-message">{{ specialSaveError }}</div>
                 }
+
+                <div class="modal-form-grid">
+                  @for (column of specialType.columns; track column.key; let isFirst = $first) {
+                    <div class="special-form-field">
+                      <label [for]="'add-' + column.key">
+                        {{ column.label }}
+                      </label>
+
+                      <input
+                        [id]="'add-' + column.key"
+                        [type]="getSpecialInputType(column.key)"
+                        [ngModel]="draft[column.key] ?? ''"
+                        (ngModelChange)="updateSpecialAddField(column.key, $event)"
+                        [autofocus]="isFirst"
+                        [attr.aria-label]="column.label" />
+                    </div>
+                  }
+                </div>
               </div>
-            </div>
 
-            <div class="modal-footer">
-              <button
-                type="button"
-                class="cancel-button"
-                (click)="cancelSpecialAdd()"
-                [disabled]="isSavingMasterData">
-                Cancel
-              </button>
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="cancel-button"
+                  (click)="cancelSpecialAdd()"
+                  [disabled]="isSavingMasterData">
+                  Cancel
+                </button>
 
-              <button
-                type="button"
-                class="save-button icon-only-action"
-                (click)="saveSpecialAdd()"
-                [disabled]="isSavingMasterData"
-                title="Save record"
-                aria-label="Save record">
-                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
-                  <path d="M17 21v-8H7v8M7 3v5h8"></path>
-                </svg>
-                <span class="visually-hidden">{{ isSavingMasterData ? 'Saving...' : 'Save Record' }}</span>
-              </button>
+                <button
+                  type="button"
+                  class="save-button icon-only-action"
+                  (click)="saveSpecialAdd()"
+                  [disabled]="isSavingMasterData"
+                  title="Save record"
+                  aria-label="Save record">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                    <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                  </svg>
+                  <span class="visually-hidden">{{ isSavingMasterData ? 'Saving...' : 'Save Record' }}</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      }
+        }
       }
 
       <!-- ML01 - MASTER LIST OF MASTER LISTS -->
@@ -765,7 +781,6 @@
           @if (ml01SaveError && !isAddingML01) {
             <div class="error-message">{{ ml01SaveError }}</div>
           }
-
 
           @if (isLoadingML01) {
             <p class="loading-message">Loading ML01 records...</p>
@@ -946,109 +961,109 @@
 
         </section>
 
-      @if (isAddingML01 && ml01AddDraft; as draft) {
-        <div class="modal-backdrop">
-          <div
-            class="modal-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="ml01-add-title"
-            tabindex="-1"
-            (keydown.escape)="cancelML01Add()">
+        @if (isAddingML01 && ml01AddDraft; as draft) {
+          <div class="modal-backdrop">
+            <div
+              class="modal-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ml01-add-title"
+              tabindex="-1"
+              (keydown.escape)="cancelML01Add()">
 
-            <div class="modal-header">
-              <div>
-                <h3 id="ml01-add-title">Add Record</h3>
-                <p>Master List of Master Lists</p>
-              </div>
-
-              <button
-                type="button"
-                class="modal-close"
-                (click)="cancelML01Add()"
-                [disabled]="isSavingML01"
-                aria-label="Close">
-                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M18 6 6 18"></path>
-                  <path d="m6 6 12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <div class="modal-body">
-              @if (ml01SaveError) {
-                <div class="error-message">{{ ml01SaveError }}</div>
-              }
-
-              <div class="modal-form-grid">
-                <div class="special-form-field">
-                  <label for="ml01-add-description">Description</label>
-                  <input
-                    id="ml01-add-description"
-                    type="text"
-                    autofocus
-                    [(ngModel)]="draft.description"
-                    placeholder="Enter description" />
+              <div class="modal-header">
+                <div>
+                  <h3 id="ml01-add-title">Add Record</h3>
+                  <p>Master List of Master Lists</p>
                 </div>
 
-                <div class="special-form-field">
-                  <label for="ml01-add-documentNo">Document No.</label>
-                  <input
-                    id="ml01-add-documentNo"
-                    type="text"
-                    [(ngModel)]="draft.documentNo"
-                    placeholder="Enter document number" />
-                </div>
+                <button
+                  type="button"
+                  class="modal-close"
+                  (click)="cancelML01Add()"
+                  [disabled]="isSavingML01"
+                  aria-label="Close">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M18 6 6 18"></path>
+                    <path d="m6 6 12 12"></path>
+                  </svg>
+                </button>
               </div>
 
-              <p class="modal-section-title">Revision Details</p>
+              <div class="modal-body">
+                @if (ml01SaveError) {
+                  <div class="error-message">{{ ml01SaveError }}</div>
+                }
 
-              @for (revision of draft.revisions; track $index) {
-                <div class="modal-revision-row">
+                <div class="modal-form-grid">
                   <div class="special-form-field">
-                    <label>Revision {{ revision.revisionNo }} Pages</label>
+                    <label for="ml01-add-description">Description</label>
                     <input
-                      type="number"
-                      min="1"
-                      [(ngModel)]="revision.pageCount" />
+                      id="ml01-add-description"
+                      type="text"
+                      autofocus
+                      [(ngModel)]="draft.description"
+                      placeholder="Enter description" />
                   </div>
 
                   <div class="special-form-field">
-                    <label>Revision {{ revision.revisionNo }} Date</label>
+                    <label for="ml01-add-documentNo">Document No.</label>
                     <input
-                      type="date"
-                      [(ngModel)]="revision.revisionDate" />
+                      id="ml01-add-documentNo"
+                      type="text"
+                      [(ngModel)]="draft.documentNo"
+                      placeholder="Enter document number" />
                   </div>
                 </div>
-              }
-            </div>
 
-            <div class="modal-footer">
-              <button
-                type="button"
-                class="cancel-button"
-                (click)="cancelML01Add()"
-                [disabled]="isSavingML01">
-                Cancel
-              </button>
+                <p class="modal-section-title">Revision Details</p>
 
-              <button
-                type="button"
-                class="save-button icon-only-action"
-                (click)="saveML01Add()"
-                [disabled]="isSavingML01"
-                title="Save record"
-                aria-label="Save record">
-                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
-                  <path d="M17 21v-8H7v8M7 3v5h8"></path>
-                </svg>
-                <span class="visually-hidden">{{ isSavingML01 ? 'Saving...' : 'Save Record' }}</span>
-              </button>
+                @for (revision of draft.revisions; track $index) {
+                  <div class="modal-revision-row">
+                    <div class="special-form-field">
+                      <label>Revision {{ revision.revisionNo }} Pages</label>
+                      <input
+                        type="number"
+                        min="1"
+                        [(ngModel)]="revision.pageCount" />
+                    </div>
+
+                    <div class="special-form-field">
+                      <label>Revision {{ revision.revisionNo }} Date</label>
+                      <input
+                        type="date"
+                        [(ngModel)]="revision.revisionDate" />
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="cancel-button"
+                  (click)="cancelML01Add()"
+                  [disabled]="isSavingML01">
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  class="save-button icon-only-action"
+                  (click)="saveML01Add()"
+                  [disabled]="isSavingML01"
+                  title="Save record"
+                  aria-label="Save record">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                    <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                  </svg>
+                  <span class="visually-hidden">{{ isSavingML01 ? 'Saving...' : 'Save Record' }}</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      }
+        }
       }
 
       <!-- ML02–ML06 CONTROLLED DOCUMENTS TABLE -->
@@ -1065,6 +1080,30 @@
             </div>
 
             <div class="master-list-heading-actions">
+
+              @if (canAddDocument) {
+                <button
+                  type="button"
+                  class="add-button icon-only-action"
+                  (click)="startAddDocument()"
+                  [disabled]="
+                    isAddingDocument ||
+                    isSavingNewDocument ||
+                    editingDocumentId !== null ||
+                    isSavingDocument ||
+                    isBulkSelectionMode ||
+                    isAddingMasterData ||
+                    editingMasterDataId !== null
+                  "
+                  title="Add Document"
+                  aria-label="Add Document">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 5v14"></path>
+                    <path d="M5 12h14"></path>
+                  </svg>
+                  <span class="visually-hidden">Add Document</span>
+                </button>
+              }
 
               <button
                 type="button"
@@ -1097,7 +1136,6 @@
                 <span class="visually-hidden">Refresh</span>
               </button>
 
-              <!-- ENTER BULK SELECTION MODE -->
               @if (canBulkObsolete && !isBulkSelectionMode) {
                 <button
                   type="button"
@@ -1183,6 +1221,7 @@
                   <th rowspan="2" class="title-column">Title / Description</th>
                   <th rowspan="2" class="document-number-column">Document No.</th>
                   <th rowspan="2" class="document-type-column">Document Type</th>
+                  <th rowspan="2" class="standard-column">Standard</th>
                   <th rowspan="2" class="department-column">Department Name</th>
                   <th rowspan="2" class="retention-column">Retention Period</th>
                   <th rowspan="2" class="status-column">Status</th>
@@ -1213,7 +1252,7 @@
                   <tr>
                     <td
                       class="table-message"
-                      [attr.colspan]="(isQmsAdmin ? 9 : 8) + revisionColumns.length * 2 + (isBulkSelectionMode && canBulkObsolete ? 1 : 0)">
+                      [attr.colspan]="(isQmsAdmin ? 10 : 9) + revisionColumns.length * 2 + (isBulkSelectionMode && canBulkObsolete ? 1 : 0)">
                       Loading documents...
                     </td>
                   </tr>
@@ -1267,6 +1306,23 @@
                               <option [ngValue]="type.documentTypeId">
                                 {{ type.typeCode }} - {{ type.typeName }}
                                 {{ !type.isActive ? '(Discontinued)' : '' }}
+                              </option>
+                            }
+                          </select>
+                        </td>
+
+                        <!-- STANDARD EDIT FIELD -->
+                        <td>
+                          <select
+                            class="edit-input"
+                            [(ngModel)]="draft.standard"
+                            aria-label="Standard">
+
+                            <option [ngValue]="null">Select Standard</option>
+
+                            @for (standard of standardOptions; track standard) {
+                              <option [ngValue]="standard">
+                                {{ standard }}
                               </option>
                             }
                           </select>
@@ -1405,6 +1461,11 @@
                           </span>
                         </td>
 
+                        <!-- STANDARD DISPLAY FIELD -->
+                        <td class="standard-cell">
+                          {{ document.standard || '—' }}
+                        </td>
+
                         <td class="department-cell">
                           {{ document.departmentName || '—' }}
                         </td>
@@ -1474,10 +1535,10 @@
                   <tr>
                     <td
                       class="table-message empty-state"
-                      [attr.colspan]="(isQmsAdmin ? 9 : 8) + revisionColumns.length * 2 + (isBulkSelectionMode && canBulkObsolete ? 1 : 0)">
+                      [attr.colspan]="(isQmsAdmin ? 10 : 9) + revisionColumns.length * 2 + (isBulkSelectionMode && canBulkObsolete ? 1 : 0)">
                       <strong>No documents match your filters</strong>
                       <span>
-                        Try changing the document type, department or search
+                        Try changing the document type, department, Standard or search
                         text, or reset the filters.
                       </span>
                     </td>
@@ -1535,6 +1596,12 @@
             </div>
           }
 
+          @if (addDocumentMessage) {
+            <div class="success-message" role="status">
+              {{ addDocumentMessage }}
+            </div>
+          }
+
           @if (saveMessage) {
             <div class="success-message">
               {{ saveMessage }}
@@ -1560,6 +1627,176 @@
           }
 
         </section>
+
+        <!-- ADD DOCUMENT MODAL -->
+        @if (isAddingDocument && addDocumentDraft; as draft) {
+          <div class="modal-backdrop">
+            <div
+              class="modal-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="add-document-title"
+              tabindex="-1"
+              (keydown.escape)="cancelAddDocument()">
+
+              <div class="modal-header">
+                <div>
+                  <h3 id="add-document-title">Add Document</h3>
+                  <p>Controlled Document Register</p>
+                </div>
+
+                <button
+                  type="button"
+                  class="modal-close"
+                  (click)="cancelAddDocument()"
+                  [disabled]="isSavingNewDocument"
+                  aria-label="Close">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M18 6 6 18"></path>
+                    <path d="m6 6 12 12"></path>
+                  </svg>
+                </button>
+              </div>
+
+              <div class="modal-body">
+
+                @if (addDocumentError) {
+                  <div class="error-message" role="alert">
+                    {{ addDocumentError }}
+                  </div>
+                }
+
+                <div class="modal-form-grid">
+
+                  <div class="special-form-field">
+                    <label for="add-document-title">Document Title</label>
+                    <input
+                      id="add-document-title"
+                      type="text"
+                      [(ngModel)]="draft.title"
+                      placeholder="Enter document title"
+                      autofocus />
+                  </div>
+
+                  <div class="special-form-field">
+                    <label for="add-document-number">Document Number</label>
+                    <input
+                      id="add-document-number"
+                      type="text"
+                      [(ngModel)]="draft.documentNo"
+                      placeholder="Enter document number" />
+                  </div>
+
+                  <div class="special-form-field">
+                    <label for="add-document-type">Document Type</label>
+                    <select
+                      id="add-document-type"
+                      [(ngModel)]="draft.documentTypeId">
+                      <option [ngValue]="null">Select Document Type</option>
+                      @for (type of addableDocumentTypes; track type.documentTypeId) {
+                        <option [ngValue]="type.documentTypeId">
+                          {{ type.typeCode }} - {{ type.typeName }}
+                        </option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="special-form-field">
+                    <label for="add-document-department">Department</label>
+                    <select
+                      id="add-document-department"
+                      [(ngModel)]="draft.departmentId">
+                      <option [ngValue]="null">Select Department</option>
+                      @for (department of departments; track department.departmentId) {
+                        <option [ngValue]="department.departmentId">
+                          {{ department.departmentCode }} - {{ department.departmentName }}
+                        </option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="special-form-field">
+                    <label for="add-document-standard">Standard</label>
+                    <select
+                      id="add-document-standard"
+                      [(ngModel)]="draft.standard">
+                      <option value="">Select Standard</option>
+                      @for (standard of standardOptions; track standard) {
+                        <option [value]="standard">{{ standard }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="special-form-field">
+                    <label for="add-document-retention">Retention Period</label>
+                    <input
+                      id="add-document-retention"
+                      type="text"
+                      [(ngModel)]="draft.retentionPeriod"
+                      placeholder="Enter retention period" />
+                  </div>
+
+                  <div class="special-form-field">
+                    <label for="add-document-revision">Initial Revision Number</label>
+                    <input
+                      id="add-document-revision"
+                      type="number"
+                      min="0"
+                      step="1"
+                      [(ngModel)]="draft.revisionNumber" />
+                  </div>
+
+                  <div class="special-form-field">
+                    <label for="add-document-pages">Page Count</label>
+                    <input
+                      id="add-document-pages"
+                      type="number"
+                      min="1"
+                      step="1"
+                      [(ngModel)]="draft.pageCount"
+                      placeholder="Enter page count" />
+                  </div>
+
+                  <div class="special-form-field">
+                    <label for="add-document-revision-date">Revision Date</label>
+                    <input
+                      id="add-document-revision-date"
+                      type="date"
+                      [(ngModel)]="draft.revisionDate" />
+                  </div>
+
+                </div>
+              </div>
+
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="cancel-button"
+                  (click)="cancelAddDocument()"
+                  [disabled]="isSavingNewDocument">
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  class="save-button icon-only-action"
+                  (click)="saveNewDocument()"
+                  [disabled]="isSavingNewDocument"
+                  title="Save document"
+                  aria-label="Save document">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+                    <path d="M17 21v-8H7v8M7 3v5h8"></path>
+                  </svg>
+                  <span class="visually-hidden">
+                    {{ isSavingNewDocument ? 'Saving...' : 'Save Document' }}
+                  </span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        }
       }
 
     </section>

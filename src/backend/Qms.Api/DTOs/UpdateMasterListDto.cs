@@ -16,6 +16,8 @@ public class UpdateMasterListDto
     
     [Range(1,int.MaxValue)]
     public int DepartmentId { get; set; }
+    [StringLength(100)]
+public string? Standard { get; set; }
 
     [StringLength(50)]
     public string? RetentionPeriod { get; set; }

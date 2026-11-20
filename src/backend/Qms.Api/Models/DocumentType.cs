@@ -8,6 +8,7 @@ public class DocumentType
     public string TypeCode { get; set; } = string.Empty;
 
     public string TypeName { get; set; } = string.Empty;
+    public string? DocumentTypeCode { get; set; }
 
     public bool IsActive { get; set; } = true;
 

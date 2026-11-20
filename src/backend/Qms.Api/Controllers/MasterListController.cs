@@ -1,5 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.Versioning;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Qms.Api.Models;
@@ -24,37 +23,51 @@ public class MasterListController : ControllerBase
         _excelExportService = excelExportService;
     }
 
+    // GET: api/master-list/document-types
     [HttpGet("document-types")]
     public async Task<IActionResult> GetDocumentTypes()
     {
         var documentTypes = await _service.GetDocumentTypesAsync();
+
         return Ok(documentTypes);
     }
 
+    // GET: api/master-list/departments
     [HttpGet("departments")]
     public async Task<IActionResult> GetDepartments()
     {
         var departments = await _service.GetQMSDepartmentsAsync();
+
         return Ok(departments);
     }
 
+    // GET: api/master-list/documents
+    // Optional filters:
+    // documentTypeId, departmentId, search, status, standard
     [HttpGet("documents")]
     public async Task<IActionResult> GetDocuments(
         [FromQuery] int? documentTypeId,
         [FromQuery] int? departmentId,
         [FromQuery] string? search,
         [FromQuery] string? status,
+        [FromQuery] string? standard,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10)
     {
         if (pageNumber < 1)
         {
-            return BadRequest(new { message = "Page number must be at least 1." });
+            return BadRequest(new
+            {
+                message = "Page number must be at least 1."
+            });
         }
 
         if (pageSize < 1 || pageSize > 100)
         {
-            return BadRequest(new { message = "Page size must be between 1 and 100." });
+            return BadRequest(new
+            {
+                message = "Page size must be between 1 and 100."
+            });
         }
 
         try
@@ -64,6 +77,7 @@ public class MasterListController : ControllerBase
                 departmentId,
                 search,
                 status,
+                standard,
                 pageNumber,
                 pageSize);
 
@@ -71,14 +85,52 @@ public class MasterListController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
         }
     }
 
-    [HttpPut("documents/{documentId:int}")]
-
+    // POST: api/master-list/documents
+    // Add a new document for ML02-ML06 and ML11.
+    [HttpPost("documents")]
     [Authorize(Roles = QmsRole.QmsAdmin)]
-    public async Task<IActionResult> UpdateDocuments(int documentId, [FromBody] UpdateMasterListDto request)
+    public async Task<IActionResult> AddDocument(
+        [FromBody] AddDocumentDto request)
+    {
+        try
+        {
+            var documentId = await _service.AddDocumentAsync(request);
+
+            return CreatedAtAction(
+                nameof(GetDocuments),
+                new
+                {
+                    documentTypeId = request.DocumentTypeId
+                },
+                new
+                {
+                    documentId,
+                    message = "Document added successfully."
+                });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
+    // PUT: api/master-list/documents/{documentId}
+    // Only QMS Admin can update Master List documents.
+    [HttpPut("documents/{documentId:int}")]
+    [Authorize(Roles = QmsRole.QmsAdmin)]
+    public async Task<IActionResult> UpdateDocuments(
+        int documentId,
+        [FromBody] UpdateMasterListDto request)
     {
         try
         {
@@ -90,22 +142,25 @@ public class MasterListController : ControllerBase
             {
                 return NotFound(new
                 {
-                    message = "Document not found"
+                    message = "Document not found."
                 });
             }
 
             return Ok(new
             {
-                message = "Master List Document Updated Successfully"
+                message = "Master List Document Updated Successfully."
             });
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
         }
     }
 
-    // Excel export
+    // GET: api/master-list/export
     [HttpGet("export")]
     public async Task<IActionResult> ExportMasterList(
         [FromQuery] int? documentTypeId,
@@ -119,7 +174,8 @@ public class MasterListController : ControllerBase
                 departmentId,
                 cancellationToken);
 
-            var fileName = $"MasterList_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            var fileName =
+                $"MasterList_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
 
             return File(
                 fileBytes,
@@ -128,12 +184,17 @@ public class MasterListController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
         }
     }
 
+    // PUT: api/master-list/obsolete
     [HttpPut("obsolete")]
-    public async Task<IActionResult> BulkobsoleteDocumets([FromBody] BulkObsoleteDocuments request)
+    public async Task<IActionResult> BulkobsoleteDocumets(
+        [FromBody] BulkObsoleteDocuments request)
     {
         try
         {
@@ -141,13 +202,12 @@ public class MasterListController : ControllerBase
 
             return Ok(new
             {
-                message = $"{count} documets marked as obsolte Sucessfully.",
+                message = $"{count} documents marked as obsolete successfully.",
                 updatedCount = count
             });
-
-
         }
-        catch (ArgumentException ex) {
+        catch (ArgumentException ex)
+        {
             return BadRequest(new
             {
                 message = ex.Message

@@ -35,7 +35,7 @@ export interface DocumentRevision {
 }
 
 export interface MasterListDocument {
-typeCode: any;
+  typeCode: any;
   documentId: number;
   title: string;
   documentNo: string;
@@ -47,6 +47,7 @@ typeCode: any;
   obseleteDate: string | null;
   revisions: DocumentRevision[];
   typeName: string | null;
+  standard: string | null;
 }
 
 export interface UpdateMasterListDocument {
@@ -57,12 +58,32 @@ export interface UpdateMasterListDocument {
   retentionPeriod: string | null;
   status: string;
   obseleteDate: string | null;
+  standard: string | null;
   revisions: {
     revisionNumber: number;
     pageCount: number;
     revisionDate: string;
   }[];
 }
+
+// Request for adding a new controlled document.
+export interface AddDocumentRequest {
+  documentNo: string;
+  title: string;
+  documentTypeId: number;
+  departmentId: number;
+  standard: string | null;
+  retentionPeriod: string | null;
+  revisionNumber: number;
+  pageCount: number;
+  revisionDate: string;
+}
+
+export interface AddDocumentResponse {
+  documentId: number;
+  message: string;
+}
+
 export interface ML01Revision {
   id: number;
   revisionNo: number;
@@ -88,6 +109,7 @@ export interface ML01EntryRequest {
   documentNo: string;
   revisions: ML01RevisionRequest[];
 }
+
 export interface BulkObsoleteDocumentsRequest {
   documentIds: number[];
 }
@@ -118,8 +140,10 @@ export class MasterListService {
     search?: string,
     pageNumber = 1,
     pageSize = 10,
-    status?: string
+    status?: string,
+    standard?: string
   ): Observable<PagedResult<MasterListDocument>> {
+
     let params = new HttpParams()
       .set('pageNumber', pageNumber)
       .set('pageSize', pageSize);
@@ -140,9 +164,23 @@ export class MasterListService {
       params = params.set('status', status);
     }
 
+    if (standard?.trim()) {
+      params = params.set('standard', standard.trim());
+    }
+
     return this.http.get<PagedResult<MasterListDocument>>(
       `${this.apiUrl}/documents`,
       { params }
+    );
+  }
+
+  // Add a new controlled document (ML02-ML06 and ML11).
+  addDocument(
+    request: AddDocumentRequest
+  ): Observable<AddDocumentResponse> {
+    return this.http.post<AddDocumentResponse>(
+      `${this.apiUrl}/documents`,
+      request
     );
   }
 
@@ -155,6 +193,7 @@ export class MasterListService {
       request
     );
   }
+
   obsoleteDocuments(
     request: BulkObsoleteDocumentsRequest
   ): Observable<{ message: string }> {
@@ -165,31 +204,31 @@ export class MasterListService {
   }
 
   // --------------------------------------------------
-// ML01 - MASTER LIST OF MASTER LISTS
-// --------------------------------------------------
+  // ML01 - MASTER LIST OF MASTER LISTS
+  // --------------------------------------------------
 
-private readonly ml01ApiUrl = 'http://localhost:5193/api/ML01';
+  private readonly ml01ApiUrl = 'http://localhost:5193/api/ML01';
 
-getML01Entries(): Observable<ML01Entry[]> {
-  return this.http.get<ML01Entry[]>(this.ml01ApiUrl);
-}
+  getML01Entries(): Observable<ML01Entry[]> {
+    return this.http.get<ML01Entry[]>(this.ml01ApiUrl);
+  }
 
-createML01Entry(
-  request: ML01EntryRequest
-): Observable<ML01Entry> {
-  return this.http.post<ML01Entry>(
-    this.ml01ApiUrl,
-    request
-  );
-}
+  createML01Entry(
+    request: ML01EntryRequest
+  ): Observable<ML01Entry> {
+    return this.http.post<ML01Entry>(
+      this.ml01ApiUrl,
+      request
+    );
+  }
 
-updateML01Entry(
-  id: number,
-  request: ML01EntryRequest
-): Observable<ML01Entry> {
-  return this.http.put<ML01Entry>(
-    `${this.ml01ApiUrl}/${id}`,
-    request
-  );
-}
+  updateML01Entry(
+    id: number,
+    request: ML01EntryRequest
+  ): Observable<ML01Entry> {
+    return this.http.put<ML01Entry>(
+      `${this.ml01ApiUrl}/${id}`,
+      request
+    );
+  }
 }

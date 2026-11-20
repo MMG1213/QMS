@@ -15,6 +15,8 @@ public class MasterListDocumentDto
 
     public DateOnly? ObseleteDate{ get; set; }
 
+    public string? Standard { get; set; }
+
     public List<DocumentRevisionDto> Revisions { get; set; } = new();
 
 }

@@ -133,7 +133,7 @@ private async Task ExportControlledDocumentsAsync(
         headers.Add("Pages");
         headers.Add("Date");
     }
-
+    headers.Add("Standard");
     headers.Add("Retention Period");
     headers.Add("Status");
     headers.Add("Obsolete Date");
@@ -196,7 +196,8 @@ private async Task ExportControlledDocumentsAsync(
                     column += 2;
                 }
             }
-
+            worksheet.Cell(currentRow, column++).Value =
+    document.Standard ?? "";
             worksheet.Cell(currentRow, column++).Value =
                 document.RetentionPeriod ?? "";
 

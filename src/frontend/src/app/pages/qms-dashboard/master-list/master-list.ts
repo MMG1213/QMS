@@ -1,3 +1,4 @@
+
 import {
   Component,
   HostListener,
@@ -18,6 +19,7 @@ import {
   MasterListDocument,
   DocumentRevision,
   UpdateMasterListDocument,
+  AddDocumentRequest,
   ML01Entry,
   ML01EntryRequest,
   ML01Revision,
@@ -31,7 +33,11 @@ import {
 } from '../../../services/master-data.service';
 
 import { SigninService } from '../../../services/signin.service';
-import { DocumentApprovalMatrixService, DocumentApprovalMatrix, SaveDocumentApprovalMatrixRequest } from '../../../services/document-approval-matrix.service';
+import {
+  DocumentApprovalMatrixService,
+  DocumentApprovalMatrix,
+  SaveDocumentApprovalMatrixRequest
+} from '../../../services/document-approval-matrix.service';
 import { MasterListExportService } from '../../../services/master-list-export';
 
 // --------------------------------------------------
@@ -50,6 +56,22 @@ interface ML01EntryDraft {
   description: string;
   documentNo: string;
   revisions: ML01RevisionDraft[];
+}
+
+// --------------------------------------------------
+// ADD DOCUMENT DRAFT INTERFACE
+// --------------------------------------------------
+
+interface AddDocumentDraft {
+  documentNo: string;
+  title: string;
+  documentTypeId: number | null;
+  departmentId: number | null;
+  standard: string;
+  retentionPeriod: string;
+  revisionNumber: number | null;
+  pageCount: number | null;
+  revisionDate: string;
 }
 
 @Component({
@@ -174,7 +196,15 @@ export class MasterListComponent implements OnInit {
   departments: Department[] = [];
   documents: MasterListDocument[] = [];
 
-  // Server-side pagination for the ML02–ML06 Master List documents.
+  readonly standardOptions: string[] = [
+    'ISO 9001',
+    'ISO 14001',
+    'ISO 45001',
+    'IMS'
+  ];
+
+  selectedStandard = '';
+
   pageNumber = 1;
   pageSize = 10;
   totalCount = 0;
@@ -187,8 +217,284 @@ export class MasterListComponent implements OnInit {
   selectedDepartmentId: number | null = null;
   searchText = '';
 
-  // Status selected from the Total / Active / Obsolete summary cards.
   selectedStatusFilter: 'All' | 'Active' | 'Obsolete' = 'All';
+
+  // --------------------------------------------------
+  // ADD DOCUMENT (ML02–ML06 AND ML11)
+  // --------------------------------------------------
+
+  readonly addableDocumentTypeIds: number[] = [
+    1, 2, 3, 4, 5, 11
+  ];
+
+  isAddingDocument = false;
+  isSavingNewDocument = false;
+
+  addDocumentDraft: AddDocumentDraft | null = null;
+
+  addDocumentError = '';
+  addDocumentMessage = '';
+
+  /**
+   * Add Document is available only to QMS Admin.
+   *
+   * It is available when:
+   * - All document types are selected, or
+   * - ML02–ML06 or ML11 is selected.
+   *
+   * ML01 and ML07–ML10 are excluded.
+   */
+  get canAddDocument(): boolean {
+
+    const allowedType =
+      this.selectedDocumentTypeId === null ||
+      this.addableDocumentTypeIds.includes(
+        this.selectedDocumentTypeId
+      );
+
+    return this.isQmsAdmin &&
+      allowedType &&
+      !this.isML01Selected &&
+      !this.selectedSpecialType;
+  }
+
+  /**
+   * Document types available in the Add Document form.
+   */
+  get addableDocumentTypes(): DocumentType[] {
+
+    return this.documentTypes.filter(type =>
+      this.addableDocumentTypeIds.includes(type.documentTypeId)
+    );
+  }
+
+  // --------------------------------------------------
+  // START ADD DOCUMENT
+  // --------------------------------------------------
+
+  startAddDocument(): void {
+
+    if (
+      !this.canAddDocument ||
+      this.isAddingDocument ||
+      this.isSavingNewDocument ||
+      this.editingDocumentId !== null ||
+      this.isSavingDocument ||
+      this.isBulkSelectionMode ||
+      this.editingML01Id !== null ||
+      this.isAddingML01 ||
+      this.editingMasterDataId !== null ||
+      this.isAddingMasterData
+    ) {
+      return;
+    }
+
+    const selectedTypeIsAllowed =
+      this.selectedDocumentTypeId !== null &&
+      this.addableDocumentTypeIds.includes(
+        this.selectedDocumentTypeId
+      );
+
+    this.addDocumentDraft = {
+
+      documentNo: '',
+
+      title: '',
+
+      documentTypeId: selectedTypeIsAllowed
+        ? this.selectedDocumentTypeId
+        : null,
+
+      departmentId: this.selectedDepartmentId,
+
+      standard: '',
+
+      retentionPeriod: '',
+
+      revisionNumber: 0,
+
+      pageCount: null,
+
+      revisionDate: ''
+    };
+
+    this.addDocumentError = '';
+    this.addDocumentMessage = '';
+
+    this.isAddingDocument = true;
+
+    this.cdr.markForCheck();
+  }
+
+  // --------------------------------------------------
+  // CANCEL ADD DOCUMENT
+  // --------------------------------------------------
+
+  cancelAddDocument(): void {
+
+    if (this.isSavingNewDocument) {
+      return;
+    }
+
+    this.isAddingDocument = false;
+    this.addDocumentDraft = null;
+
+    this.addDocumentError = '';
+    this.addDocumentMessage = '';
+
+    this.cdr.markForCheck();
+  }
+
+  // --------------------------------------------------
+  // SAVE NEW DOCUMENT
+  // --------------------------------------------------
+
+  saveNewDocument(): void {
+
+    const draft = this.addDocumentDraft;
+
+    if (
+      !this.isQmsAdmin ||
+      !this.canAddDocument ||
+      !draft ||
+      this.isSavingNewDocument
+    ) {
+      return;
+    }
+
+    // Document Number validation.
+    if (!draft.documentNo.trim()) {
+      this.addDocumentError = 'Document number is required.';
+      return;
+    }
+
+    // Document Title validation.
+    if (!draft.title.trim()) {
+      this.addDocumentError = 'Document title is required.';
+      return;
+    }
+
+    // Document Type validation.
+    if (
+      draft.documentTypeId === null ||
+      !this.addableDocumentTypeIds.includes(
+        draft.documentTypeId
+      ) ||
+      !this.addableDocumentTypes.some(
+        type => type.documentTypeId === draft.documentTypeId
+      )
+    ) {
+      this.addDocumentError =
+        'Select a valid Document Type (ML02–ML06 or ML11).';
+      return;
+    }
+
+    // Department validation.
+    if (
+      draft.departmentId === null ||
+      !this.departments.some(
+        department =>
+          department.departmentId === draft.departmentId
+      )
+    ) {
+      this.addDocumentError = 'Select a valid department.';
+      return;
+    }
+
+    // Initial revision number validation.
+    if (
+      draft.revisionNumber === null ||
+      !Number.isInteger(Number(draft.revisionNumber)) ||
+      Number(draft.revisionNumber) < 0
+    ) {
+      this.addDocumentError =
+        'Enter a valid initial revision number (0 or higher).';
+      return;
+    }
+
+    // Page count validation.
+    if (
+      draft.pageCount === null ||
+      !Number.isInteger(Number(draft.pageCount)) ||
+      Number(draft.pageCount) < 1
+    ) {
+      this.addDocumentError =
+        'Page count must be at least 1.';
+      return;
+    }
+
+    // Revision date validation.
+    if (!draft.revisionDate) {
+      this.addDocumentError = 'Revision date is required.';
+      return;
+    }
+
+    // Build API request.
+    const request: AddDocumentRequest = {
+
+      documentNo: draft.documentNo.trim(),
+
+      title: draft.title.trim(),
+
+      documentTypeId: Number(draft.documentTypeId),
+
+      departmentId: Number(draft.departmentId),
+
+      standard: draft.standard.trim() || null,
+
+      retentionPeriod: draft.retentionPeriod.trim() || null,
+
+      revisionNumber: Number(draft.revisionNumber),
+
+      pageCount: Number(draft.pageCount),
+
+      revisionDate: draft.revisionDate.substring(0, 10)
+    };
+
+    this.isSavingNewDocument = true;
+
+    this.addDocumentError = '';
+    this.addDocumentMessage = '';
+
+    this.masterListService.addDocument(request).subscribe({
+
+      next: response => {
+
+        this.isSavingNewDocument = false;
+
+        this.isAddingDocument = false;
+        this.addDocumentDraft = null;
+
+        this.addDocumentMessage =
+          response?.message ??
+          'Document added successfully.';
+
+        // Show the first page after creating a new document.
+        this.pageNumber = 1;
+
+        // Refresh the document table and summary counts.
+        this.loadDocuments();
+
+        this.cdr.markForCheck();
+      },
+
+      error: error => {
+
+        console.error(
+          'Failed to add controlled document:',
+          error
+        );
+
+        this.isSavingNewDocument = false;
+
+        this.addDocumentError =
+          error?.error?.message ??
+          'Could not add the document. Please check the entered values and try again.';
+
+        this.cdr.markForCheck();
+      }
+    });
+  }
 
   // --------------------------------------------------
   // BULK OBSOLETE (ML02–ML06)
@@ -200,14 +506,14 @@ export class MasterListComponent implements OnInit {
   bulkObsoleteError = '';
   isBulkSelectionMode = false;
 
-  // The API applies status filtering before Skip/Take. `documents` is already
-  // the current page, so do not filter it again in the browser.
   get filteredDocuments(): MasterListDocument[] {
     return this.documents;
   }
 
   get firstRecordNumber(): number {
-    return this.totalCount === 0 ? 0 : (this.pageNumber - 1) * this.pageSize + 1;
+    return this.totalCount === 0
+      ? 0
+      : (this.pageNumber - 1) * this.pageSize + 1;
   }
 
   get lastRecordNumber(): number {
@@ -215,7 +521,12 @@ export class MasterListComponent implements OnInit {
   }
 
   changePage(nextPage: number): void {
-    if (nextPage < 1 || nextPage > this.totalPages || nextPage === this.pageNumber) {
+
+    if (
+      nextPage < 1 ||
+      nextPage > this.totalPages ||
+      nextPage === this.pageNumber
+    ) {
       return;
     }
 
@@ -225,8 +536,13 @@ export class MasterListComponent implements OnInit {
   }
 
   onPageSizeChange(value: string | number): void {
+
     const nextPageSize = Number(value);
-    if (![10, 25, 50].includes(nextPageSize) || nextPageSize === this.pageSize) {
+
+    if (
+      ![10, 25, 50].includes(nextPageSize) ||
+      nextPageSize === this.pageSize
+    ) {
       return;
     }
 
@@ -237,6 +553,7 @@ export class MasterListComponent implements OnInit {
   }
 
   get canBulkObsolete(): boolean {
+
     const allowedTypes =
       this.selectedDocumentTypeId === null ||
       [1, 2, 3, 4, 5].includes(this.selectedDocumentTypeId);
@@ -269,6 +586,7 @@ export class MasterListComponent implements OnInit {
   }
 
   toggleDocumentSelection(documentId: number, checked: boolean): void {
+
     if (!this.canBulkObsolete || !this.isBulkSelectionMode) return;
 
     const exists = this.selectableDocuments.some(
@@ -289,11 +607,13 @@ export class MasterListComponent implements OnInit {
   }
 
   toggleSelectAllDocuments(checked: boolean): void {
+
     if (!this.canBulkObsolete || !this.isBulkSelectionMode) return;
 
     const updated = new Set(this.selectedDocumentIds);
 
     for (const document of this.selectableDocuments) {
+
       if (checked) {
         updated.add(document.documentId);
       } else {
@@ -311,11 +631,14 @@ export class MasterListComponent implements OnInit {
   }
 
   enterBulkSelectionMode(): void {
+
     if (
       !this.canBulkObsolete ||
       this.isBulkObsoleting ||
       this.editingDocumentId !== null ||
-      this.isSavingDocument
+      this.isSavingDocument ||
+      this.isAddingDocument ||
+      this.isSavingNewDocument
     ) {
       return;
     }
@@ -327,6 +650,7 @@ export class MasterListComponent implements OnInit {
   }
 
   cancelBulkSelectionMode(): void {
+
     this.clearDocumentSelection();
     this.isBulkSelectionMode = false;
     this.bulkObsoleteMessage = '';
@@ -334,18 +658,20 @@ export class MasterListComponent implements OnInit {
   }
 
   bulkObsoleteDocuments(): void {
+
     if (
       !this.canBulkObsolete ||
       !this.isBulkSelectionMode ||
       this.isBulkObsoleting ||
       this.editingDocumentId !== null ||
       this.isSavingDocument ||
+      this.isAddingDocument ||
+      this.isSavingNewDocument ||
       this.selectedDocumentIds.size === 0
     ) {
       return;
     }
 
-    // Only submit currently visible, active documents.
     const selectableIds = new Set(
       this.selectableDocuments.map(document => document.documentId)
     );
@@ -377,7 +703,9 @@ export class MasterListComponent implements OnInit {
     this.bulkObsoleteMessage = '';
 
     this.masterListService.obsoleteDocuments(request).subscribe({
+
       next: response => {
+
         this.isBulkObsoleting = false;
         this.clearDocumentSelection();
         this.isBulkSelectionMode = false;
@@ -390,6 +718,7 @@ export class MasterListComponent implements OnInit {
       },
 
       error: error => {
+
         console.error('Bulk obsolete failed:', error);
 
         this.isBulkObsoleting = false;
@@ -404,8 +733,22 @@ export class MasterListComponent implements OnInit {
   }
 
   setStatusFilter(status: 'All' | 'Active' | 'Obsolete'): void {
+
     this.selectedStatusFilter = status;
     this.pageNumber = 1;
+    this.clearDocumentSelection();
+    this.loadDocuments();
+  }
+
+  // --------------------------------------------------
+  // STANDARD FILTER
+  // --------------------------------------------------
+
+  onStandardChange(value: string): void {
+
+    this.selectedStandard = value;
+    this.pageNumber = 1;
+
     this.clearDocumentSelection();
     this.loadDocuments();
   }
@@ -442,7 +785,6 @@ export class MasterListComponent implements OnInit {
     return this.selectedDocumentTypeId === 10;
   }
 
-  // Generate columns dynamically from revision 00 to the highest revision.
   get ml01RevisionColumns(): number[] {
 
     const revisionNumbers = this.ml01Entries.flatMap(entry =>
@@ -684,7 +1026,6 @@ export class MasterListComponent implements OnInit {
 
   loadDocuments(): void {
 
-    // ML01 has its own API and must not use the ML02–ML06 endpoint.
     if (this.isML01Selected) {
 
       this.documents = [];
@@ -697,7 +1038,6 @@ export class MasterListComponent implements OnInit {
       return;
     }
 
-    // ML07–ML10 use their own special-table APIs.
     if (this.selectedSpecialType) {
 
       this.documents = [];
@@ -712,7 +1052,6 @@ export class MasterListComponent implements OnInit {
       return;
     }
 
-    // Normal ML02–ML06 documents.
     this.ml01Entries = [];
     this.isLoadingML01 = false;
     this.ml01Error = '';
@@ -728,7 +1067,10 @@ export class MasterListComponent implements OnInit {
       this.searchText,
       this.pageNumber,
       this.pageSize,
-      this.selectedStatusFilter === 'All' ? undefined : this.selectedStatusFilter
+      this.selectedStatusFilter === 'All'
+        ? undefined
+        : this.selectedStatusFilter,
+      this.selectedStandard || undefined
     ).subscribe({
 
       next: result => {
@@ -742,7 +1084,6 @@ export class MasterListComponent implements OnInit {
         this.activeCount = result.activeCount ?? 0;
         this.obsoleteCount = result.obsoleteCount ?? 0;
 
-        // Selection is limited to the currently loaded page.
         const activeIds = new Set(
           this.selectableDocuments.map(document => document.documentId)
         );
@@ -794,7 +1135,6 @@ export class MasterListComponent implements OnInit {
 
       next: entries => {
 
-        // Ignore a late response if the user selected another type.
         if (!this.isML01Selected) {
           return;
         }
@@ -852,7 +1192,9 @@ export class MasterListComponent implements OnInit {
       this.isAddingML01 ||
       this.editingML01Id !== null ||
       this.editingDocumentId !== null ||
-      this.editingMasterDataId !== null
+      this.editingMasterDataId !== null ||
+      this.isAddingDocument ||
+      this.isSavingNewDocument
     ) {
       return;
     }
@@ -958,7 +1300,9 @@ export class MasterListComponent implements OnInit {
       this.isAddingML01 ||
       this.editingML01Id !== null ||
       this.editingDocumentId !== null ||
-      this.editingMasterDataId !== null
+      this.editingMasterDataId !== null ||
+      this.isAddingDocument ||
+      this.isSavingNewDocument
     ) {
       return;
     }
@@ -1225,7 +1569,9 @@ export class MasterListComponent implements OnInit {
       this.isSavingDocument ||
       this.isSavingMasterData ||
       this.isDeletingMasterData ||
-      this.isAddingMasterData
+      this.isAddingMasterData ||
+      this.isAddingDocument ||
+      this.isSavingNewDocument
     ) {
       return;
     }
@@ -1418,10 +1764,16 @@ export class MasterListComponent implements OnInit {
 
     this.selectedDocumentTypeId =
       value === '' ? null : Number(value);
+
     this.pageNumber = 1;
 
-    // Reset the summary-card status selection when changing document type.
     this.selectedStatusFilter = 'All';
+
+    // Clear Add Document state.
+    this.isAddingDocument = false;
+    this.addDocumentDraft = null;
+    this.addDocumentError = '';
+    this.addDocumentMessage = '';
 
     // Clear ML02–ML06 edit state.
     this.editingDocumentId = null;
@@ -1445,7 +1797,6 @@ export class MasterListComponent implements OnInit {
     this.specialSaveMessage = '';
     this.specialSaveError = '';
 
-    // ML01 and ML07–ML10 are not department-specific in this UI.
     if (this.selectedSpecialType || this.isML01Selected) {
       this.selectedDepartmentId = null;
     }
@@ -1453,16 +1804,20 @@ export class MasterListComponent implements OnInit {
     this.loadDocuments();
     this.loadMasterData();
 
-    // Keep the compact approval box in sync with the selected Document Type.
     if (this.selectedDocumentTypeId !== null) {
-      this.approvalMatrixSelectedDocumentTypeId = this.selectedDocumentTypeId;
+
+      this.approvalMatrixSelectedDocumentTypeId =
+        this.selectedDocumentTypeId;
+
       this.isEditingApprovalMatrix = false;
       this.approvalMatrixEditBackup = null;
       this.loadApprovalMatrix();
+
     } else if (this.approvalMatrixDocumentTypes.length > 0) {
-      // All Document Types: display the default matrix (first available type).
+
       this.approvalMatrixSelectedDocumentTypeId =
         this.approvalMatrixDocumentTypes[0].documentTypeId;
+
       this.isEditingApprovalMatrix = false;
       this.approvalMatrixEditBackup = null;
       this.loadApprovalMatrix();
@@ -1483,6 +1838,7 @@ export class MasterListComponent implements OnInit {
 
     this.selectedDepartmentId =
       value === '' ? null : Number(value);
+
     this.pageNumber = 1;
 
     this.loadDocuments();
@@ -1522,7 +1878,14 @@ export class MasterListComponent implements OnInit {
     this.selectedDepartmentId = null;
     this.searchText = '';
     this.selectedStatusFilter = 'All';
+    this.selectedStandard = '';
     this.pageNumber = 1;
+
+    // Clear Add Document state.
+    this.isAddingDocument = false;
+    this.addDocumentDraft = null;
+    this.addDocumentError = '';
+    this.addDocumentMessage = '';
 
     this.editingDocumentId = null;
     this.editDraft = null;
@@ -1557,13 +1920,22 @@ export class MasterListComponent implements OnInit {
 
   selectTab(tab: string): void {
 
-    this.activeTab = tab;
     this.profileMenuOpen = false;
 
+    if (tab === 'MasterList') {
+      void this.router.navigate(['/qms/master-list']);
+      return;
+    }
+
+    if (tab === 'DCR') {
+      void this.router.navigate(['/qms/dcr']);
+      return;
+    }
+
+    this.activeTab = tab;
   }
 
   selectDocumentType(type: DocumentType): void {
-
     this.onDocumentTypeChange(type.documentTypeId);
   }
 
@@ -1580,7 +1952,9 @@ export class MasterListComponent implements OnInit {
       this.isSavingDocument ||
       this.isSavingMasterData ||
       this.isDeletingMasterData ||
-      this.isAddingMasterData
+      this.isAddingMasterData ||
+      this.isAddingDocument ||
+      this.isSavingNewDocument
     ) {
       return;
     }
@@ -1751,7 +2125,6 @@ export class MasterListComponent implements OnInit {
   // --------------------------------------------------
 
   formatRevision(revisionNumber: number): string {
-
     return `Rev ${String(revisionNumber).padStart(3, '0')}`;
   }
 
@@ -1789,7 +2162,9 @@ export class MasterListComponent implements OnInit {
       this.editingMasterDataId !== null ||
       this.isSavingDocument ||
       this.isSavingMasterData ||
-      this.isAddingMasterData
+      this.isAddingMasterData ||
+      this.isAddingDocument ||
+      this.isSavingNewDocument
     ) {
       return;
     }
@@ -1940,6 +2315,8 @@ export class MasterListComponent implements OnInit {
           ? draft.obseleteDate?.slice(0, 10) ?? null
           : null,
 
+      standard: draft.standard?.trim() || null,
+
       revisions: draft.revisions.map(revision => ({
         revisionNumber: revision.revisionNumber,
         pageCount: Number(revision.pageCount),
@@ -2028,6 +2405,12 @@ export class MasterListComponent implements OnInit {
       return;
     }
 
+    // Cancel Add Document first.
+    if (this.isAddingDocument && !this.isSavingNewDocument) {
+      this.cancelAddDocument();
+      return;
+    }
+
     if (this.isAddingML01 && !this.isSavingML01) {
       this.cancelML01Add();
       return;
@@ -2091,42 +2474,58 @@ export class MasterListComponent implements OnInit {
   }
 
   loadApprovalMatrixDocumentTypes(): void {
+
     this.isLoadingApprovalMatrixTypes = true;
     this.approvalMatrixLoadError = '';
 
     this.masterListService.getDocumentTypes().subscribe({
+
       next: (types) => {
+
         this.approvalMatrixDocumentTypes = types ?? [];
         this.isLoadingApprovalMatrixTypes = false;
 
         if (this.approvalMatrixDocumentTypes.length > 0) {
+
           this.approvalMatrixSelectedDocumentTypeId =
-            this.selectedDocumentTypeId ?? this.approvalMatrixDocumentTypes[0].documentTypeId;
+            this.selectedDocumentTypeId ??
+            this.approvalMatrixDocumentTypes[0].documentTypeId;
+
           this.loadApprovalMatrix();
         }
+
         this.cdr.detectChanges();
       },
+
       error: (error) => {
+
         this.isLoadingApprovalMatrixTypes = false;
+
         this.approvalMatrixLoadError = error?.error?.message ??
           'Unable to load Document Types.';
+
         this.cdr.detectChanges();
       }
     });
   }
 
   onApprovalMatrixDocumentTypeChange(): void {
+
     this.isEditingApprovalMatrix = false;
     this.approvalMatrixEditBackup = null;
+
     if (this.approvalMatrixSelectedDocumentTypeId === null) {
       this.approvalMatrix = this.createEmptyApprovalMatrix(0);
       return;
     }
+
     this.loadApprovalMatrix();
   }
 
   loadApprovalMatrix(): void {
+
     const documentTypeId = this.approvalMatrixSelectedDocumentTypeId;
+
     if (documentTypeId === null) return;
 
     this.isLoadingApprovalMatrix = true;
@@ -2135,7 +2534,9 @@ export class MasterListComponent implements OnInit {
     this.approvalMatrixSaveMessage = '';
 
     this.approvalMatrixService.getMatrix(documentTypeId).subscribe({
+
       next: (response) => {
+
         this.approvalMatrix = {
           documentTypeId,
           approvedBy: response.approvedBy ?? null,
@@ -2145,23 +2546,33 @@ export class MasterListComponent implements OnInit {
           checkedDate: this.approvalMatrixDateInput(response.checkedDate),
           issuedDate: this.approvalMatrixDateInput(response.issuedDate)
         };
+
         this.isLoadingApprovalMatrix = false;
         this.cdr.detectChanges();
       },
+
       error: (error) => {
+
         this.isLoadingApprovalMatrix = false;
+
         this.approvalMatrixLoadError = error?.error?.message ??
           'Unable to load Approval Matrix data.';
+
         this.cdr.detectChanges();
       }
     });
   }
 
   startApprovalMatrixEdit(): void {
-    if (!this.canEditApprovalMatrix || this.isLoadingApprovalMatrix ||
-        this.approvalMatrixSelectedDocumentTypeId === null) {
+
+    if (
+      !this.canEditApprovalMatrix ||
+      this.isLoadingApprovalMatrix ||
+      this.approvalMatrixSelectedDocumentTypeId === null
+    ) {
       return;
     }
+
     this.approvalMatrixEditBackup = { ...this.approvalMatrix };
     this.isEditingApprovalMatrix = true;
     this.approvalMatrixSaveError = '';
@@ -2169,9 +2580,11 @@ export class MasterListComponent implements OnInit {
   }
 
   cancelApprovalMatrixEdit(): void {
+
     if (this.approvalMatrixEditBackup) {
       this.approvalMatrix = { ...this.approvalMatrixEditBackup };
     }
+
     this.approvalMatrixEditBackup = null;
     this.isEditingApprovalMatrix = false;
     this.approvalMatrixSaveError = '';
@@ -2179,8 +2592,14 @@ export class MasterListComponent implements OnInit {
   }
 
   saveApprovalMatrix(): void {
+
     const documentTypeId = this.approvalMatrixSelectedDocumentTypeId;
-    if (!this.canEditApprovalMatrix || documentTypeId === null || this.isSavingApprovalMatrix) {
+
+    if (
+      !this.canEditApprovalMatrix ||
+      documentTypeId === null ||
+      this.isSavingApprovalMatrix
+    ) {
       return;
     }
 
@@ -2199,24 +2618,34 @@ export class MasterListComponent implements OnInit {
     };
 
     this.approvalMatrixService.saveMatrix(request).subscribe({
+
       next: () => {
+
         this.isSavingApprovalMatrix = false;
         this.isEditingApprovalMatrix = false;
         this.approvalMatrixEditBackup = null;
-        this.approvalMatrixSaveMessage = 'Document Approval Matrix saved successfully.';
+
+        this.approvalMatrixSaveMessage =
+          'Document Approval Matrix saved successfully.';
+
         this.loadApprovalMatrix();
         this.cdr.detectChanges();
       },
+
       error: (error) => {
+
         this.isSavingApprovalMatrix = false;
+
         this.approvalMatrixSaveError = error?.error?.message ??
           'Unable to save Approval Matrix. Please try again.';
+
         this.cdr.detectChanges();
       }
     });
   }
 
   refreshApprovalMatrix(): void {
+
     if (this.approvalMatrixSelectedDocumentTypeId !== null) {
       this.loadApprovalMatrix();
     } else {
@@ -2225,7 +2654,9 @@ export class MasterListComponent implements OnInit {
   }
 
   private approvalMatrixText(value: string | null): string | null {
+
     const trimmed = value?.trim();
+
     return trimmed ? trimmed : null;
   }
 
@@ -2239,7 +2670,6 @@ export class MasterListComponent implements OnInit {
 
   // --------------------------------------------------
   // MASTER LIST SUMMARY COUNTS
-  // Counts are based on the currently loaded document set and active filters.
   // --------------------------------------------------
 
   get totalDocumentCount(): number {

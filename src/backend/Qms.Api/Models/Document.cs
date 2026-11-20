@@ -21,6 +21,8 @@ public class Document
 
     public DateOnly? ObseleteDate{ get; set; }
 
+    public string? Standard { get; set; }
+
     public ICollection<DocumentRevision> Revisions { get; set; }
         = new List<DocumentRevision>();
 }

@@ -2349,3 +2349,11 @@ button:focus-visible {
     justify-content: flex-start;
   }
 }
+.standard-column {
+  min-width: 160px;
+}
+
+.standard-cell {
+  min-width: 160px;
+  white-space: nowrap;
+}

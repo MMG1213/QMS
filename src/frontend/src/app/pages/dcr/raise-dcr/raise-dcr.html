@@ -1,0 +1,259 @@
+
+<div class="raise-dcr-container">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h2>Raise Document Change Request</h2>
+        <p>Submit a new document addition, revision or obsolete request.</p>
+      </div>
+    </div>
+  
+    <!-- Success Message -->
+    <div class="alert success-alert" *ngIf="successMessage">
+      <span>✓</span>
+      {{ successMessage }}
+    </div>
+  
+    <!-- Error Message -->
+    <div class="alert error-alert" *ngIf="errorMessage">
+      <span>!</span>
+      {{ errorMessage }}
+    </div>
+  
+    <!-- DCR Form -->
+    <div class="form-card">
+  
+      <div class="form-card-header">
+        <h3>Request Information</h3>
+        <p>Fields marked with * are mandatory.</p>
+      </div>
+  
+      <form #dcrForm="ngForm" (ngSubmit)="submitDCR()">
+  
+        <div class="form-grid">
+  
+          <!-- Request Date -->
+          <div class="form-group">
+            <label>Request Date <span>*</span></label>
+            <input
+              type="date"
+              name="requestDate"
+              [(ngModel)]="requestDate"
+              required>
+          </div>
+  
+          <!-- Standard -->
+          <div class="form-group">
+            <label>Standard <span>*</span></label>
+            <select
+              name="standard"
+              [(ngModel)]="standard"
+              required>
+  
+              <option value="">Select Standard</option>
+              <option value="ISO 9001:2015">ISO 9001:2015</option>
+              <option value="ISO 14001:2015">ISO 14001:2015</option>
+              <option value="ISO 45001:2018">ISO 45001:2018</option>
+  
+            </select>
+          </div>
+  
+          <!-- Request Type -->
+          <div class="form-group full-width">
+            <label>Request Type <span>*</span></label>
+  
+            <div class="request-type-options">
+  
+              <label
+                class="request-type-option"
+                [class.selected]="requestType === 'Addition'">
+  
+                <input
+                  type="radio"
+                  name="requestType"
+                  value="Addition"
+                  [(ngModel)]="requestType"
+                  required>
+  
+                <div>
+                  <strong>Addition</strong>
+                  <small>Create a new document</small>
+                </div>
+              </label>
+  
+              <label
+                class="request-type-option"
+                [class.selected]="requestType === 'Revision'">
+  
+                <input
+                  type="radio"
+                  name="requestType"
+                  value="Revision"
+                  [(ngModel)]="requestType"
+                  required>
+  
+                <div>
+                  <strong>Revision</strong>
+                  <small>Modify an existing document</small>
+                </div>
+              </label>
+  
+              <label
+                class="request-type-option"
+                [class.selected]="requestType === 'Obsolete'">
+  
+                <input
+                  type="radio"
+                  name="requestType"
+                  value="Obsolete"
+                  [(ngModel)]="requestType"
+                  required>
+  
+                <div>
+                  <strong>Obsolete</strong>
+                  <small>Make a document obsolete</small>
+                </div>
+              </label>
+  
+            </div>
+          </div>
+  
+          <!-- Document Type -->
+          <div class="form-group">
+            <label>Document Type <span>*</span></label>
+  
+            <select
+              name="documentTypeName"
+              [(ngModel)]="documentTypeName"
+              required>
+  
+              <option value="">Select Document Type</option>
+  
+              <option
+                *ngFor="let type of documentTypes"
+                [value]="type.typeName">
+  
+                {{ type.typeName }}
+  
+              </option>
+  
+            </select>
+  
+            <small *ngIf="loadingDocumentTypes">
+              Loading document types...
+            </small>
+          </div>
+  
+          <!-- Existing Document ID -->
+          <div
+            class="form-group"
+            *ngIf="requestType === 'Revision' || requestType === 'Obsolete'">
+  
+            <label>Existing Document ID <span>*</span></label>
+  
+            <input
+              type="number"
+              name="documentId"
+              [(ngModel)]="documentId"
+              min="1"
+              placeholder="Enter existing Document ID"
+              required>
+  
+            <small>
+              Temporary input. We'll replace this with an existing-document dropdown.
+            </small>
+          </div>
+  
+          <!-- Document Title -->
+          <div class="form-group">
+            <label>Document Title</label>
+            <input
+              type="text"
+              name="documentTitle"
+              [(ngModel)]="documentTitle"
+              maxlength="250"
+              placeholder="Enter document title">
+          </div>
+  
+          <!-- Document Number -->
+          <div class="form-group">
+            <label>Document Number</label>
+            <input
+              type="text"
+              name="documentNo"
+              [(ngModel)]="documentNo"
+              maxlength="100"
+              placeholder="Enter document number">
+          </div>
+  
+          <!-- Description Before Change -->
+          <div class="form-group full-width">
+            <label>Description Before Change</label>
+  
+            <textarea
+              name="descriptionBeforechange"
+              [(ngModel)]="descriptionBeforechange"
+              rows="3"
+              maxlength="2000"
+              placeholder="Describe the existing document or current condition">
+            </textarea>
+          </div>
+  
+          <!-- Description After Change -->
+          <div class="form-group full-width">
+            <label>Description After Change</label>
+  
+            <textarea
+              name="descriptionAfterchange"
+              [(ngModel)]="descriptionAfterchange"
+              rows="3"
+              maxlength="2000"
+              placeholder="Describe the proposed change">
+            </textarea>
+          </div>
+  
+          <!-- Reason -->
+          <div class="form-group full-width">
+            <label>Reason for Change</label>
+  
+            <textarea
+              name="reasonforchange"
+              [(ngModel)]="reasonforchange"
+              rows="3"
+              maxlength="2000"
+              placeholder="Explain why this change is required">
+            </textarea>
+          </div>
+  
+        </div>
+  
+        <!-- Form Actions -->
+        <div class="form-actions">
+  
+          <button
+            type="button"
+            class="btn-cancel"
+            (click)="resetForm()"
+            [disabled]="submitting">
+            Clear
+          </button>
+  
+          <button
+            type="submit"
+            class="btn-submit"
+            [disabled]="submitting || !dcrForm.valid">
+  
+            <span *ngIf="!submitting">Submit DCR →</span>
+            <span *ngIf="submitting">Submitting...</span>
+  
+          </button>
+  
+        </div>
+  
+      </form>
+  
+    </div>
+  
+  </div>
+  
