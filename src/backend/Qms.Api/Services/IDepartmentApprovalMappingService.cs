@@ -17,8 +17,9 @@ public interface IDepartmentApprovalMappingService
             string createdByEmployeeId);
 
     Task<(bool Success, string Message)> UpdateAsync(
-        int id,
-        UpdateDepartmentApprovalMappingDto dto);
+    int id,
+    UpdateDepartmentApprovalMappingDto dto,
+    string createdByEmployeeId);
 
     Task<(bool Success, string Message)> DeleteAsync(int id);
 }

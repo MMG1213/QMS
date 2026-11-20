@@ -158,6 +158,127 @@ namespace Qms.Api.Migrations
                     b.ToTable("AppUsers");
                 });
 
+            modelBuilder.Entity("Qms.Api.Models.DCRRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly?>("ApprovalDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("AttachmentPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CurrentRevisionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly?>("DateUpdatedIntoSystem")
+                        .HasColumnType("date");
+
+                    b.Property<int>("DepartmentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DescriptionAfterchange")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("DescriptionBeforechange")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int?>("DocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DocumentNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DocumentTitle")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<int>("DocumentTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly?>("EffectiveDateofImplementation")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("FinalizedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("NewRevisionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ProcessOwnerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reasonforchange")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("ReferenceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateOnly>("RequestDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("RequestType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Standard")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("DocumentTypeId");
+
+                    b.HasIndex("ProcessOwnerId");
+
+                    b.HasIndex("ReferenceNumber")
+                        .IsUnique();
+
+                    b.ToTable("DCRRequests");
+                });
+
             modelBuilder.Entity("Qms.Api.Models.DepartmentApprovalLevel", b =>
                 {
                     b.Property<int>("Id")
@@ -776,6 +897,114 @@ namespace Qms.Api.Migrations
                     b.ToTable("TestingOrMeasuringInstruments");
                 });
 
+            modelBuilder.Entity("Qms.Api.Models.WorkFlowInstance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DCRRequestId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DepartmentApprovalMappingId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DCRRequestId")
+                        .IsUnique();
+
+                    b.HasIndex("DepartmentApprovalMappingId");
+
+                    b.ToTable("WorkFlowInstances");
+                });
+
+            modelBuilder.Entity("Qms.Api.Models.WorkflowAction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("ActionAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ActionByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Comments")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("WorkflowStageId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActionByUserId");
+
+                    b.HasIndex("WorkflowStageId");
+
+                    b.ToTable("WorkflowActions");
+                });
+
+            modelBuilder.Entity("Qms.Api.Models.WorkflowStage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ActionTakenAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ApproverId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DepartmentApprovalLevelId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StageOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("WorkflowInstanceId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApproverId");
+
+                    b.HasIndex("DepartmentApprovalLevelId");
+
+                    b.HasIndex("WorkflowInstanceId", "StageOrder")
+                        .IsUnique();
+
+                    b.ToTable("WorkflowStages");
+                });
+
             modelBuilder.Entity("Qms.Api.Models.AccountRequest", b =>
                 {
                     b.HasOne("Qms.Api.Models.QMSDepartment", "QMSDepartment")
@@ -802,6 +1031,47 @@ namespace Qms.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("QMSDepartment");
+                });
+
+            modelBuilder.Entity("Qms.Api.Models.DCRRequest", b =>
+                {
+                    b.HasOne("Qms.Api.Models.AppUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Qms.Api.Models.QMSDepartment", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Qms.Api.Models.Document", "Document")
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Qms.Api.Models.DocumentType", "DocumentType")
+                        .WithMany()
+                        .HasForeignKey("DocumentTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Qms.Api.Models.AppUser", "ProcessOwner")
+                        .WithMany()
+                        .HasForeignKey("ProcessOwnerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Department");
+
+                    b.Navigation("Document");
+
+                    b.Navigation("DocumentType");
+
+                    b.Navigation("ProcessOwner");
                 });
 
             modelBuilder.Entity("Qms.Api.Models.DepartmentApprovalLevel", b =>
@@ -988,6 +1258,71 @@ namespace Qms.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("DocumentType");
+                });
+
+            modelBuilder.Entity("Qms.Api.Models.WorkFlowInstance", b =>
+                {
+                    b.HasOne("Qms.Api.Models.DCRRequest", "DCRRequest")
+                        .WithOne()
+                        .HasForeignKey("Qms.Api.Models.WorkFlowInstance", "DCRRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Qms.Api.Models.DepartmentApprovalMapping", "DepartmentApprovalMapping")
+                        .WithMany()
+                        .HasForeignKey("DepartmentApprovalMappingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DCRRequest");
+
+                    b.Navigation("DepartmentApprovalMapping");
+                });
+
+            modelBuilder.Entity("Qms.Api.Models.WorkflowAction", b =>
+                {
+                    b.HasOne("Qms.Api.Models.AppUser", "ActionByUser")
+                        .WithMany()
+                        .HasForeignKey("ActionByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Qms.Api.Models.WorkflowStage", "WorkflowStage")
+                        .WithMany()
+                        .HasForeignKey("WorkflowStageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ActionByUser");
+
+                    b.Navigation("WorkflowStage");
+                });
+
+            modelBuilder.Entity("Qms.Api.Models.WorkflowStage", b =>
+                {
+                    b.HasOne("Qms.Api.Models.AppUser", "Approver")
+                        .WithMany()
+                        .HasForeignKey("ApproverId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Qms.Api.Models.DepartmentApprovalLevel", "DepartmentApprovalLevel")
+                        .WithMany()
+                        .HasForeignKey("DepartmentApprovalLevelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Qms.Api.Models.WorkFlowInstance", "WorkFlowInstance")
+                        .WithMany()
+                        .HasForeignKey("WorkflowInstanceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Approver");
+
+                    b.Navigation("DepartmentApprovalLevel");
+
+                    b.Navigation("WorkFlowInstance");
                 });
 
             modelBuilder.Entity("Qms.Api.Models.DepartmentApprovalMapping", b =>

@@ -210,7 +210,7 @@ export class AdminSignupRequestsComponent implements OnInit {
         .filter(level => level.approvalType !== 'QMSFinal')
         .map(level => level.levelNumber);
       return Math.max(max, ...departmentLevels, 0);
-    }, 2);
+    }, 0);
     return Array.from({ length: maxLevel }, (_, index) => index + 1);
   }
 

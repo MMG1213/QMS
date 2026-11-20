@@ -58,9 +58,8 @@ public class DepartmentApprovalMappingsController : ControllerBase
         [FromBody] CreateDepartmentApprovalMappingDto dto)
     {
         var employeeId =
-            User.FindFirst("EmployeeId")?.Value
-            ?? User.FindFirst("employeeId")?.Value
-            ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            User.FindFirst("employeeId")?.Value
+            ?? User.FindFirst(ClaimTypes.Name)?.Value;
 
         if (string.IsNullOrWhiteSpace(employeeId))
             return Unauthorized(new { message = "Employee ID claim missing." });
@@ -87,22 +86,20 @@ public class DepartmentApprovalMappingsController : ControllerBase
         int id,
         [FromBody] UpdateDepartmentApprovalMappingDto dto)
     {
-        var result = await _service.UpdateAsync(id, dto);
+        var employeeId =
+            User.FindFirst("employeeId")?.Value
+            ?? User.FindFirst(ClaimTypes.Name)?.Value;
+
+        if (string.IsNullOrWhiteSpace(employeeId))
+            return Unauthorized(new { message = "Employee ID claim missing." });
+
+        var result = await _service.UpdateAsync(
+            id,
+            dto,
+            employeeId);
 
         if (!result.Success)
             return BadRequest(new { message = result.Message });
-
-        return Ok(new { message = result.Message });
-    }
-
-    [HttpDelete("{id:int}")]
-    [Authorize(Roles = "QMS Admin")]
-    public async Task<IActionResult> Delete(int id)
-    {
-        var result = await _service.DeleteAsync(id);
-
-        if (!result.Success)
-            return NotFound(new { message = result.Message });
 
         return Ok(new { message = result.Message });
     }

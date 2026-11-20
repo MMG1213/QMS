@@ -46,9 +46,156 @@ public class QmsDbContext : DbContext
     public DbSet<ML01Entry> ML01Entries => Set<ML01Entry>();
     public DbSet<ML01Revision> ML01Revisions => Set<ML01Revision>();
 
+    public DbSet<DCRRequest> DCRRequests => Set<DCRRequest>();
+
+public DbSet<WorkFlowInstance> WorkFlowInstances => Set<WorkFlowInstance>();
+
+public DbSet<WorkflowStage> WorkflowStages => Set<WorkflowStage>();
+
+public DbSet<WorkflowAction> WorkflowActions => Set<WorkflowAction>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<WorkflowAction>(entity =>
+{
+    entity.HasKey(x => x.Id);
+
+    entity.Property(x => x.Action)
+        .IsRequired()
+        .HasMaxLength(20);
+
+    entity.Property(x => x.Comments)
+        .HasMaxLength(1000);
+
+    entity.HasOne(x => x.WorkflowStage)
+        .WithMany()
+        .HasForeignKey(x => x.WorkflowStageId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+    entity.HasOne(x => x.ActionByUser)
+        .WithMany()
+        .HasForeignKey(x => x.ActionByUserId)
+        .OnDelete(DeleteBehavior.Restrict);
+});
+        modelBuilder.Entity<WorkFlowInstance>(entity =>
+{
+    entity.HasKey(x => x.Id);
+
+    // One DCR can have one workflow instance
+    entity.HasOne(x => x.DCRRequest)
+        .WithOne()
+        .HasForeignKey<WorkFlowInstance>(x => x.DCRRequestId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+    // Workflow uses a particular approval configuration
+    entity.HasOne(x => x.DepartmentApprovalMapping)
+        .WithMany()
+        .HasForeignKey(x => x.DepartmentApprovalMappingId)
+        .OnDelete(DeleteBehavior.Restrict);
+});
+        modelBuilder.Entity<WorkflowStage>(entity =>
+{
+    entity.HasKey(x => x.Id);
+
+    // One WorkflowInstance has many WorkflowStages
+    entity.HasOne(x => x.WorkFlowInstance)
+        .WithMany()
+        .HasForeignKey(x => x.WorkflowInstanceId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+    // Stage references its original approval configuration
+    entity.HasOne(x => x.DepartmentApprovalLevel)
+        .WithMany()
+        .HasForeignKey(x => x.DepartmentApprovalLevelId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+    // Assigned approver
+    entity.HasOne(x => x.Approver)
+        .WithMany()
+        .HasForeignKey(x => x.ApproverId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+    // Prevent duplicate stage numbers in one workflow
+    entity.HasIndex(x => new { x.WorkflowInstanceId, x.StageOrder })
+        .IsUnique();
+});
+
+        modelBuilder.Entity<DCRRequest>(entity =>
+ {
+     entity.HasKey(x => x.Id);
+
+     entity.Property(x => x.ReferenceNumber)
+         .IsRequired()
+         .HasMaxLength(50);
+
+     entity.HasIndex(x => x.ReferenceNumber)
+         .IsUnique();
+
+     // Department
+     entity.HasOne(x => x.Department)
+         .WithMany()
+         .HasForeignKey(x => x.DepartmentId)
+         .OnDelete(DeleteBehavior.Restrict);
+
+     // Document Type
+     entity.HasOne(x => x.DocumentType)
+         .WithMany()
+         .HasForeignKey(x => x.DocumentTypeId)
+         .OnDelete(DeleteBehavior.Restrict);
+
+     // Existing Document (optional for Addition)
+     entity.HasOne(x => x.Document)
+         .WithMany()
+         .HasForeignKey(x => x.DocumentId)
+         .OnDelete(DeleteBehavior.Restrict);
+
+     // Process Owner
+     entity.HasOne(x => x.ProcessOwner)
+         .WithMany()
+         .HasForeignKey(x => x.ProcessOwnerId)
+         .OnDelete(DeleteBehavior.Restrict);
+
+     // Employee who created the DCR
+     entity.HasOne(x => x.CreatedByUser)
+         .WithMany()
+         .HasForeignKey(x => x.CreatedByUserId)
+         .OnDelete(DeleteBehavior.Restrict);
+
+    
+
+     entity.Property(x => x.Standard)
+.IsRequired()
+.HasMaxLength(100);
+
+     entity.Property(x => x.RequestType)
+        .IsRequired()
+        .HasMaxLength(30);
+
+     entity.Property(x => x.DocumentTitle)
+        .HasMaxLength(250);
+
+     entity.Property(x => x.DocumentNo)
+        .HasMaxLength(100);
+
+     entity.Property(x => x.DescriptionBeforechange)
+        .HasMaxLength(2000);
+
+     entity.Property(x => x.DescriptionAfterchange)
+        .HasMaxLength(2000);
+
+     entity.Property(x => x.Reasonforchange)
+        .HasMaxLength(2000);
+
+     entity.Property(x => x.AttachmentPath)
+        .HasMaxLength(500);
+
+     entity.Property(x => x.Status)
+        .IsRequired()
+        .HasMaxLength(30);
+
+     entity.Property(x => x.RowVersion)
+        .IsRowVersion();
+ });
 
         modelBuilder.Entity<AppUser>(entity =>
         {
@@ -93,7 +240,7 @@ public class QmsDbContext : DbContext
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
         });
-        
+
         // Department Approval Mapping
         modelBuilder.Entity<DepartmentApprovalMapping>(entity =>
         {
@@ -235,7 +382,7 @@ public class QmsDbContext : DbContext
                     "[ApprovalType] IN ('Department', 'QMSFinal')");
             });
         });
-        
+
         modelBuilder.Entity<QMSDepartment>(entity =>
         {
             entity.ToTable("QMSDepartments");
@@ -269,7 +416,7 @@ public class QmsDbContext : DbContext
                 .HasColumnType("datetime2")
                 .IsRequired(false);
         });
-        
+
         modelBuilder.Entity<DocumentType>(entity =>
         {
             entity.HasKey(t => t.DocumentTypeId);

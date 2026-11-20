@@ -17,6 +17,7 @@ public class DepartmentApprovalMappingService
         _context = context;
     }
 
+    // GET ALL CONFIGURATIONS
     public async Task<List<DepartmentApprovalMappingDto>> GetAllAsync()
     {
         var mappings = await GetMappingQuery()
@@ -27,6 +28,7 @@ public class DepartmentApprovalMappingService
         return mappings.Select(MapToDto).ToList();
     }
 
+    // GET CONFIGURATION BY ID
     public async Task<DepartmentApprovalMappingDto?> GetByIdAsync(int id)
     {
         var mapping = await GetMappingQuery()
@@ -35,20 +37,18 @@ public class DepartmentApprovalMappingService
         return mapping == null ? null : MapToDto(mapping);
     }
 
+    // GET ACTIVE EMPLOYEES
     public async Task<List<ApprovalMappingEmployeeDto>> GetEmployeesAsync(
         int departmentId)
     {
         var departmentExists = await _context.QMSDepartments
-            .AnyAsync(x => x.DepartmentId == departmentId && x.IsActive);
+            .AnyAsync(x =>
+                x.DepartmentId == departmentId && x.IsActive);
 
         if (!departmentExists)
             throw new InvalidOperationException(
                 "Department not found or inactive.");
 
-        // Return every active login ID so approval-level and final-approval
-        // dropdowns can select employees from any department.
-        // The Angular UI should filter DCR Creators by the selected department,
-        // and ValidateConfigurationAsync enforces that rule on the server.
         return await _context.AppUsers
             .Where(x => x.IsActive)
             .OrderBy(x => x.FullName)
@@ -62,6 +62,7 @@ public class DepartmentApprovalMappingService
             .ToListAsync();
     }
 
+    // CREATE NEW WORKFLOW CONFIGURATION
     public async Task<(bool Success, string Message, int? MappingId,
         int? ConfigVersion)> CreateAsync(
         CreateDepartmentApprovalMappingDto dto,
@@ -93,14 +94,16 @@ public class DepartmentApprovalMappingService
             return (false, validationMessage, null, null);
 
         if (string.IsNullOrWhiteSpace(createdByEmployeeId))
-            return (false, "Logged-in Employee ID is missing.", null, null);
+            return (false,
+                "Logged-in Employee ID is missing.", null, null);
 
         var creatorExists = await _context.AppUsers
             .AnyAsync(x =>
                 x.EmployeeId == createdByEmployeeId && x.IsActive);
 
         if (!creatorExists)
-            return (false, "Invalid logged-in employee.", null, null);
+            return (false,
+                "Invalid logged-in employee.", null, null);
 
         var latestVersion = await _context.DepartmentApprovalMappings
             .Where(x => x.DepartmentId == dto.DepartmentId)
@@ -134,8 +137,6 @@ public class DepartmentApprovalMappingService
                 LevelNumber = level.LevelNumber,
                 ApprovalType = level.ApprovalType,
                 ApproverEmployeeId = level.ApproverEmployeeId,
-                RedirectedApproverEmployeeId =
-                    level.RedirectedApproverEmployeeId,
                 IsActive = level.IsActive,
                 CreatedAtUtc = now
             })
@@ -151,65 +152,125 @@ public class DepartmentApprovalMappingService
             mapping.ConfigVersion);
     }
 
+    // UPDATE CONFIGURATION BY CREATING A NEW VERSION
     public async Task<(bool Success, string Message)> UpdateAsync(
         int id,
-        UpdateDepartmentApprovalMappingDto dto)
+        UpdateDepartmentApprovalMappingDto dto,
+        string createdByEmployeeId)
     {
-        var mapping = await _context.DepartmentApprovalMappings
-            .Include(x => x.DCRCreators)
-            .Include(x => x.ApprovalLevels)
-            .FirstOrDefaultAsync(x => x.Id == id);
+        if (string.IsNullOrWhiteSpace(createdByEmployeeId))
+            return (false, "Logged-in Employee ID is missing.");
 
-        if (mapping == null)
-            return (false, "Department approval mapping not found.");
+        var adminExists = await _context.AppUsers
+            .AnyAsync(x =>
+                x.EmployeeId == createdByEmployeeId && x.IsActive);
 
-        var validationMessage = await ValidateConfigurationAsync(
-            mapping.DepartmentId,
-            dto.CreatorEmployeeIds,
-            dto.ApprovalLevels);
+        if (!adminExists)
+            return (false, "Invalid logged-in employee.");
 
-        if (validationMessage != null)
-            return (false, validationMessage);
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable);
 
-        var now = DateTime.UtcNow;
+        try
+        {
+            var mapping = await _context.DepartmentApprovalMappings
+                .FirstOrDefaultAsync(x => x.Id == id);
 
-        mapping.IsActive = dto.IsActive;
-        mapping.UpdatedAtUtc = now;
+            if (mapping == null)
+                return (false,
+                    "Department approval mapping not found.");
 
-        _context.DepartmentDCRCreators.RemoveRange(mapping.DCRCreators);
-        _context.DepartmentApprovalLevels.RemoveRange(
-            mapping.ApprovalLevels);
+            if (!mapping.IsActive)
+                return (false,
+                    "Historical configurations cannot be edited. Edit the active configuration instead.");
 
-        mapping.DCRCreators = dto.CreatorEmployeeIds
-            .Distinct()
-            .Select(employeeId => new DepartmentDCRCreator
+            var now = DateTime.UtcNow;
+
+            // CASE 1: DEACTIVATE THE CURRENT CONFIGURATION
+            if (!dto.IsActive)
             {
-                DepartmentApprovalMappingId = mapping.Id,
-                CreatorEmployeeId = employeeId,
-                CreatedAtUtc = now
-            })
-            .ToList();
+                mapping.IsActive = false;
+                mapping.UpdatedAtUtc = now;
 
-        mapping.ApprovalLevels = dto.ApprovalLevels
-            .OrderBy(x => x.LevelNumber)
-            .Select(level => new DepartmentApprovalLevel
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return (true,
+                    "Department approval mapping deactivated successfully.");
+            }
+
+            // CASE 2: CREATE A NEW CONFIGURATION VERSION
+            var validationMessage = await ValidateConfigurationAsync(
+                mapping.DepartmentId,
+                dto.CreatorEmployeeIds,
+                dto.ApprovalLevels);
+
+            if (validationMessage != null)
+                return (false, validationMessage);
+
+            var latestVersion =
+                await _context.DepartmentApprovalMappings
+                    .Where(x => x.DepartmentId == mapping.DepartmentId)
+                    .Select(x => (int?)x.ConfigVersion)
+                    .MaxAsync() ?? 0;
+
+            // Deactivate the previous version.
+            mapping.IsActive = false;
+            mapping.UpdatedAtUtc = now;
+
+            await _context.SaveChangesAsync();
+
+            // Create a new mapping record.
+            var newMapping = new DepartmentApprovalMapping
             {
-                DepartmentApprovalMappingId = mapping.Id,
-                LevelNumber = level.LevelNumber,
-                ApprovalType = level.ApprovalType,
-                ApproverEmployeeId = level.ApproverEmployeeId,
-                RedirectedApproverEmployeeId =
-                    level.RedirectedApproverEmployeeId,
-                IsActive = level.IsActive,
+                DepartmentId = mapping.DepartmentId,
+                ConfigVersion = latestVersion + 1,
+                IsActive = true,
+                CreatedByEmployeeId = createdByEmployeeId,
                 CreatedAtUtc = now
-            })
-            .ToList();
+            };
 
-        await _context.SaveChangesAsync();
+            // Create new DCR creator records.
+            newMapping.DCRCreators = dto.CreatorEmployeeIds
+                .Distinct()
+                .Select(employeeId => new DepartmentDCRCreator
+                {
+                    CreatorEmployeeId = employeeId,
+                    CreatedAtUtc = now
+                })
+                .ToList();
 
-        return (true, "Department approval mapping updated successfully.");
+            // Create new approval-level records.
+            newMapping.ApprovalLevels = dto.ApprovalLevels
+                .OrderBy(x => x.LevelNumber)
+                .Select(level => new DepartmentApprovalLevel
+                {
+                    LevelNumber = level.LevelNumber,
+                    ApprovalType = level.ApprovalType,
+                    ApproverEmployeeId = level.ApproverEmployeeId,
+                    IsActive = level.IsActive,
+                    CreatedAtUtc = now
+                })
+                .ToList();
+
+            _context.DepartmentApprovalMappings.Add(newMapping);
+
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+
+            return (true,
+                $"New workflow configuration version {newMapping.ConfigVersion} created successfully.");
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
+    // DEACTIVATE CONFIGURATION INSTEAD OF PHYSICALLY DELETING IT
     public async Task<(bool Success, string Message)> DeleteAsync(int id)
     {
         var mapping = await _context.DepartmentApprovalMappings
@@ -218,13 +279,20 @@ public class DepartmentApprovalMappingService
         if (mapping == null)
             return (false, "Department approval mapping not found.");
 
-        _context.DepartmentApprovalMappings.Remove(mapping);
+        if (!mapping.IsActive)
+            return (true,
+                "Department approval mapping is already inactive.");
+
+        mapping.IsActive = false;
+        mapping.UpdatedAtUtc = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
 
-        return (true, "Department approval mapping deleted successfully.");
+        return (true,
+            "Department approval mapping deactivated successfully.");
     }
 
+    // COMMON QUERY FOR LOADING CONFIGURATION DETAILS
     private IQueryable<DepartmentApprovalMapping> GetMappingQuery()
     {
         return _context.DepartmentApprovalMappings
@@ -233,11 +301,10 @@ public class DepartmentApprovalMappingService
             .Include(x => x.DCRCreators)
                 .ThenInclude(x => x.CreatorEmployee)
             .Include(x => x.ApprovalLevels)
-                .ThenInclude(x => x.ApproverEmployee)
-            .Include(x => x.ApprovalLevels)
-                .ThenInclude(x => x.RedirectedApproverEmployee);
+                .ThenInclude(x => x.ApproverEmployee);
     }
 
+    // VALIDATE WORKFLOW CONFIGURATION
     private async Task<string?> ValidateConfigurationAsync(
         int departmentId,
         List<string> creatorEmployeeIds,
@@ -285,15 +352,12 @@ public class DepartmentApprovalMappingService
 
         var approverIds = approvalLevels
             .Select(x => x.ApproverEmployeeId)
-            .Concat(approvalLevels
-                .Where(x => !string.IsNullOrWhiteSpace(
-                    x.RedirectedApproverEmployeeId))
-                .Select(x => x.RedirectedApproverEmployeeId!))
             .Distinct()
             .ToList();
 
         var approvers = await _context.AppUsers
-            .Where(x => approverIds.Contains(x.EmployeeId) && x.IsActive)
+            .Where(x =>
+                approverIds.Contains(x.EmployeeId) && x.IsActive)
             .ToListAsync();
 
         if (approvers.Count != approverIds.Count)
@@ -309,28 +373,14 @@ public class DepartmentApprovalMappingService
                 return $"Invalid approver Employee ID at level {level.LevelNumber}.";
             }
 
-            // Approval-level approvers can belong to any department.
-            // QMSFinal can also be assigned to any active login ID.
-            // There is intentionally no department or QMS Admin role restriction.
-
-            if (!string.IsNullOrWhiteSpace(
-                level.RedirectedApproverEmployeeId))
-            {
-                var redirected = approvers.FirstOrDefault(
-                    x => x.EmployeeId == level.RedirectedApproverEmployeeId);
-
-                if (redirected == null)
-                {
-                    return $"Invalid redirected approver Employee ID at level {level.LevelNumber}.";
-                }
-
-                // No department or role restriction for redirected approvers.
-            }
+            // Approvers can belong to any department.
+            // No department or role restriction is applied.
         }
 
         return null;
     }
 
+    // MAP ENTITY TO DTO
     private static DepartmentApprovalMappingDto MapToDto(
         DepartmentApprovalMapping mapping)
     {
@@ -369,12 +419,6 @@ public class DepartmentApprovalMappingService
                     ApproverEmployeeId = x.ApproverEmployeeId,
                     ApproverEmployeeName =
                         x.ApproverEmployee?.FullName ?? "",
-
-                    RedirectedApproverEmployeeId =
-                        x.RedirectedApproverEmployeeId,
-
-                    RedirectedApproverEmployeeName =
-                        x.RedirectedApproverEmployee?.FullName,
 
                     IsActive = x.IsActive
                 })
